@@ -44,6 +44,8 @@ export type Route =
   | { name: 'family' }
   | { name: 'upgrade' }
   | { name: 'progress' }
+  /** The weekly sheet, laid out for paper rather than for a screen. */
+  | { name: 'progress-print' }
   | { name: 'custom-lists' }
   /** The learner's task list — what a grown-up has set them. */
   | { name: 'tasks' }

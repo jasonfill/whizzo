@@ -53,8 +53,13 @@ async function authHeader(): Promise<Record<string, string>> {
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, anonymous = false, signal } = options
 
+  // FormData carries its own content type, including a boundary the browser
+  // generates. Setting the header ourselves would overwrite the boundary and
+  // the server would see one unparseable part.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+
   const headers: Record<string, string> = { accept: 'application/json' }
-  if (body !== undefined) headers['content-type'] = 'application/json'
+  if (body !== undefined && !isForm) headers['content-type'] = 'application/json'
   if (!anonymous) Object.assign(headers, await authHeader())
 
   let response: Response
@@ -62,7 +67,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     response = await fetch(`${BASE}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       signal,
     })
   } catch (err) {
@@ -99,6 +104,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 export const api = {
   get: <T>(path: string, signal?: AbortSignal) => apiRequest<T>(path, { method: 'GET', signal }),
   post: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'POST', body }),
+  upload: <T>(path: string, form: FormData) => apiRequest<T>(path, { method: 'POST', body: form }),
   put: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'PUT', body }),
   patch: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'PATCH', body }),
   del: <T>(path: string) => apiRequest<T>(path, { method: 'DELETE' }),

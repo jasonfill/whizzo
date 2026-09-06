@@ -21,6 +21,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('../../lib/theme/ThemeProvider', async () =>
   (await import('../../test/mockProviders')).themeMock(),
 )
+// Privacy and the FAQ are reachable signed in as well as out, so they ask who
+// is reading in order to drop the funnel links for somebody who already has an
+// account. The rest of the site is signed-out-only and never asks.
+vi.mock('../../auth/AuthProvider', async () =>
+  (await import('../../test/mockProviders')).authMock(),
+)
 
 import { MODES } from '../../lib/quiz/session'
 import { ACTIVITIES } from '../../lib/spelling/activities'
@@ -245,7 +251,16 @@ describe('the rest of the site', () => {
   it('says what is stored and what is deliberately not', () => {
     render(<PrivacyScreen navigate={navigate} />)
     expect(screen.getByText('Not stored, and not wanted')).toBeTruthy()
-    expect(screen.getByText(/A date of birth/)).toBeTruthy()
+    expect(screen.getByText(/A full date of birth/)).toBeTruthy()
+  })
+
+  it('owns up to the birth year, which the app really does keep', () => {
+    // This page listed a date of birth as "not stored, and not wanted" while
+    // `learners.birth_year` was a column, the family screen had an input for
+    // it, and the signup age gate wrote it. A privacy page a reader can
+    // disprove from inside the app is worse than no privacy page.
+    render(<PrivacyScreen navigate={navigate} />)
+    expect(screen.getByText(/A birth year, where one was given/)).toBeTruthy()
   })
 
   it('gathers every audience’s questions rather than writing a fifth set', () => {

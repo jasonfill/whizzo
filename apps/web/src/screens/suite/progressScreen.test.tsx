@@ -31,7 +31,7 @@ vi.mock('../../lib/assignments/api', async (orig) => ({
 }))
 
 import { aGame, spies } from '../../test/mockProviders'
-import { anAssignment, signIn, skill, testState } from '../../test/state'
+import { aLearner, anAssignment, signIn, skill, testState } from '../../test/state'
 import { addDays, emptySnapshot, masteryKey, todayString } from '../../lib/progress/types'
 import type { ProgressSnapshot, SessionRecord } from '../../lib/progress/types'
 import ProgressScreen from './ProgressScreen'
@@ -143,7 +143,7 @@ describe('the words that keep going wrong', () => {
     expect(screen.getByText('because')).toBeTruthy()
   })
 
-  it('names the free-plan limit rather than quietly showing fewer', () => {
+  it('names the limit rather than quietly showing fewer', () => {
     testState.snapshot = {
       ...emptySnapshot(),
       mastery: Object.fromEntries(
@@ -152,7 +152,9 @@ describe('the words that keep going wrong', () => {
     }
     render(<ProgressScreen game={aGame()} navigate={navigate} />)
     expect(screen.getByText(/Showing 4 of 9/)).toBeTruthy()
-    fireEvent.click(screen.getByText('Family Pro'))
+    // "Covering this learner", not "Family Pro" — what is bought is a child,
+    // and there is no tier to be on.
+    fireEvent.click(screen.getByText('Covering this learner'))
     expect(navigate).toHaveBeenCalledWith({ name: 'upgrade' })
   })
 
@@ -219,7 +221,7 @@ describe('the session log', () => {
     expect(row.getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('says how much history the free plan keeps, rather than hiding it', () => {
+  it('says how much history is kept, rather than hiding the rest', () => {
     const old = Date.now() - 120 * 86_400_000
     testState.snapshot = {
       ...emptySnapshot(),
@@ -228,7 +230,7 @@ describe('the session log', () => {
       ),
     }
     render(<ProgressScreen game={aGame()} navigate={navigate} />)
-    expect(screen.getByText(/outside the free/)).toBeTruthy()
+    expect(screen.getByText(/outside\s+the 30-day window/)).toBeTruthy()
   })
 })
 
@@ -315,5 +317,73 @@ describe('progress by subject', () => {
     studying([['misc', null, 0.5, 1], ['bio', 'science.biology', 0.5, 1]])
     render(<ProgressScreen game={aGame()} navigate={navigate} />)
     expect(screen.getByText('General')).toBeTruthy()
+  })
+})
+
+// Retention is the one card here about the future rather than the past, so it
+// is also the one that can be confidently wrong. The tests are mostly about
+// what it refuses to say.
+describe('will it stick?', () => {
+  /** Covered, because retention is one of the things coverage buys. */
+  function covered(...items: Array<Record<string, unknown>>) {
+    signIn(aLearner({ displayName: 'Ada', covered: true }))
+    testState.skills = { spelling: skill('spelling', { placed: true }) }
+    testState.snapshot = {
+      ...emptySnapshot(),
+      mastery: Object.fromEntries(items.map((m, i) => [`spelling:i${i}`, m])),
+    } as never
+  }
+
+  it('splits what is known from what is going', () => {
+    covered(
+      mastery('secure', { intervalDays: 40, dueOn: addDays(todayString(), 40), lapses: 0 }),
+      mastery('gone', { intervalDays: 2, dueOn: addDays(todayString(), -9), lapses: 0 }),
+    )
+    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    expect(screen.getByText('Will it stick?')).toBeTruthy()
+    expect(screen.getByText('Secure')).toBeTruthy()
+    expect(screen.getByText('Slipping')).toBeTruthy()
+  })
+
+  it('scores only what has actually been tested', () => {
+    // One measured and holding, one never attempted. 100%, not 50% — a word
+    // nobody has met has not been forgotten.
+    covered(
+      mastery('known', { intervalDays: 40, dueOn: addDays(todayString(), 40), lapses: 0 }),
+      mastery('unseen', { totalAttempts: 0, reps: 0, lapses: 0, dueOn: null }),
+    )
+    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    expect(screen.getByText('100% holding')).toBeTruthy()
+  })
+
+  it('says nothing at all when there is nothing to say', () => {
+    covered(mastery('unseen', { totalAttempts: 0, reps: 0, lapses: 0, dueOn: null }))
+    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    expect(screen.queryByText('Will it stick?')).toBeNull()
+  })
+
+  it('is one of the things covering a learner buys', () => {
+    signIn(aLearner({ displayName: 'Ada', covered: false }))
+    testState.skills = { spelling: skill('spelling', { placed: true }) }
+    testState.snapshot = {
+      ...emptySnapshot(),
+      mastery: {
+        'spelling:i0': mastery('known', {
+          intervalDays: 40,
+          dueOn: addDays(todayString(), 40),
+          lapses: 0,
+        }),
+      },
+    } as never
+    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    expect(screen.queryByText('Will it stick?')).toBeNull()
+  })
+
+  it('offers the printable sheet whether or not it is unlocked', () => {
+    // A locked door you can see beats a feature nobody knows exists.
+    covered(mastery('known', { intervalDays: 40, dueOn: addDays(todayString(), 40) }))
+    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    fireEvent.click(screen.getByText(/Weekly sheet to print/))
+    expect(navigate).toHaveBeenCalledWith({ name: 'progress-print' })
   })
 })

@@ -133,12 +133,12 @@ export default function CustomListsScreen({ navigate }: { navigate: Navigate }) 
       {atLimit && (
         <Card className="mb-4">
           <p className="font-bold text-amber-700">
-            The free plan saves {coverage.wordListLimit} custom{' '}
+            An uncovered learner saves {coverage.wordListLimit} custom{' '}
             {coverage.wordListLimit === 1 ? 'list' : 'lists'}.{' '}
             <button className="underline" onClick={() => navigate({ name: 'upgrade' })}>
-              Family Pro
+              Covering them
             </button>{' '}
-            lifts that to 50.
+            removes the limit.
           </p>
         </Card>
       )}

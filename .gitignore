@@ -35,3 +35,6 @@ test-report.md
 
 # Local Supabase stack overrides (written by scripts/local-env.mjs)
 apps/web/.env.development.local
+
+# TypeScript incremental build info — generated, never source.
+*.tsbuildinfo

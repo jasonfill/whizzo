@@ -1,3 +1,4 @@
+import { useAuth } from '../../auth/AuthProvider'
 import { Button, Card } from '../../components/ui'
 import type { Navigate, Route } from '../../routes'
 import {
@@ -23,6 +24,7 @@ import {
  * refuses, not because the app remembers not to ask.
  */
 export default function PrivacyScreen({ navigate }: { navigate: Navigate }) {
+  const { status } = useAuth()
   const here: Route = { name: 'privacy' }
   const toAuth = () => navigate({ name: 'auth' })
 
@@ -30,6 +32,8 @@ export default function PrivacyScreen({ navigate }: { navigate: Navigate }) {
     <MarketingPage
       current={here}
       navigate={navigate}
+      // Reachable signed in as well as out; the chrome drops the funnel.
+      inApp={status === 'signed-in'}
       closing={{
         title: 'A record your child can build and nobody can quietly rewrite.',
         body: 'No ads, no trackers, no email address for a child, and an export button for everything in it.',
@@ -82,6 +86,7 @@ export default function PrivacyScreen({ navigate }: { navigate: Navigate }) {
               items={[
                 'A grown-up’s email address, for signing in',
                 'Each learner’s display name and the grade hint you give them',
+                'A birth year, where one was given — it is what decides whether a learner may have a sign-in of their own',
                 'Every answer: what was asked, what was given, how long it took, whether a hint was used, whether the app checked it',
                 'Sessions, mastery per item, levels, streaks and collectibles',
                 'Work set, and which round closed it',
@@ -96,7 +101,7 @@ export default function PrivacyScreen({ navigate }: { navigate: Navigate }) {
               className="mt-3"
               items={[
                 'An email address, phone number or postal address for a child',
-                'A date of birth — a grade hint is all the app needs',
+                'A full date of birth — the year on its own is as precise as it gets',
                 'Location, contacts, camera or microphone',
                 'Any advertising or analytics profile',
                 'Anything sold, shared or brokered to a third party — ever',

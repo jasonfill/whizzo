@@ -306,9 +306,9 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
       <p className="mt-6 text-center text-xs font-bold text-stone">
         Free forever, no ads.{' '}
         <button className="underline hover:text-ink" onClick={() => navigate({ name: 'upgrade' })}>
-          Family Pro
+          Covering a child
         </button>{' '}
-        adds custom word lists and printable reports.
+        adds their full history, the reports, and rewards.
       </p>
     </div>
   )

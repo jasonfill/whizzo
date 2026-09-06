@@ -15,10 +15,11 @@ import { pendingMigrations, runMigrations } from './migrate.js'
 import { childLoginAdminRoutes, childLoginPublicRoutes } from './routes/childLogin.js'
 import { devLoginRoutes } from './routes/devLogin.js'
 import { inviteRoutes, learnerRoutes } from './routes/learners.js'
-import { callerOf } from './auth.js'
+import { callerOf, requireCaller } from './auth.js'
 import { contentRoutes } from './routes/content.js'
 import { progressRoutes } from './routes/progress.js'
 import { rewardRoutes } from './routes/rewards.js'
+import { billingRoutes } from './routes/billing.js'
 
 export async function buildServer() {
   const app = Fastify({
@@ -141,15 +142,37 @@ export async function buildServer() {
   await app.register(childLoginAdminRoutes, { prefix: '/api' })
   await app.register(rewardRoutes, { prefix: '/api' })
 
+  // Billing sits in its own scope with a tighter limiter than the rest: every
+  // route here either opens a Stripe session or changes what somebody is
+  // charged, and none of them is worth calling in a loop. The webhook is
+  // exempt — Stripe retries, sometimes in bursts, and rate-limiting our own
+  // payment provider into a three-day retry backlog would be a self-inflicted
+  // outage.
+  await app.register(async (scoped) => {
+    await scoped.register(rateLimit, {
+      max: 30,
+      timeWindow: '1 hour',
+      allowList: (request) => request.url.endsWith('/billing/webhook'),
+      keyGenerator: (request) => request.caller?.id ?? request.ip,
+    })
+    await scoped.register(billingRoutes, { prefix: '/api' })
+  })
+
   // Ingestion gets its own rate-limit scope. The global 300/min is irrelevant
   // here — a handful of jobs an hour is the shape, because each one costs real
   // money and the global limit would let somebody spend a month's credits in a
   // minute.
   await app.register(async (scoped) => {
+    // Identify the caller here rather than leaving it to the routes. The
+    // limiter keys on `onRequest`, which runs before any route's `preHandler`,
+    // so without this its key generator would be reaching for a caller that
+    // has not been worked out yet — and one ceiling shared by every signed-in
+    // user on an IP is not the ceiling this is trying to impose.
+    scoped.addHook('onRequest', requireCaller)
     await scoped.register(rateLimit, {
       max: 12,
       timeWindow: '1 hour',
-      keyGenerator: (request) => callerOf(request)?.id ?? request.ip,
+      keyGenerator: (request) => callerOf(request).id,
     })
     await scoped.register(contentRoutes, { prefix: '/api' })
   })

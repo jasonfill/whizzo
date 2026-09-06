@@ -8,6 +8,7 @@ import ScreenHeader from '../../components/suite/ScreenHeader'
 import { loadLibrary } from '../../lib/assignments/library'
 import { Button, Card, Pill } from '../../components/ui'
 import { money, priceBreakdown, priceLine } from '../../lib/plans'
+import { billingPortal } from '../../lib/billing/api'
 import { PRICE_FIRST_LEARNER_CENTS } from '@whizzo/shared'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import type { Navigate } from '../../routes'
@@ -37,6 +38,7 @@ export default function AccountScreen({ navigate }: { navigate: Navigate }) {
   }, [status])
 
   const { learners } = useLearners()
+  const [portalBusy, setPortalBusy] = useState(false)
   const coverage = useCoverage()
   // What this person actually pays for: the children *of theirs* that are
   // covered. Not `profiles.plan` — a flag that says "Pro" for a teacher who has
@@ -138,9 +140,30 @@ export default function AccountScreen({ navigate }: { navigate: Navigate }) {
                 printing it under a coverage total would be the same
                 substitution this screen just stopped making. */}
             <p className="mb-3 font-bold text-muted">Thank you for supporting the project.</p>
-            <Button variant="ghost" className="w-full" onClick={() => navigate({ name: 'upgrade' })}>
-              Cover somebody else
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" onClick={() => navigate({ name: 'upgrade' })}>
+                Cover somebody else
+              </Button>
+              {/* Stripe's own portal rather than screens of ours. Card details
+                  are the one thing this product should never see, and a cancel
+                  flow we wrote is one we would have to keep correct against
+                  Stripe's rules forever. */}
+              <Button
+                variant="ghost"
+                disabled={portalBusy}
+                onClick={async () => {
+                  setPortalBusy(true)
+                  try {
+                    const { url } = await billingPortal()
+                    window.location.assign(url)
+                  } catch {
+                    setPortalBusy(false)
+                  }
+                }}
+              >
+                {portalBusy ? 'Opening…' : 'Card and invoices'}
+              </Button>
+            </div>
           </>
         ) : (
           <>

@@ -62,6 +62,11 @@ function bearer(request: FastifyRequest): string | null {
  * globally so that adding an unauthenticated endpoint is a deliberate act.
  */
 export async function requireCaller(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
+  // Already established by an earlier hook — verifying the same token twice
+  // buys nothing. This is what lets a scope authenticate early (so a rate
+  // limiter can key on the caller) without the routes inside it paying for it.
+  if (request.caller) return
+
   const token = bearer(request)
   if (!token) throw unauthorized('This endpoint needs a signed-in user')
 

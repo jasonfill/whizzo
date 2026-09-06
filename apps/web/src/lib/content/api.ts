@@ -43,6 +43,32 @@ export function addLink(url: string): Promise<{ sourceId: string; job: JobView }
   return api.post('/content/sources/link', { url })
 }
 
+/** One registered file. No job yet — nothing runs until the quote is accepted. */
+export interface UploadedSource {
+  sourceId: string
+  filename: string
+  pages: number
+}
+
+export interface UploadResult {
+  sources: UploadedSource[]
+  /** Named, with a reason. A file that vanishes silently is a support ticket. */
+  rejected: Array<{ filename: string; reason: string }>
+}
+
+/**
+ * Hand over files directly.
+ *
+ * Each file comes back as its own source, so the caller gets a list to quote
+ * one by one rather than a single opaque total — and a file that was refused is
+ * named alongside the ones that were not.
+ */
+export function uploadFiles(files: File[]): Promise<UploadResult> {
+  const form = new FormData()
+  for (const file of files) form.append('files', file, file.name)
+  return api.upload<UploadResult>('/content/sources/upload', form)
+}
+
 export function estimateFor(sourceId: string, noRush: boolean): Promise<EstimateView> {
   return api.get<EstimateView>(`/content/sources/${sourceId}/estimate?noRush=${noRush}`)
 }

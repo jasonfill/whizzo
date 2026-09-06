@@ -79,6 +79,10 @@ export default {
           '25%': { transform: 'translateX(-6px)' },
           '75%': { transform: 'translateX(6px)' },
         },
+        slideUp: {
+          '0%': { transform: 'translateY(16px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         pop: 'pop 0.25s ease-in-out',
@@ -87,6 +91,7 @@ export default {
         pounce: 'pounce 0.5s ease-in-out',
         'confetti-fall': 'confettiFall 1.2s ease-in forwards',
         shake: 'shake 0.3s ease-in-out',
+        'slide-up': 'slideUp 0.3s ease-out',
       },
     },
   },

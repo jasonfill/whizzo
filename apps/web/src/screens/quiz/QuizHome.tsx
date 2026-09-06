@@ -114,11 +114,11 @@ export default function QuizHome({ navigate }: { navigate: Navigate }) {
       {atLimit && (
         <Card className="mb-4">
           <p className="font-bold text-amber-700">
-            The free plan saves {coverage.deckLimit} decks.{' '}
+            An uncovered learner saves {coverage.deckLimit} decks.{' '}
             <button className="underline" onClick={() => navigate({ name: 'upgrade' })}>
-              Family Pro
+              Covering them
             </button>{' '}
-            lifts that limit. Starter decks never count against it.
+            removes the limit. Starter decks never count against it.
           </p>
         </Card>
       )}

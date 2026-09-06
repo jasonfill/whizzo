@@ -143,3 +143,106 @@ export function looksLikeSignIn(finalUrl: URL, contentType: string): boolean {
 
 export const SIGN_IN_MESSAGE =
   'That document is private. Either change sharing to "anyone with the link", or download it and upload the file.'
+
+export interface Fetched {
+  bytes: Buffer
+  /** The content type the server actually sent, without its parameters. */
+  mime: string
+  finalUrl: URL
+}
+
+/**
+ * Actually go and get it.
+ *
+ * Redirects are followed by hand rather than left to `fetch`, and that is the
+ * whole reason this function exists: **every hop is re-checked against DNS
+ * before we connect to it.** `redirect: 'follow'` would resolve and connect to
+ * each new host inside undici, where no check of ours runs — so a permitted
+ * public host redirecting to 169.254.169.254 would be fetched, and the fence in
+ * this file would be decorative.
+ *
+ * The body is read in chunks against a running total rather than trusted to
+ * `content-length`, for the same reason: a header is a claim by the server, and
+ * a server that wants to hand us four gigabytes will happily claim otherwise.
+ */
+export async function fetchSource(
+  start: URL,
+  deps: { resolve?: Resolver; fetchImpl?: typeof fetch } = {},
+): Promise<{ ok: true; fetched: Fetched } | FetchRefusal> {
+  const resolve = deps.resolve ?? realResolver
+  const doFetch = deps.fetchImpl ?? fetch
+  let url = start
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    const unsafe = await assertPublicHost(url.hostname, resolve)
+    if (unsafe) return unsafe
+
+    let response: Response
+    try {
+      response = await doFetch(url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        headers: { accept: '*/*' },
+      })
+    } catch {
+      return { ok: false, code: 'unreachable', message: 'We could not reach that link.' }
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location')
+      if (!location) {
+        return { ok: false, code: 'unreachable', message: 'We could not reach that link.' }
+      }
+      try {
+        url = new URL(location, url)
+      } catch {
+        return { ok: false, code: 'unreachable', message: 'We could not reach that link.' }
+      }
+      continue
+    }
+
+    const mime = (response.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase()
+
+    // A private Google Doc does not fail — it serves a sign-in page with a
+    // perfectly good 200. Turning that into forty cards about signing in to
+    // Google is the failure this catches.
+    if (looksLikeSignIn(url, mime)) {
+      return { ok: false, code: 'needs-sign-in', message: SIGN_IN_MESSAGE }
+    }
+
+    if (!response.ok || !response.body) {
+      return { ok: false, code: 'unreachable', message: 'We could not reach that link.' }
+    }
+
+    const chunks: Buffer[] = []
+    let total = 0
+    const reader = response.body.getReader()
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        total += value.byteLength
+        if (total > MAX_BYTES) {
+          await reader.cancel().catch(() => {})
+          const mb = Math.round(MAX_BYTES / 1024 / 1024)
+          return {
+            ok: false,
+            code: 'too-large',
+            message: `That document is bigger than ${mb}MB. Split it and share the part you need.`,
+          }
+        }
+        chunks.push(Buffer.from(value))
+      }
+    } catch {
+      return { ok: false, code: 'unreachable', message: 'That download stopped part way through.' }
+    }
+
+    return { ok: true, fetched: { bytes: Buffer.concat(chunks), mime, finalUrl: url } }
+  }
+
+  return {
+    ok: false,
+    code: 'too-many-redirects',
+    message: 'That link redirects too many times to follow.',
+  }
+}

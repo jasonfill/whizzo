@@ -97,11 +97,11 @@ export default function DeckEditor({
       {overDeckLimit && (
         <Card className="mb-4">
           <p className="font-bold text-amber-700">
-            You have used all {coverage.deckLimit} of your free decks.{' '}
+            All {coverage.deckLimit} decks for this learner are used.{' '}
             <button className="underline" onClick={() => navigate({ name: 'upgrade' })}>
-              Family Pro
+              Covering them
             </button>{' '}
-            lifts the limit, or you can delete one you have finished with.
+            removes the limit, or you can delete one you have finished with.
           </p>
         </Card>
       )}

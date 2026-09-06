@@ -5,7 +5,8 @@
 | Stage | | |
 | --- | --- | --- |
 | 0 Foundations | **done** | `rich` in `shared`, one `QuizCard`, migration registry |
-| 0.5 Billing | **schema done** | migration 0013, coverage model, `llm_usage`, `credit_ledger`, gates moved off `profiles.plan`. Stripe deliberately deferred |
+| 0.5 Billing | **done** | migration 0013, coverage model, `llm_usage`, `credit_ledger`, gates moved off `profiles.plan` |
+| 0.6 Stripe | **code done, needs config** | migration 0018, checkout, webhook, add/remove learners, portal. Needs two Stripe prices and four env vars — see below. Credit packs still deferred |
 | 1 Tracks | **done** | registry, `track` end to end, migration 0014, deck picker, per-track reporting |
 | 2 The ladder | **done** | `ladder.ts`, catalog, capability matrix, puzzles, `simulate:ladder`, the two scaffolded question kinds, `ASSIGNABLE` generated |
 | 3 Ingestion | **done** | migration 0017, validator, credit gate, model layer, SSRF fence, pipeline, job runner, routes, screen |
@@ -245,6 +246,41 @@ later: units carry prerequisites, the graph is validated, and `objectives` is
 written on every piece of content while nothing reads it. Backfilling an
 objective onto every set anyone ever made is the one thing here that gets
 harder with every passing day.
+
+## 3c. Turning payments on
+
+The code is finished and tested; what remains is account configuration, which
+cannot be done from a repository. In Stripe:
+
+1. Two **recurring monthly prices** on one product — $4 and $2. Two flat prices
+   rather than one graduated tier on purpose: a tier is configured in the
+   dashboard, which puts the amount a customer is charged somewhere this
+   repository cannot see, review or test. With two prices the arithmetic is in
+   `billing/stripe.ts` and is asserted against `monthlyPriceCents`, the same
+   function the pricing page renders from.
+2. A **webhook endpoint** at `/api/billing/webhook`, subscribed to
+   `checkout.session.completed`, `customer.subscription.updated`,
+   `customer.subscription.deleted` and `invoice.payment_failed`.
+3. The **customer portal** enabled, since cancelling and card changes are
+   handed off to it rather than rebuilt.
+
+Then four variables: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+`STRIPE_PRICE_FIRST`, `STRIPE_PRICE_EXTRA`, plus `APP_URL` for the return
+links. Absent, every billing route refuses with `stripe_unconfigured` and the
+rest of the API runs — a contributor without a Stripe account is not blocked.
+
+**Two strings still say payments are off** — the closing lines on
+`PricingScreen` and `MarketingScreen`. They are accurate for a build with no
+keys and become false the moment there are keys, so they are the last thing to
+change, deliberately after the first live test charge rather than before it.
+
+**The legacy arm in `is_learner_covered` stays until there are real rows.** It
+matches `profiles.plan = 'pro'`, which is how every comped account is covered
+today. Dropping it before migrating those accounts onto subscriptions would
+silently strip them. That is a migration to write once the first real
+subscriptions exist, not now.
+
+---
 
 ## 4. What can run in parallel
 

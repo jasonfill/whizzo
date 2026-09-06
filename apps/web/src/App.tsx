@@ -53,6 +53,7 @@ import LibraryScreen from './screens/suite/LibraryScreen'
 import TasksScreen from './screens/suite/TasksScreen'
 import CustomListsScreen from './screens/suite/CustomListsScreen'
 import ProgressScreen from './screens/suite/ProgressScreen'
+import PrintableReport from './screens/suite/PrintableReport'
 import SuiteHome from './screens/suite/SuiteHome'
 import ThemePicker from './screens/theme/ThemePicker'
 import WorldScreen from './screens/theme/WorldScreen'
@@ -162,10 +163,11 @@ function Router() {
         />
         <Route path="/" element={<MarketingScreen navigate={navigate} />} />
 
-        {/* The rest of the marketing site. Signed out is the only state these
-            are reachable in: a signed-in grown-up wanting to know what coverage
-            costs has `/upgrade`, which can answer it about *their* children
-            rather than in general. */}
+        {/* The rest of the marketing site. Signed out is the only state the
+            sales pages are reachable in: a signed-in grown-up wanting to know
+            what coverage costs has `/upgrade`, which can answer it about
+            *their* children rather than in general. `/privacy` and `/faq` are
+            reference rather than pitch and are registered in both tables. */}
         <Route path="/features" element={<FeaturesScreen navigate={navigate} />} />
         <Route path="/how-it-works" element={<HowItWorksScreen navigate={navigate} />} />
         <Route path="/pricing" element={<PricingScreen navigate={navigate} />} />
@@ -202,6 +204,7 @@ function Router() {
       <Route path="/account" element={<AccountScreen navigate={navigate} />} />
       <Route path="/upgrade" element={<UpgradeScreen navigate={navigate} />} />
       <Route path="/progress" element={<ProgressScreen game={game} navigate={navigate} />} />
+      <Route path="/progress/print" element={<PrintableReport navigate={navigate} />} />
       <Route path="/custom-lists" element={<CustomListsScreen navigate={navigate} />} />
       <Route path="/tasks" element={<TasksScreen navigate={navigate} />} />
       <Route path="/library" element={<LibraryScreen navigate={navigate} />} />
@@ -209,6 +212,21 @@ function Router() {
       <Route path="/theme" element={<ThemePicker navigate={navigate} />} />
       <Route path="/world" element={<WorldScreen navigate={navigate} />} />
       <Route path="/settings" element={<SettingsScreen game={game} navigate={navigate} />} />
+
+      {/* Reference, not sales pitch — and that is the whole distinction.
+          Features, how-it-works and pricing stay signed-out-only on purpose:
+          a signed-in grown-up has `/upgrade`, which answers "what does this
+          cost?" about their own children rather than in general.
+
+          These two are a different kind of page. A privacy policy is the one
+          a paying customer is likeliest to want on demand, and in some places
+          is entitled to; the FAQ is where "how do I remove a tutor" is
+          answered. Bouncing either to the app home was the product hiding its
+          own terms from exactly the people who had handed over data. The
+          marketing chrome drops its sales links for a signed-in reader (see
+          `chrome.tsx`) so neither page leads anywhere that would redirect. */}
+      <Route path="/privacy" element={<PrivacyScreen navigate={navigate} />} />
+      <Route path="/faq" element={<FaqScreen navigate={navigate} />} />
 
       {/* Typing */}
       <Route path="/typing" element={<TypingHome game={game} navigate={navigate} />} />

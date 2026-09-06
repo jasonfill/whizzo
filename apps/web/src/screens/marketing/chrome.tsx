@@ -130,11 +130,39 @@ function samePage(a: Route, b: Route): boolean {
 const navLink =
   'rounded-lg px-3 py-2 text-[15px] font-extrabold text-body transition-colors hover:bg-wash hover:text-ink aria-[current=page]:bg-wash aria-[current=page]:text-ink'
 
-function Header({ current, navigate }: { current: Route; navigate: Navigate }) {
-  const [open, setOpen] = useState(false)
-  const toAuth = () => navigate({ name: 'auth' })
+/**
+ * Which of these links actually go somewhere for the person reading.
+ *
+ * The sales pages are signed-out-only by design — a signed-in grown-up has
+ * `/upgrade`, which answers the price question about *their* children. But
+ * `/privacy` and `/faq` are reference, and they are reachable in both states,
+ * so a signed-in reader can land on this chrome. Offering them the funnel from
+ * there would be offering links that redirect to the app home.
+ */
+function siteNav(inApp: boolean): { product: NavItem[]; audiences: NavItem[] } {
+  return {
+    product: inApp ? PRODUCT_NAV.filter((i) => REACHABLE_IN_APP.has(i.route.name)) : PRODUCT_NAV,
+    audiences: inApp ? [] : AUDIENCE_NAV,
+  }
+}
 
-  const items = [...PRODUCT_NAV, ...AUDIENCE_NAV]
+/** Route names registered in the signed-in table too. Keep in step with App. */
+const REACHABLE_IN_APP = new Set(['privacy', 'faq'])
+
+function Header({
+  current,
+  navigate,
+  inApp,
+}: {
+  current: Route
+  navigate: Navigate
+  inApp: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const { product, audiences } = siteNav(inApp)
+  const toAuth = () => navigate({ name: inApp ? 'home' : 'auth' })
+
+  const items = [...product, ...audiences]
 
   return (
     <header className="mb-8">
@@ -144,7 +172,7 @@ function Header({ current, navigate }: { current: Route; navigate: Navigate }) {
         </PageLink>
 
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
-          {PRODUCT_NAV.map((item) => (
+          {product.map((item) => (
             <PageLink
               key={item.label}
               to={item.route}
@@ -157,7 +185,7 @@ function Header({ current, navigate }: { current: Route; navigate: Navigate }) {
           ))}
           <span className="mx-2 h-6 w-px bg-hair" aria-hidden />
           <Button variant="ghost" className="px-4 py-2 text-[15px]" onClick={toAuth}>
-            Sign in
+            {inApp ? 'Back to the app' : 'Sign in'}
           </Button>
           <Button className="px-4 py-2 text-[15px]" onClick={toAuth}>
             Start free
@@ -226,18 +254,20 @@ function Header({ current, navigate }: { current: Route; navigate: Navigate }) {
   )
 }
 
-function Footer({ navigate }: { navigate: Navigate }) {
+function Footer({ navigate, inApp }: { navigate: Navigate; inApp: boolean }) {
+  const { product, audiences } = siteNav(inApp)
   const columns: Array<{ heading: string; items: NavItem[] }> = [
-    { heading: 'Product', items: PRODUCT_NAV },
-    { heading: 'Who it is for', items: AUDIENCE_NAV },
+    { heading: 'Product', items: product },
+    { heading: 'Who it is for', items: audiences },
     {
       heading: 'Trust',
       items: [
-        { route: { name: 'privacy' }, label: 'Privacy and data' },
-        { route: { name: 'how' }, label: 'Why the numbers hold up' },
+        { route: { name: 'privacy' } as Route, label: 'Privacy and data' },
+        // Only offered where it goes anywhere; `how` is signed-out-only.
+        ...(inApp ? [] : [{ route: { name: 'how' } as Route, label: 'Why the numbers hold up' }]),
       ],
     },
-  ]
+  ].filter((c) => c.items.length > 0)
 
   return (
     <footer className="mt-14 border-t border-hair pt-8">
@@ -290,18 +320,30 @@ export function MarketingPage({
   navigate,
   children,
   closing,
+  inApp = false,
 }: {
   current: Route
   navigate: Navigate
   children: ReactNode
   closing?: { title: string; body: string }
+  /**
+   * True when a signed-in grown-up is reading this.
+   *
+   * Only `/privacy` and `/faq` are registered in both route tables, so only
+   * they can be true here. It matters because the rest of the site is
+   * signed-out-only by design: leaving the funnel links up for a signed-in
+   * reader would offer them links that redirect to the app home, and the
+   * closing "create a free account" band would be selling an account they
+   * already have.
+   */
+  inApp?: boolean
 }) {
   return (
     <div className="mx-auto w-full max-w-5xl py-4">
-      <Header current={current} navigate={navigate} />
+      <Header current={current} navigate={navigate} inApp={inApp} />
       {children}
-      <ClosingBand navigate={navigate} closing={closing} />
-      <Footer navigate={navigate} />
+      {!inApp && <ClosingBand navigate={navigate} closing={closing} />}
+      <Footer navigate={navigate} inApp={inApp} />
     </div>
   )
 }

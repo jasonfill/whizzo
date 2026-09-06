@@ -46,6 +46,8 @@ export function routeToPath(route: Route): string {
 
     case 'auth':
       return '/signin'
+    case 'progress-print':
+      return '/progress/print'
     case 'account':
       return '/account'
     case 'family':

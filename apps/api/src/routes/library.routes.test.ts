@@ -322,3 +322,82 @@ describe('assignment sets', () => {
     expect(res.statusCode).toBe(400)
   })
 })
+
+// The free-tier ceiling, enforced on the server for the first time.
+//
+// It lived only in the browser, which made it a suggestion: the same request
+// sent twice went straight past it. What matters as much as the refusal is the
+// two things it must never do — refuse an edit, or take anything away.
+describe('the deck ceiling', () => {
+  /** How the count query answers, in order: visibility, then the counts. */
+  function library({
+    covered,
+    held,
+    updating = 0,
+  }: {
+    covered: boolean
+    held: number
+    updating?: number
+  }) {
+    query
+      .mockReset()
+      .mockResolvedValueOnce({ rows: [{ id: LEARNER }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ covered, held: String(held), updating: String(updating) }] })
+      .mockResolvedValue({ rows: [{ id: LEARNER }], rowCount: 1 })
+  }
+
+  async function save(decks: unknown[]) {
+    const app = await buildApp()
+    return app.inject({
+      method: 'POST',
+      url: `/api/learners/${LEARNER}/decks`,
+      headers: await auth(),
+      payload: { decks },
+    })
+  }
+
+  it('refuses one past the line for an uncovered learner', async () => {
+    library({ covered: false, held: 3 })
+    const res = await save([deck()])
+    expect(res.statusCode).toBe(403)
+    expect(res.json().error.code).toBe('over_limit')
+  })
+
+  it('says what to do about it', async () => {
+    // A refusal a parent cannot act on is just a wall.
+    library({ covered: false, held: 3 })
+    const res = await save([deck()])
+    expect(res.json().error.message).toMatch(/Cover them|delete one/)
+  })
+
+  it('allows the last one under the line', async () => {
+    library({ covered: false, held: 2 })
+    expect((await save([deck()])).statusCode).toBeLessThan(400)
+  })
+
+  it('counts the whole batch, not one at a time', async () => {
+    // Two at once from a learner holding two is four, and four is over.
+    library({ covered: false, held: 2 })
+    expect((await save([deck(), deck()])).statusCode).toBe(403)
+  })
+
+  it('never refuses an edit to something already saved', async () => {
+    // Forty decks made while covered stay editable after a lapse. Nothing is
+    // deleted and nothing becomes read-only for non-payment.
+    library({ covered: false, held: 40, updating: 1 })
+    expect((await save([deck()])).statusCode).toBeLessThan(400)
+  })
+
+  it('does not limit a covered learner at all', async () => {
+    library({ covered: true, held: 400 })
+    expect((await save([deck()])).statusCode).toBeLessThan(400)
+  })
+
+  it('lets the save through when the count cannot be read', async () => {
+    // Failing closed here would mean a query returning an unexpected shape
+    // costs a paying family their child's work. Failing open costs a fourth
+    // deck.
+    query.mockReset().mockResolvedValue({ rows: [{ id: LEARNER }], rowCount: 1 })
+    expect((await save([deck()])).statusCode).toBeLessThan(400)
+  })
+})

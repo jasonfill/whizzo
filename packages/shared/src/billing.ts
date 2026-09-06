@@ -165,6 +165,29 @@ export function creditsForPages(pages: number): number {
   return Math.max(CREDIT_FLOOR, Math.ceil(Math.max(0, pages) * CREDITS_PER_PAGE))
 }
 
+/**
+ * A page of plain text.
+ *
+ * Uploads are not all paginated: a photograph of a worksheet has no pages, and
+ * a `.txt` has as many as the reader's window is wide. But the price is quoted
+ * in pages, and quoting one document in pages and the next in kilobytes would
+ * make the two impossible to compare on the screen where a parent decides. So
+ * everything is converted to the same unit before it is priced, and these are
+ * the two conversions.
+ *
+ * 2000 characters is a generously full page of prose — chosen to err towards
+ * over-counting, because a quote that comes in under itself is a good surprise
+ * and one that comes in over is a complaint.
+ */
+export const CHARS_PER_PAGE = 2000
+
+export function pagesForText(characters: number): number {
+  return Math.max(1, Math.ceil(Math.max(0, characters) / CHARS_PER_PAGE))
+}
+
+/** One photograph is one page. It costs one read call either way. */
+export const PAGES_PER_IMAGE = 1
+
 /** The monthly allowance a subscription grants, pooled across its learners. */
 export function monthlyCredits(coveredLearners: number): number {
   if (coveredLearners <= 0) return 0

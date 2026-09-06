@@ -176,6 +176,46 @@ const schema = z.object({
 
   /** Override where the .sql files are read from. Rarely needed. */
   MIGRATIONS_DIR: z.string().min(1).optional(),
+
+  // --- Stripe --------------------------------------------------------------
+  //
+  // All optional, for the same reason the Anthropic key is: a contributor
+  // without a Stripe account should be able to run the whole rest of the API.
+  // The billing routes refuse politely when these are absent rather than the
+  // process refusing to boot.
+
+  /** Secret key, `sk_...`. Absent means payments are off in this build. */
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+
+  /**
+   * Signing secret for the webhook endpoint, `whsec_...`.
+   *
+   * Separate from the secret key and not interchangeable with it. Without this
+   * the webhook cannot verify that a request came from Stripe, and an
+   * unverified webhook is an open endpoint for granting yourself coverage — so
+   * its absence refuses the route rather than skipping the check.
+   */
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+
+  /**
+   * The two recurring prices: one for the first child, one for each after.
+   *
+   * Two flat prices rather than one graduated tier, so the arithmetic lives in
+   * this repository where it can be tested against the number the pricing page
+   * renders. A tier configured in the Stripe dashboard is a price nothing here
+   * can see or assert.
+   */
+  STRIPE_PRICE_FIRST: z.string().min(1).optional(),
+  STRIPE_PRICE_EXTRA: z.string().min(1).optional(),
+
+  /**
+   * Where the SPA lives, for Stripe's return URLs.
+   *
+   * Stripe sends the parent back here after checkout, so a wrong value is a
+   * paid customer landing on somebody else's site. Defaults to same-origin,
+   * which is the production shape.
+   */
+  APP_URL: z.string().default(''),
 })
 
 /**

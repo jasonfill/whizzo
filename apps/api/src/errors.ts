@@ -20,6 +20,15 @@ export const badRequest = (m: string, code = 'bad_request') => new HttpError(400
 export const unauthorized = (m = 'Sign in first') => new HttpError(401, m, 'unauthorized')
 export const forbidden = (m = 'Not allowed') => new HttpError(403, m, 'forbidden')
 export const notFound = (m = 'Not found') => new HttpError(404, m, 'not_found')
+/**
+ * A free-tier ceiling, which is a different refusal from "not allowed".
+ *
+ * 403 with its own code rather than 402: nothing is owed, and the client has to
+ * be able to tell "cover this learner and try again" apart from "you may not
+ * touch this record", because only one of those is worth showing an upgrade
+ * link for.
+ */
+export const overLimit = (m: string) => new HttpError(403, m, 'over_limit')
 
 interface PgError {
   code?: string

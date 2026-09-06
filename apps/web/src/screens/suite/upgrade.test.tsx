@@ -7,7 +7,7 @@
 // the one rule underneath the whole billing model: coverage is bought for a
 // child, and the person who benefits is not always the person who pays.
 
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../auth/AuthProvider', async () => (await import('../../test/mockProviders')).authMock())
@@ -18,14 +18,33 @@ vi.mock('../../lib/theme/ThemeProvider', async () =>
   (await import('../../test/mockProviders')).themeMock(),
 )
 
+const billing = vi.hoisted(() => ({
+  startCheckout: vi.fn(async () => ({ url: 'https://checkout.stripe/x' })),
+  changeCoverage: vi.fn(async () => ({ covered: 2, cancelled: false })),
+  billingPortal: vi.fn(async () => ({ url: 'https://billing.stripe/x' })),
+  isUnconfigured: vi.fn(() => false),
+}))
+vi.mock('../../lib/billing/api', () => billing)
+
 import { aLearner, resetTestState, signIn, testState } from '../../test/state'
 import UpgradeScreen from './UpgradeScreen'
 
 const navigate = vi.fn()
 
+/** Where the browser was sent. Assigning to window.location is not testable. */
+const assign = vi.fn()
+
 beforeEach(() => {
   resetTestState()
   navigate.mockClear()
+  assign.mockClear()
+  billing.startCheckout.mockClear().mockResolvedValue({ url: 'https://checkout.stripe/x' })
+  billing.changeCoverage.mockClear().mockResolvedValue({ covered: 2, cancelled: false })
+  billing.isUnconfigured.mockReturnValue(false)
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { assign, pathname: '/upgrade' },
+  })
   signIn()
 })
 
@@ -169,12 +188,20 @@ describe('a tutor, who is never the one paying', () => {
 })
 
 describe('what the button admits', () => {
-  it('cannot charge anybody, and says so', () => {
-    // A button that takes a card number and does nothing is worse than one
-    // that admits it is not ready.
+  it('says who handles the card, and that it can be stopped', () => {
+    // This used to admit no processor was connected. Now that one is, the
+    // thing a parent wants to know before typing a card number is who is
+    // holding it and how they get out.
     household(false)
     render(<UpgradeScreen navigate={navigate} />)
-    expect(screen.getByText(/No payment processor is connected/)).toBeInTheDocument()
+    expect(screen.getByText(/handled by Stripe/)).toBeInTheDocument()
+    expect(screen.getByText(/Cancel whenever you like/)).toBeInTheDocument()
+  })
+
+  it('promises a part-month is prorated once somebody is already covered', () => {
+    household(true, false)
+    render(<UpgradeScreen navigate={navigate} />)
+    expect(screen.getByText(/You pay the difference, not a fresh month/)).toBeInTheDocument()
   })
 
   it('has nothing to do when everyone is already covered', () => {
@@ -212,5 +239,93 @@ describe('the promise the page makes', () => {
     render(<UpgradeScreen navigate={navigate} />)
     fireEvent.click(screen.getByText('Create a free account'))
     expect(navigate).toHaveBeenCalledWith({ name: 'auth' })
+  })
+})
+
+// Paying, for real this time. The button used to be disabled with a note
+// admitting no processor was connected; what matters now is that the two paths
+// through it stay apart — a family with no subscription needs a card form, and
+// one that already pays must never be sent through checkout again, because
+// that gives them a second subscription and two charges a month.
+describe('actually paying', () => {
+  it('sends a new customer to Stripe with the children they chose', async () => {
+    household(false, false)
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getByText(/Cover 2 children/))
+    await waitFor(() => expect(billing.startCheckout).toHaveBeenCalledWith(['l0', 'l1']))
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://checkout.stripe/x'))
+  })
+
+  it('sends only the children still ticked', async () => {
+    household(false, false)
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getAllByLabelText('Cover them')[0]!)
+    fireEvent.click(screen.getByText(/Cover them —/))
+    await waitFor(() => expect(billing.startCheckout).toHaveBeenCalledWith(['l1']))
+  })
+
+  it('changes an existing subscription rather than opening a second one', async () => {
+    // The bug this prevents: a family who already pays going through checkout
+    // again and ending up with two subscriptions and two charges a month.
+    household(true, false)
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getByText(/Cover them —/))
+    await waitFor(() => expect(billing.changeCoverage).toHaveBeenCalledWith({ add: ['l1'] }))
+    expect(billing.startCheckout).not.toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('says nothing was charged when it fails', async () => {
+    // The first thing a parent needs to know after a failed payment.
+    household(false)
+    billing.startCheckout.mockRejectedValueOnce(new Error('network'))
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getByText(/Cover them —/))
+    expect(await screen.findByText(/Nothing has been charged/)).toBeInTheDocument()
+  })
+
+  it('does not blame the parent for a build with no Stripe in it', async () => {
+    household(false)
+    billing.startCheckout.mockRejectedValueOnce(new Error('nope'))
+    billing.isUnconfigured.mockReturnValue(true)
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getByText(/Cover them —/))
+    expect(await screen.findByText(/Payments are not switched on yet/)).toBeInTheDocument()
+  })
+})
+
+describe('stopping', () => {
+  it('takes one child off without touching the others', async () => {
+    // Without this the only way to stop paying for one child of three is to
+    // cancel the subscription covering all three.
+    household(true, true)
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getAllByText('Stop covering')[0]!)
+    await waitFor(() => expect(billing.changeCoverage).toHaveBeenCalledWith({ remove: ['l0'] }))
+  })
+
+  it('asks first, and does nothing when the answer is no', async () => {
+    household(true, true)
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getAllByText('Stop covering')[0]!)
+    expect(billing.changeCoverage).not.toHaveBeenCalled()
+  })
+
+  it('warns that the last one ends the subscription', async () => {
+    household(true)
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getByText('Stop covering'))
+    expect(confirm.mock.calls[0]![0]).toMatch(/ends the subscription/)
+  })
+
+  it('promises nothing is deleted, because nothing is', async () => {
+    household(true, true)
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<UpgradeScreen navigate={navigate} />)
+    fireEvent.click(screen.getAllByText('Stop covering')[0]!)
+    expect(confirm.mock.calls[0]![0]).toMatch(/nothing they have made is deleted/)
   })
 })

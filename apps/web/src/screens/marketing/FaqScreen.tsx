@@ -1,5 +1,6 @@
 import { Button } from '../../components/ui'
 import type { Navigate, Route } from '../../routes'
+import { useAuth } from '../../auth/AuthProvider'
 import { FaqList, LinkButton, MarketingPage, PageHero, Section } from './chrome'
 import { AUDIENCES, AUDIENCE_ORDER } from './audiences'
 import { CORE_FAQ } from './copy'
@@ -13,6 +14,7 @@ import { CORE_FAQ } from './copy'
  * different one.
  */
 export default function FaqScreen({ navigate }: { navigate: Navigate }) {
+  const { status } = useAuth()
   const here: Route = { name: 'faq' }
   const toAuth = () => navigate({ name: 'auth' })
 
@@ -20,6 +22,8 @@ export default function FaqScreen({ navigate }: { navigate: Navigate }) {
     <MarketingPage
       current={here}
       navigate={navigate}
+      // Reachable signed in as well as out; the chrome drops the funnel.
+      inApp={status === 'signed-in'}
       closing={{
         title: 'Still not sure? It costs nothing to find out.',
         body: 'The free account is the whole curriculum, and one round of spelling will tell you more than this page can.',

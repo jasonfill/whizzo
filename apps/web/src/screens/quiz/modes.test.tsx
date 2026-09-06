@@ -5,7 +5,7 @@
 // answer; Match checks every pair itself. A mode may change how hard a round
 // feels — it may never change what an answer is worth without saying so.
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../auth/AuthProvider', async () =>
@@ -147,6 +147,56 @@ describe('flashcards', () => {
   it('says how many cards are put away', async () => {
     renderCards()
     expect(await screen.findByText(/0 of \d+ put away/)).toBeTruthy()
+  })
+
+  describe('slide layout', () => {
+    // Some learners want the question in front of them while they check the
+    // answer. That changes what is on screen, not what a grade is worth.
+    async function renderSliding() {
+      renderCards()
+      await screen.findByText('Question')
+      fireEvent.click(screen.getByRole('radio', { name: /Slide/ }))
+    }
+
+    it('still keeps the answer hidden until asked', async () => {
+      await renderSliding()
+      expect(screen.getByText('Question')).toBeTruthy()
+      expect(screen.queryByText('Answer')).toBeNull()
+      expect(screen.queryByText('😺 Got it')).toBeNull()
+      expect(screen.getByText(/show the answer to see how you did/)).toBeTruthy()
+    })
+
+    it('shows both sides at once when the answer slides in', async () => {
+      await renderSliding()
+      fireEvent.click(screen.getByLabelText('Show the answer'))
+      expect(screen.getByText('Question')).toBeTruthy()
+      expect(screen.getByText('Answer')).toBeTruthy()
+      expect(screen.getByText('😺 Got it')).toBeTruthy()
+      expect(screen.getByText('😾 Still learning')).toBeTruthy()
+    })
+
+    it('slides the answer in on the space bar too', async () => {
+      await renderSliding()
+      fireEvent.keyDown(window, { key: ' ' })
+      expect(screen.getByText('Answer')).toBeTruthy()
+      expect(screen.getByLabelText('Hide the answer')).toBeTruthy()
+    })
+
+    it('remembers the choice for next time', async () => {
+      await renderSliding()
+      expect(localStorage.getItem('whizzo:flashcards:layout')).toBe('slide')
+      cleanup()
+      renderCards()
+      await screen.findByText('Question')
+      expect(screen.getByRole('radio', { name: /Slide/ }).getAttribute('aria-checked')).toBe('true')
+    })
+
+    it('can go back to flipping', async () => {
+      await renderSliding()
+      fireEvent.click(screen.getByRole('radio', { name: /Flip/ }))
+      expect(screen.getByLabelText('Turn card over')).toBeTruthy()
+      expect(localStorage.getItem('whizzo:flashcards:layout')).toBe('flip')
+    })
   })
 })
 

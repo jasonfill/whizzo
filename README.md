@@ -268,10 +268,41 @@ rises monotonically with grade.
 Parents and teachers can also paste in their own list — one word per line, with
 an optional sentence after a tab, a `|`, or a `-`.
 
+## The marketing site
+
+Signed out, the app is a site rather than a page. `screens/marketing/` holds
+seven of them — the front page, Features, How it works, Pricing, Privacy, FAQ,
+and one page per audience at `/for/parents`, `/for/teachers`, `/for/tutors` and
+`/for/homeschool` — sharing a header, footer and set of section primitives from
+`chrome.tsx`.
+
+Four rules keep it honest, and `marketing.test.tsx` pins all four:
+
+- **A button is a door; a link is a page.** Anything moving between marketing
+  pages is a real `<a href>` built from `routeToPath`, so it can be opened in a
+  tab, hovered for its URL and followed by a crawler; a modifier-click is left
+  to the browser. Every `<button>` on the site goes to `/signin` — the sole
+  exception being the control that opens the mobile menu of those buttons.
+- **Nothing leads into an activity.** A visitor has no learner, and practice
+  that is not attributed to one moves no level and lands on no report.
+- **Claims are quoted, never restated.** Prices come from
+  `@whizzo/shared/billing` — the module a charge would be built from — and the
+  activity table on Features is generated from `ACTIVITIES` and `MODES`, so a
+  new activity appears on the site and cannot appear with the wrong rule beside
+  it.
+- **One product, four pages.** A parent, a tutor and a teacher get the same
+  screens and the same permissions, so `AudienceScreen` is one component with
+  four sets of words in `audiences.ts`. What genuinely differs is who pays, and
+  that is the fact each audience page leads with.
+
+The pages are reachable only while signed out. A signed-in grown-up asking what
+coverage costs has `/upgrade`, which can answer it about their own children
+rather than in general.
+
 ## Accounts and progress
 
 - **Account first.** A visitor gets the marketing site
-  (`screens/marketing/MarketingScreen.tsx`) and two doors: sign in, or a child's
+  (`screens/marketing/`) and two doors: sign in, or a child's
   code and PIN. No activity is reachable until one of them is used.
 - **Sign up with email or Google.** Progress found in `localStorage` from before
   the gate — or from a build with no database behind it — is merged into the

@@ -9,6 +9,7 @@
 import type { FastifyInstance } from 'fastify'
 import type { ProgressSnapshot } from '@whizzo/shared'
 import {
+  deckLimit,
   deriveSessionCounts,
   emptySnapshot,
   listKey,
@@ -18,7 +19,7 @@ import {
 import { z } from 'zod'
 import { callerOf, requireCaller } from '../auth.js'
 import { withUser, type Queryable } from '../db.js'
-import { badRequest, notFound } from '../errors.js'
+import { badRequest, notFound, overLimit } from '../errors.js'
 import {
   iso,
   toAchievement,
@@ -75,6 +76,60 @@ function parse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: unknown): 
 async function assertVisible(db: Queryable, learnerId: string): Promise<void> {
   const { rows } = await db.query('select 1 from public.learners where id = $1', [learnerId])
   if (!rows.length) throw notFound('No such learner')
+}
+
+/**
+ * The free-tier deck ceiling, enforced where it is actually enforceable.
+ *
+ * The browser has always blocked this, which made the cap a suggestion: the
+ * same request sent twice, or sent at all by anything other than our own
+ * screen, went straight past it. A paywall that only exists in the client is a
+ * paywall for people who do not know it is there.
+ *
+ * Two rules the copy on the screens already promises, and which this has to
+ * keep:
+ *
+ *  - It counts what would *newly exist*. Re-saving an edit to a deck already
+ *    stored is never refused, however far over the line the learner is.
+ *  - It never deletes and never blocks reading. A learner who made forty decks
+ *    while covered keeps all forty after a lapse and is refused the
+ *    forty-first. Taking a child's work away for non-payment is not a business
+ *    model.
+ */
+async function assertUnderDeckLimit(
+  db: Queryable,
+  learnerId: string,
+  incoming: ReadonlyArray<{ id: string }>,
+): Promise<void> {
+  const { rows } = await db.query(
+    `select public.is_learner_covered($1) as covered,
+            (select count(*) from public.decks where learner_id = $1) as held,
+            (select count(*) from public.decks
+              where learner_id = $1 and id = any($2::uuid[])) as updating`,
+    [learnerId, incoming.map((d) => d.id)],
+  )
+  const row = rows[0]
+  if (!row) return
+
+  const limit = deckLimit(Boolean(row.covered))
+  if (!Number.isFinite(limit)) return
+
+  const held = Number(row.held)
+  const updating = Number(row.updating)
+  // If the count could not be read, let the save through. The worst case that
+  // way is an uncovered learner keeps a fourth deck; the worst case the other
+  // way is a paying family losing a child's work to a query that returned an
+  // unexpected shape. Only one of those is worth risking.
+  if (!Number.isFinite(held) || !Number.isFinite(updating)) return
+
+  const creating = incoming.length - updating
+  if (creating <= 0) return
+  if (held + creating <= limit) return
+
+  throw overLimit(
+    `An uncovered learner can keep ${limit} decks, and this one has ${held}. ` +
+      'Cover them to remove the limit, or delete one first.',
+  )
 }
 
 async function loadSnapshot(db: Queryable, learnerId: string): Promise<ProgressSnapshot> {
@@ -959,6 +1014,7 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
 
     const saved = await withUser(caller.id, async (db) => {
       await assertVisible(db, id)
+      await assertUnderDeckLimit(db, id, decks)
       const out = []
       for (const deck of decks) {
         const { rows } = await db.query(

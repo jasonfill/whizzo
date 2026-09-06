@@ -4,6 +4,7 @@ import { useLearners } from '../../lib/learners'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import { Button, Card, Pill } from '../../components/ui'
 import { COVERED_PERKS, FREE_PERKS, money, priceBreakdown, priceLine } from '../../lib/plans'
+import { changeCoverage, isUnconfigured, startCheckout } from '../../lib/billing/api'
 import { monthlyPriceCents, PRICE_EXTRA_LEARNER_CENTS, PRICE_FIRST_LEARNER_CENTS } from '@whizzo/shared'
 import type { Navigate } from '../../routes'
 
@@ -23,7 +24,7 @@ import type { Navigate } from '../../routes'
  */
 export default function UpgradeScreen({ navigate }: { navigate: Navigate }) {
   const { status, configured, user } = useAuth()
-  const { learners } = useLearners()
+  const { learners, refresh } = useLearners()
 
   /**
    * This person's own children, and only theirs.
@@ -54,10 +55,73 @@ export default function UpgradeScreen({ navigate }: { navigate: Navigate }) {
    * selected because nobody excluded them.
    */
   const [excluded, setExcluded] = useState<string[]>([])
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const adding = uncovered.filter((l) => !excluded.includes(l.id)).length
   const total = covered.length + adding
   const delta = monthlyPriceCents(total) - monthlyPriceCents(covered.length)
+
+  /**
+   * Off to Stripe.
+   *
+   * Two routes rather than one, because a family who already pays is a
+   * different operation from one who does not: the first changes a
+   * subscription's quantity in place and is charged the difference, and the
+   * second needs a card form. Sending an existing subscriber through checkout
+   * again would give them a second subscription and two charges a month.
+   */
+  const pay = async () => {
+    const chosen = uncovered.filter((l) => !excluded.includes(l.id)).map((l) => l.id)
+    if (chosen.length === 0) return
+    setBusy(true)
+    setError(null)
+    try {
+      if (covered.length > 0) {
+        await changeCoverage({ add: chosen })
+        // Straight to the account screen, which is where "what you cover" now
+        // says something different.
+        navigate({ name: 'account' })
+        return
+      }
+      const { url } = await startCheckout(chosen)
+      window.location.assign(url)
+    } catch (err) {
+      setError(
+        isUnconfigured(err)
+          ? 'Payments are not switched on yet. Nothing has been charged.'
+          : 'That did not go through. Nothing has been charged — please try again.',
+      )
+      setBusy(false)
+    }
+  }
+
+  /**
+   * Take one child off the subscription.
+   *
+   * Confirmed, because it is a change to what somebody is charged and the
+   * button sits next to nine others. What it never does is delete anything:
+   * the child keeps every deck and every answer and loses the reporting, which
+   * is what "uncovered" has meant everywhere else in the product.
+   */
+  const stopCovering = async (learnerId: string, name: string) => {
+    const last = covered.length === 1
+    const question = last
+      ? `Stop covering ${name}? That ends the subscription — nothing they have made is deleted.`
+      : `Stop covering ${name}? Your monthly price goes down and nothing they have made is deleted.`
+    if (!window.confirm(question)) return
+
+    setBusy(true)
+    setError(null)
+    try {
+      await changeCoverage({ remove: [learnerId] })
+      await refresh()
+    } catch {
+      setError('That did not go through. Nothing has changed.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl py-4">
@@ -103,7 +167,21 @@ export default function UpgradeScreen({ navigate }: { navigate: Navigate }) {
                   <span className="text-xl leading-none">{learner.avatarEmoji}</span>
                   <span className="font-extrabold text-ink">{learner.displayName}</span>
                   {learner.covered ? (
-                    <Pill className="bg-emerald-100 text-xs text-emerald-700">Covered</Pill>
+                    <>
+                      <Pill className="bg-emerald-100 text-xs text-emerald-700">Covered</Pill>
+                      {/* Stopping is a per-child decision, not an all-or-nothing
+                          one. Without this the only way to stop paying for one
+                          child of three is to cancel the subscription covering
+                          all three. */}
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void stopCovering(learner.id, learner.displayName)}
+                        className="ml-auto text-sm font-bold text-stone underline hover:text-ink disabled:opacity-50"
+                      >
+                        Stop covering
+                      </button>
+                    </>
                   ) : (
                     <label className="ml-auto flex items-center gap-2 font-bold text-body">
                       <input
@@ -125,18 +203,21 @@ export default function UpgradeScreen({ navigate }: { navigate: Navigate }) {
             })}
           </ul>
 
-          {/* Deliberately still disabled, and deliberately still says why.
-              A button that takes a card number and does nothing is worse than
-              one that admits it is not ready. */}
-          <Button className="mt-4 w-full" disabled={adding === 0}>
-            {adding === 0
-              ? covered.length > 0
-                ? 'Everyone is covered'
-                : 'Choose a child to cover'
-              : `Cover ${adding === 1 ? 'them' : `${adding} children`} — ${money(delta)} a month`}
+          {error && <p className="mt-3 font-bold text-rose-500">{error}</p>}
+
+          <Button className="mt-4 w-full" disabled={adding === 0 || busy} onClick={pay}>
+            {busy
+              ? 'Taking you to the card form…'
+              : adding === 0
+                ? covered.length > 0
+                  ? 'Everyone is covered'
+                  : 'Choose a child to cover'
+                : `Cover ${adding === 1 ? 'them' : `${adding} children`} — ${money(delta)} a month`}
           </Button>
           <p className="mt-2 text-center text-xs font-bold text-stone">
-            No payment processor is connected in this build, so this button cannot charge you yet.
+            {covered.length > 0
+              ? 'Added part-way through a month? You pay the difference, not a fresh month.'
+              : 'Card details are handled by Stripe. Cancel whenever you like.'}
           </p>
         </Card>
       )}

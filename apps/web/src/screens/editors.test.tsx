@@ -142,14 +142,16 @@ describe('a new deck', () => {
     warn.mockRestore()
   })
 
-  it('names the free-plan deck limit rather than failing silently at it', () => {
+  it('names the deck limit rather than failing silently at it', () => {
     testState.snapshot = {
       ...emptySnapshot(),
       decks: Array.from({ length: 20 }, (_, i) => deck({ id: `d${i}` })),
     }
     render(<DeckEditor navigate={navigate} />)
-    expect(screen.getByText(/You have used all/)).toBeTruthy()
-    fireEvent.click(screen.getByText('Family Pro'))
+    expect(screen.getByText(/decks for this learner are used/)).toBeTruthy()
+    // "Covering them", not "Family Pro" — coverage is bought per child, and
+    // there is no tier to be on.
+    fireEvent.click(screen.getByText('Covering them'))
     expect(navigate).toHaveBeenCalledWith({ name: 'upgrade' })
   })
 
@@ -415,7 +417,7 @@ describe('word lists', () => {
     expect(spies.deleteCustomList).toHaveBeenCalledWith('l1')
   })
 
-  it('names the free-plan list limit rather than failing silently at it', () => {
+  it('names the list limit rather than failing silently at it', () => {
     testState.snapshot = {
       ...emptySnapshot(),
       customLists: Array.from({ length: 10 }, (_, i) => ({
@@ -428,7 +430,7 @@ describe('word lists', () => {
       })),
     }
     render(<CustomListsScreen navigate={navigate} />)
-    expect(screen.getByText(/The free plan saves/)).toBeTruthy()
+    expect(screen.getByText(/An uncovered learner saves/)).toBeTruthy()
     expect((screen.getByText('➕ New word list') as HTMLButtonElement).disabled).toBe(true)
   })
 })

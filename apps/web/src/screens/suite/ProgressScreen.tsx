@@ -17,6 +17,7 @@ import { addDays, todayString } from '../../lib/progress/types'
 import { breakdown, gradeBreakdown, troubleWords, turnaroundWords } from '../../lib/spelling/stats'
 import { errorPattern } from '../../lib/spelling/activities'
 import { trackReadings, unaidedAccuracy } from '../../lib/progress/summary'
+import { forecast, retentionReading } from '@whizzo/shared'
 import { useTheme } from '../../lib/theme/ThemeProvider'
 import { useAssignments } from '../../hooks/useAssignments'
 import { useLearners } from '../../lib/learners/LearnerProvider'
@@ -33,9 +34,19 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
   const quiz = skill('quiz')
   const overall = breakdown(snapshot, ALL_WORDS)
   const trouble = troubleWords(snapshot, 15)
+  // Read from the same mastery records everything else here uses; nothing in
+  // the retention view feeds back into scheduling.
+  const retention = useMemo(
+    () => retentionReading(Object.values(snapshot.mastery), todayString()),
+    [snapshot.mastery],
+  )
+  const week = useMemo(
+    () => forecast(Object.values(snapshot.mastery), todayString()),
+    [snapshot.mastery],
+  )
   const turnaround = turnaroundWords(snapshot, 8)
 
-  // The history window is the one place the free plan is limited.
+  // The history window is the one place an uncovered learner is limited.
   const horizon = Number.isFinite(coverage.historyDays)
     ? addDays(todayString(), -coverage.historyDays)
     : '0000-00-00'
@@ -87,6 +98,15 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
       />
 
       <ChildSwitcher />
+
+      {/* Offered whether or not it is covered: a locked door you can see is a
+          better advertisement than a feature nobody knows exists, and the
+          sheet's own screen explains what it would be. */}
+      <div className="mb-4">
+        <Button variant="ghost" onClick={() => navigate({ name: 'progress-print' })}>
+          🖨️ Weekly sheet to print
+        </Button>
+      </div>
 
       {/* Four numbers. The last inverts because the reading level is the one a
           parent came for; the other three are context around it. */}
@@ -226,6 +246,67 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
         </div>
       </Card>
 
+      {/* Retention: the one report here about the future rather than the past.
+          Every other card answers "how did they do?"; a parent's actual
+          question is whether it will still be there next week, and the
+          spaced-repetition record has always known. */}
+      {coverage.can('retentionReport') && retention.tracked > 0 && (
+        <Card className="mb-4">
+          <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-display text-xl font-extrabold text-ink">Will it stick?</h2>
+            {retention.health !== null && (
+              <Pill className="bg-wash text-body">{retention.health}% holding</Pill>
+            )}
+          </div>
+          <p className="mb-3 text-[14px] font-bold text-muted">
+            Out of {retention.tracked} {retention.tracked === 1 ? 'thing' : 'things'} they have
+            actually been tested on. Never seen yet does not count against them.
+          </p>
+
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <RetentionStat label="Secure" value={retention.counts.secure} hint="Known for weeks" />
+            <RetentionStat label="Holding" value={retention.counts.holding} hint="On schedule" />
+            <RetentionStat label="Due" value={retention.counts.due} hint="Ready for another look" />
+            <RetentionStat
+              label="Slipping"
+              value={retention.counts.slipping + retention.counts.fragile}
+              hint="Going, or keeps going"
+            />
+          </div>
+
+          {/* The week ahead. "Eleven due this week" and "eleven due on
+              Thursday" call for different evenings. */}
+          <div className="mb-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-faint">
+            The next seven days
+          </div>
+          <div className="flex h-16 items-end gap-1.5">
+            {week.map((d) => {
+              const tallest = Math.max(1, ...week.map((x) => x.count))
+              return (
+                <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
+                  <div
+                    title={`${d.count} due on ${d.day}`}
+                    style={{ height: `${Math.max(4, (d.count / tallest) * 100)}%` }}
+                    className={`w-full rounded-t ${d.count > 0 ? 'bg-ink' : 'bg-hair'}`}
+                  />
+                  <span className="font-mono text-[9px] font-bold text-faint">
+                    {d.day.slice(8)}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {retention.attention.length > 0 && (
+            <p className="mt-3 rounded-xl bg-spark/10 px-4 py-3 text-[14px] font-bold text-[#7C4A22]">
+              {retention.attention.length}{' '}
+              {retention.attention.length === 1 ? 'thing is' : 'things are'} slipping or keep
+              slipping. They are at the top of the list below.
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* The one section a parent can act on directly, which is why it is
           named for the action rather than the data. */}
       <Card className="mb-4">
@@ -281,7 +362,7 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
           <p className="mt-3 rounded-xl bg-spark/10 px-4 py-3 text-[14px] font-bold text-[#7C4A22]">
             Showing 4 of {trouble.length}.{' '}
             <button className="underline" onClick={() => navigate({ name: 'upgrade' })}>
-              Family Pro
+              Covering this learner
             </button>{' '}
             shows every word they have missed.
           </p>
@@ -443,10 +524,10 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
         )}
         {hiddenSessions > 0 && (
           <p className="mt-3 rounded-xl bg-spark/10 px-4 py-3 text-[14px] font-bold text-[#7C4A22]">
-            {hiddenSessions} older {hiddenSessions === 1 ? 'session is' : 'sessions are'} outside the
-            free {coverage.historyDays}-day window.{' '}
+            {hiddenSessions} older {hiddenSessions === 1 ? 'session is' : 'sessions are'} outside
+            the {coverage.historyDays}-day window.{' '}
             <button className="underline" onClick={() => navigate({ name: 'upgrade' })}>
-              Family Pro
+              Covering this learner
             </button>{' '}
             keeps the full history.
           </p>
@@ -515,6 +596,17 @@ function activityLabel(activity: string, subject: string): string {
   if (activity === 'lesson') return 'Typing lesson'
   if (activity === 'cat-rain') return 'Word Rain'
   return activity
+}
+
+/** One band of the retention split: the count, and what the word means. */
+function RetentionStat({ label, value, hint }: { label: string; value: number; hint: string }) {
+  return (
+    <div className="rounded-2xl bg-quiet px-3 py-2">
+      <div className="font-display text-2xl font-extrabold text-ink">{value}</div>
+      <div className="text-[13px] font-extrabold text-body">{label}</div>
+      <div className="text-[11px] font-bold text-stone">{hint}</div>
+    </div>
+  )
 }
 
 function StatCard({

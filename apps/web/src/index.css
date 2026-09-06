@@ -48,3 +48,73 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Printing
+   ---------------------------------------------------------------------------
+   Scoped to the sheet rather than applied globally: a print stylesheet that
+   rewrites the whole app is one that has to be kept correct on every screen,
+   and only one screen is ever meant to reach a printer.
+
+   The app paints on a tinted ground with a fixed background layer behind it.
+   Left alone, a browser either drops all of that (and prints pale grey text on
+   white) or honours it and empties a cartridge. So the sheet is forced to ink
+   on white, and the decorative layers are removed rather than trusted. */
+@media print {
+  /* Anything explicitly marked, wherever it sits in the tree.
+     An earlier version of this tried `body > *:not(:has([data-print-sheet]))`,
+     which reads well and hides nothing: the app renders into a single #root, so
+     body has exactly one element child and it always contains the sheet. The
+     decorative background is a *sibling of main inside* that root, and a fixed
+     element is painted onto every printed page — so it survived, full-bleed, on
+     all of them. Marking what should go is duller and actually works. */
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  html,
+  body,
+  main {
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  [data-print-sheet] {
+    max-width: none !important;
+    padding: 0 !important;
+    color: #000 !important;
+  }
+
+  /* Tailwind's text colours are all tuned for the tinted ground. On paper the
+     only thing that matters is that it is legible in one ink. */
+  [data-print-sheet] * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  [data-print-sheet] table {
+    /* A table split across a page break loses its header, which is the one
+       thing that made it readable. */
+    break-inside: auto;
+  }
+  [data-print-sheet] tr {
+    break-inside: avoid;
+  }
+  [data-print-sheet] thead {
+    display: table-header-group;
+  }
+  [data-print-sheet] section {
+    break-inside: avoid;
+  }
+  [data-print-sheet] [data-print-keep] {
+    /* The action list is the reason the sheet exists; it may run long, so it
+       is allowed to break where the tighter sections are not. */
+    break-inside: auto;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+}
