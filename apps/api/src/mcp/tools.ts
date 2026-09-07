@@ -310,7 +310,7 @@ const handlers: Record<string, Handler> = {
         decksFor(db, who.learner.id),
         masteryFor(db, who.learner.id),
         db.query(
-          `select a.id, t.activity, t.target_id, a.due_on
+          `select a.id, t.activity, t.target_id, t.due_on
              from public.assignments a join public.assignment_sets t on t.id = a.set_id
             where a.learner_id = $1 and a.status = 'open' and t.subject = 'quiz'`,
           [who.learner.id],
