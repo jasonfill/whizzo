@@ -11,6 +11,7 @@ import { defaultSkillState, emptySnapshot } from '../lib/progress/types'
 import type { ProgressSnapshot, SkillState, Subject } from '../lib/progress/types'
 import type { Learner } from '../lib/learners'
 import type { Assignment } from '../lib/assignments/api'
+import type { PlannerWeekResponse } from '../lib/planner/api'
 import { THEMES } from '../lib/themes'
 import type { Theme } from '../lib/themes'
 
@@ -37,6 +38,7 @@ export interface TestState {
 
   theme: Theme
   assignments: Assignment[]
+  plannerWeek: PlannerWeekResponse | null
 }
 
 export const testState: TestState = createState()
@@ -60,6 +62,7 @@ function createState(): TestState {
 
     theme: THEMES[0]!,
     assignments: [],
+    plannerWeek: null,
   }
 }
 

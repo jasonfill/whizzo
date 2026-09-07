@@ -20,6 +20,7 @@ import { contentRoutes } from './routes/content.js'
 import { progressRoutes } from './routes/progress.js'
 import { rewardRoutes } from './routes/rewards.js'
 import { billingRoutes } from './routes/billing.js'
+import { plannerRoutes } from './routes/planner.js'
 
 export async function buildServer() {
   const app = Fastify({
@@ -141,6 +142,7 @@ export async function buildServer() {
   await app.register(progressRoutes, { prefix: '/api' })
   await app.register(childLoginAdminRoutes, { prefix: '/api' })
   await app.register(rewardRoutes, { prefix: '/api' })
+  await app.register(plannerRoutes, { prefix: '/api' })
 
   // Billing sits in its own scope with a tighter limiter than the rest: every
   // route here either opens a Stripe session or changes what somebody is

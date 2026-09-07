@@ -452,6 +452,11 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
         // And any promise this round came good on. There is no endpoint for
         // this: earning is derived from evidence, never asserted by anybody.
         await db.query('select public.award_matching_rewards($1, $2)', [id, session.id])
+        // And the study session on the planner this round was. Same rule, same
+        // shape: closed by evidence, in this transaction, or not at all.
+        await db.query('select public.complete_matching_planner_items($1, $2, $3)', [
+          id, session.id, change.today ?? null,
+        ])
       }
 
       if (change.achievements?.length) {
@@ -575,7 +580,7 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
    */
   const assignmentSelect = `
     select a.id, a.set_id, a.learner_id, a.sort_order, a.status, a.completed_at,
-           a.session_id, a.created_at,
+           a.session_id, a.created_at, a.course_id,
            t.created_by, t.subject, t.activity, t.target_id, t.size, t.title,
            t.note, t.min_accuracy, t.due_on
       from public.assignments a
@@ -1020,8 +1025,8 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
         const { rows } = await db.query(
           `insert into public.decks
              (id, learner_id, title, description, tags, cards, term_label,
-              definition_label, created_by, track, objectives, updated_at)
-           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
+              definition_label, created_by, track, objectives, course_id, updated_at)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
            on conflict (id) do update set
              title = excluded.title,
              description = excluded.description,
@@ -1031,11 +1036,12 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
              definition_label = excluded.definition_label,
              track = excluded.track,
              objectives = excluded.objectives,
+             course_id = excluded.course_id,
              updated_at = now()
            returning *`,
           [deck.id, id, deck.title, deck.description, deck.tags,
            JSON.stringify(deck.cards), deck.termLabel, deck.definitionLabel, caller.id,
-           deck.track ?? null, deck.objectives ?? []],
+           deck.track ?? null, deck.objectives ?? [], deck.courseId ?? null],
         )
         const row = rows[0]
         if (row) out.push(toDeck(row))

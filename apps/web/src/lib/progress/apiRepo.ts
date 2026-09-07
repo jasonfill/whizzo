@@ -20,6 +20,7 @@ import { api, ApiError } from '../api/client'
 import { applyChange, type ProgressChange, type ProgressRepo } from './repo'
 import {
   emptySnapshot,
+  todayString,
   type Attempt,
   type CustomWordList,
   type ProgressSnapshot,
@@ -52,7 +53,7 @@ export class ApiProgressRepo implements ProgressRepo {
   async persist(change: ProgressChange): Promise<void> {
     this.snapshot = applyChange(this.snapshot, change)
     try {
-      await api.post<void>(`/learners/${this.learnerId}/progress`, change)
+      await api.post<void>(`/learners/${this.learnerId}/progress`, { ...change, today: todayString() })
     } catch (err) {
       console.warn('[cat-academy] progress write failed', err)
     }

@@ -1,6 +1,6 @@
 # Build sequence — the three specs as one plan
 
-**Status:** in progress · **Date:** 2026-08-31 · **Governs:** activities, structure, ingestion, billing
+**Status:** in progress · **Date:** 2026-09-06 · **Governs:** activities, structure, ingestion, billing, planner, MCP
 
 | Stage | | |
 | --- | --- | --- |
@@ -15,6 +15,8 @@
 | 6 Fluency & engagement | **done** | maturity band + band-aware praise, `brain-dump` grading, `speed-recall` fluency from `responseMs` |
 | 7 Generators | **done** | math fact banks — six out of the box, stable ids, difficulty as children meet it |
 | 8 Publishing | **partial** | units, prerequisites and `validateCatalog`. Groups, slots and the supplied catalog deliberately deferred |
+| 9 Planner | **done** | migration 0019, `planner.ts` + `simulate:planner`, courses, the week and Today, cards with drag, tests planned backwards, linked sessions closed by evidence, trigger-written history, comments, plan and wrap flows, print, the Family line — [weekly-planner-spec.md](weekly-planner-spec.md) |
+| 10 MCP | **proposed** | OAuth server, `/mcp`, the tutor tools, grading moved to shared, `channel` on attempts, migration 0020 — [mcp-tutor-spec.md](mcp-tutor-spec.md) |
 
 Three proposals exist, they overlap, and each one has its own "Phase 1". This
 document is the single authority on **what gets built when**, and on the
@@ -107,6 +109,9 @@ six.
 | 0015 | `assignments.goal` and the goal-completion predicate | 4 |
 | 0016 | `rewards`, `reward_points`, `award_matching_rewards()` | 5 |
 | 0017 | `content_sources`, `content_jobs`, `source_id`, `accepted_at` | 3 |
+| 0018 | Stripe: customer and subscription ids, webhook bookkeeping | 0.6 |
+| 0019 | `courses`, `planner_weeks`, `assessments`, `planner_items`, `planner_events` (append-only, trigger-written), `planner_comments`, `planner_prefs`, `course_id` on decks / word lists / assignments | 9 |
+| 0020 | `mcp_clients`, `mcp_grants`, `mcp_auth_codes`, `mcp_refresh_tokens`, `mcp_rounds`, `attempts.channel` | 10 |
 
 Numbers follow the stages except ingestion, which is built third and numbered
 last: rewards is the smaller and more certain change, and there is no value in
@@ -226,6 +231,51 @@ into a publisher — a different business with different costs, gated on the
 billing model that is still open.
 
 ---
+
+### Stage 9 — The weekly planner
+
+*Built 2026-09-06, on its own worktree. Depends on nothing unbuilt: tracks
+(1), the Mastery Path (4) and retention were all in place.*
+
+Courses as per-learner enrolments citing a track; the week grid with tasks,
+assessments and the app's own due work pulled in; `proposeStudyPlan()` with
+`simulate:planner` in the same pull request; linked study sessions closed in
+the round's transaction by the same mechanism as assignments; grown-up view,
+attributed writes and comments; the Family line. Scope in
+[weekly-planner-spec.md](weekly-planner-spec.md).
+
+Sits after 8 in number only. It can start now, and it is the first stage whose
+value is visible to a learner who never opens a deck.
+
+### Stage 10 — MCP: renting the tutor
+
+*Proposed. Depends on the ladder (2) and the Mastery Path (4), both built.
+Independent of 9; the two can run side by side.*
+
+The app as a tool surface for Claude and ChatGPT, so the assistant a family
+already pays for can run a practice round out loud and the answers land in
+`attempts` as verified evidence. Scope in
+[mcp-tutor-spec.md](mcp-tutor-spec.md).
+
+**Claude voice mode calls custom connectors** (confirmed 2026-09-06), and
+that is the whole point: a child practising out loud with the assistant the
+family already pays for. ChatGPT gets the same server and the text-chat
+tutor until its voice mode grows tools.
+
+**Starts with a one-day spike, before any of the rest**: a stub server with
+one read and one write tool, connected to Claude on iOS, to measure the tool
+round trip inside a voice turn and confirm an *allow always* tool runs
+without a prompt mid-conversation. Those two numbers set the round length
+and decide whether grading and the next question can stay one call.
+
+Then, in order: grading moved from `apps/web` to `packages/shared` (the
+`rich` move again — file move, old path re-exports); the OAuth server and
+consent screen; `/mcp` and the tool catalogue with `simulate:tutor` in the
+same pull request; migration 0020; the `tutor` activity and `speakable`
+requirement; Learn tasks closed by tutor sessions; the tutor packet.
+
+No model call is made from this code and `llm_usage` gains nothing from it,
+which is why it is free at every tier.
 
 ## 3b. Deliberately not built
 

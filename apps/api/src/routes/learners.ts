@@ -11,7 +11,7 @@ import { z } from 'zod'
 import { callerOf, requireCaller } from '../auth.js'
 import { withUser } from '../db.js'
 import { badRequest, notFound } from '../errors.js'
-import type { GuardianRole } from '@whizzo/shared'
+import { bandForGrade, PLANNER_BAND, type GuardianRole } from '@whizzo/shared'
 import { toGuardian, toLearner } from '../mappers.js'
 
 const uuid = z.string().uuid('That is not a valid id')
@@ -81,6 +81,17 @@ const guardianPatchSchema = z.object({
   canManageContent: z.boolean(),
 })
 
+/**
+ * How many days this week carry more open minutes than this learner's limit —
+ * the learner's own if set, else the band's. The same rule `weekLoad` applies
+ * on the planner, so the Family line and the grid agree.
+ */
+function heavyDays(row: { grade_hint: number | null; daily_minutes: number | null; planner_days: unknown }): number {
+  const limit = row.daily_minutes ?? PLANNER_BAND[bandForGrade(row.grade_hint)].dailyMinutes
+  const days = Array.isArray(row.planner_days) ? (row.planner_days as Array<{ minutes: number }>) : []
+  return days.filter((d) => Number(d.minutes) > limit).length
+}
+
 // Input pinned to `unknown` so T binds to the schema's output type.
 function parse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: unknown): T {
   const result = schema.safeParse(value)
@@ -139,18 +150,27 @@ export async function learnerRoutes(app: FastifyInstance): Promise<void> {
            coalesce(d.items, 0)                        as items_this_week,
            v.verified_total,
            v.verified_correct,
-           coalesce(k.streak_days, 0)                  as streak_days
+           coalesce(k.streak_days, 0)                  as streak_days,
+           public.planner_overview(l.id)               as planner,
+           l.grade_hint,
+           pp.daily_minutes                            as daily_minutes,
+           coalesce(h.days, '[]'::jsonb)               as planner_days
          from public.learners l
+         left join public.planner_prefs pp on pp.learner_id = l.id
 
+         -- The due date lives on the shared set since 0009, so the count has
+         -- to reach through to it.
          left join lateral (
            select
-             count(*) filter (where status = 'open')                             as open_count,
-             count(*) filter (where status = 'open'
-                                and due_on is not null
-                                and due_on < current_date)                       as overdue_count,
-             count(*) filter (where status = 'done'
-                                and completed_at >= now() - interval '7 days')   as done_week
-           from public.assignments where learner_id = l.id
+             count(*) filter (where a.status = 'open')                           as open_count,
+             count(*) filter (where a.status = 'open'
+                                and t.due_on is not null
+                                and t.due_on < current_date)                     as overdue_count,
+             count(*) filter (where a.status = 'done'
+                                and a.completed_at >= now() - interval '7 days') as done_week
+           from public.assignments a
+           join public.assignment_sets t on t.id = a.set_id
+           where a.learner_id = l.id
          ) a on true
 
          left join lateral (
@@ -179,6 +199,22 @@ export async function learnerRoutes(app: FastifyInstance): Promise<void> {
            from public.skill_states where learner_id = l.id
          ) k on true
 
+         -- Open minutes per day this week. Which days are heavy is decided
+         -- below with the shared band table and the learner's own limit, so
+         -- Family and the planner never disagree about it.
+         left join lateral (
+           select jsonb_agg(jsonb_build_object('day', d.on_day, 'minutes', d.mins)) as days
+             from (
+               select on_day, sum(coalesce(minutes, 0))::int as mins
+                 from public.planner_items
+                where learner_id = l.id
+                  and week_start = current_date - (extract(isodow from current_date)::int - 1)
+                  and deleted_at is null and status = 'open'
+                  and kind <> 'event' and on_day is not null
+                group by on_day
+             ) d
+         ) h on true
+
          order by l.created_at asc`,
       )
 
@@ -197,6 +233,7 @@ export async function learnerRoutes(app: FastifyInstance): Promise<void> {
             ? Math.round((Number(row.verified_correct) / Number(row.verified_total)) * 100)
             : null,
         currentStreakDays: Number(row.streak_days),
+        planner: row.planner ? { ...(row.planner as Record<string, unknown>), heavyDays: heavyDays(row) } : null,
       }))
     })
 

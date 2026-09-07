@@ -3,6 +3,7 @@ import Mascot, { MASCOT_MUTED } from '../../components/Mascot'
 import Wordmark from '../../components/Wordmark'
 import AccountChip from '../../components/suite/AccountChip'
 import LearnerChip from '../../components/suite/LearnerChip'
+import TodayStrip from '../../components/planner/TodayStrip'
 import { Button, Card, Pill } from '../../components/ui'
 import { TOTAL_LESSONS } from '../../data/lessons'
 import { useAssignments } from '../../hooks/useAssignments'
@@ -137,6 +138,10 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
           🔄 Moving your saved progress into your account…
         </Pill>
       )}
+
+      {/* The plan for today, when there is one. The planner is the learner's;
+          this is its front door on the home screen. */}
+      <TodayStrip navigate={navigate} />
 
       {/* Work someone has set comes before the free choice of subjects: if a
           child has homework, that is the thing to show them first. */}
@@ -282,6 +287,9 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Button variant="ghost" onClick={() => navigate({ name: 'planner' })}>
+          🗓️ Planner
+        </Button>
         <Button variant="ghost" onClick={() => navigate({ name: 'progress' })}>
           📊 Progress
         </Button>

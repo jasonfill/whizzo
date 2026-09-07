@@ -49,6 +49,11 @@ import SpellingPlay from './screens/spelling/SpellingPlay'
 import AccountScreen from './screens/suite/AccountScreen'
 import FamilyScreen from './screens/suite/FamilyScreen'
 import ContentScreen from './screens/content/ContentScreen'
+import PlannerScreen from './screens/planner/PlannerScreen'
+import PlanWeekScreen from './screens/planner/PlanWeekScreen'
+import WrapWeekScreen from './screens/planner/WrapWeekScreen'
+import CoursesScreen from './screens/planner/CoursesScreen'
+import PlannerPrint from './screens/planner/PlannerPrint'
 import LibraryScreen from './screens/suite/LibraryScreen'
 import TasksScreen from './screens/suite/TasksScreen'
 import CustomListsScreen from './screens/suite/CustomListsScreen'
@@ -209,6 +214,13 @@ function Router() {
       <Route path="/tasks" element={<TasksScreen navigate={navigate} />} />
       <Route path="/library" element={<LibraryScreen navigate={navigate} />} />
       <Route path="/library/add" element={<ContentScreen navigate={navigate} />} />
+      <Route path="/planner" element={<Planner navigate={navigate} />} />
+      <Route path="/planner/week/:weekStart" element={<Planner navigate={navigate} />} />
+      <Route path="/planner/plan" element={<PlanWeekScreen navigate={navigate} />} />
+      <Route path="/planner/wrap" element={<WrapWeekScreen navigate={navigate} />} />
+      <Route path="/planner/courses" element={<CoursesScreen navigate={navigate} />} />
+      <Route path="/planner/print" element={<PlannerPrintRoute navigate={navigate} />} />
+      <Route path="/planner/print/:weekStart" element={<PlannerPrintRoute navigate={navigate} />} />
       <Route path="/theme" element={<ThemePicker navigate={navigate} />} />
       <Route path="/world" element={<WorldScreen navigate={navigate} />} />
       <Route path="/settings" element={<SettingsScreen game={game} navigate={navigate} />} />
@@ -336,4 +348,25 @@ function Loading() {
       <p className="text-lg font-bold text-muted">Fetching your progress…</p>
     </div>
   )
+}
+
+const MONDAY = /^\d{4}-\d{2}-\d{2}$/
+
+/** The week from the address, if it names one that looks like a day. */
+function Planner({ navigate }: { navigate: Navigate }) {
+  const { weekStart } = useParams()
+  const [params] = useSearchParams()
+  const view = params.get('view')
+  return (
+    <PlannerScreen
+      navigate={navigate}
+      weekStart={weekStart && MONDAY.test(weekStart) ? weekStart : undefined}
+      view={view === 'today' || view === 'week' ? view : undefined}
+    />
+  )
+}
+
+function PlannerPrintRoute({ navigate }: { navigate: Navigate }) {
+  const { weekStart } = useParams()
+  return <PlannerPrint navigate={navigate} weekStart={weekStart && MONDAY.test(weekStart) ? weekStart : undefined} />
 }

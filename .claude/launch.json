@@ -13,6 +13,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace", "@whizzo/web", "--", "--port", "5199", "--strictPort"],
       "port": 5199
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "@whizzo/api"],
+      "port": 8787
     }
   ]
 }

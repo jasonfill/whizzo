@@ -216,6 +216,7 @@ export const quizCardSchema = z.object({
 export const quizDeckSchema = z.object({
   id: z.string().uuid(),
   track: trackId.nullable().optional(),
+  courseId: z.string().uuid().nullable().optional(),
   objectives: z.array(z.string().max(80)).max(4).optional(),
   title: z.string().trim().min(1).max(80),
   description: z.string().max(500).default(''),
@@ -258,6 +259,9 @@ export const progressChangeSchema = z
     daily: dailySchema.optional(),
     customLists: z.array(customWordListSchema).max(200).optional(),
     decks: z.array(quizDeckSchema).max(200).optional(),
+    // The learner's own calendar day, so a card closed by this round lands on
+    // the day they saw it happen rather than the server's.
+    today: dayString.optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'That change was empty' })
 

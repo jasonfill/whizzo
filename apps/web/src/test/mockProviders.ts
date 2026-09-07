@@ -31,6 +31,12 @@ export const spies = {
   setThemeFor: vi.fn(async () => {}),
 
   navigate: vi.fn(),
+
+  plannerAdd: vi.fn(async (_draft?: unknown) => null as unknown),
+  plannerPatch: vi.fn(async (_item?: unknown, _patch?: unknown, _label?: unknown) => null as unknown),
+  plannerMove: vi.fn(async (_item?: unknown, _day?: unknown, _index?: unknown) => {}),
+  plannerTick: vi.fn(async (_item?: unknown) => {}),
+  plannerSaveWeek: vi.fn(async (_patch?: unknown) => null as unknown),
 }
 
 export function resetSpies(): void {
@@ -126,6 +132,39 @@ export async function assignmentsMock() {
       error: null,
       refresh: vi.fn(),
       learnerId: testState.active?.id ?? null,
+    }),
+  }
+}
+
+/** The planner hook, fed from the shared store rather than the network. */
+export async function plannerMock() {
+  const { testState } = await import('./state')
+  return {
+    usePlannerWeek: () => ({
+      learnerId: testState.active?.id ?? null,
+      learner: testState.active,
+      today: '2026-09-07',
+      weekStart: '2026-09-07',
+      data: testState.plannerWeek,
+      loading: false,
+      error: null,
+      clearError: vi.fn(),
+      toast: null,
+      dismissToast: vi.fn(),
+      load: [],
+      courseById: new Map((testState.plannerWeek?.courses ?? []).map((c: any) => [c.id, c])),
+      refresh: vi.fn(async () => {}),
+      add: spies.plannerAdd,
+      patch: spies.plannerPatch,
+      move: spies.plannerMove,
+      tick: spies.plannerTick,
+      skip: vi.fn(async () => {}),
+      remove: vi.fn(async () => {}),
+      copy: vi.fn(async () => null),
+      keep: vi.fn(async () => {}),
+      letGo: vi.fn(async () => {}),
+      saveWeek: spies.plannerSaveWeek,
+      setData: vi.fn(),
     }),
   }
 }

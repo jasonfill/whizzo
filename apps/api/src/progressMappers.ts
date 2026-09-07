@@ -164,6 +164,7 @@ export function toAssignment(row: any): Assignment {
     minAccuracy: row.min_accuracy,
     dueOn: dayString(row.due_on),
     sortOrder: row.sort_order,
+    courseId: row.course_id ?? null,
     status: row.status,
     completedAt: epochOrNull(row.completed_at),
     sessionId: row.session_id,
@@ -211,6 +212,7 @@ export function toDeck(row: any): QuizDeck {
     // Only present on the queries that join it; a set read on its own is not
     // worth a join for a heading nothing is about to draw.
     sourceTitle: row.source_title ?? null,
+    courseId: row.course_id ?? null,
     title: row.title,
     description: row.description ?? '',
     tags: row.tags ?? [],

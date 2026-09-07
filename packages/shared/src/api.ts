@@ -11,7 +11,18 @@ import type {
   InvitePurpose,
   Learner,
 } from './learners.js'
-import type { Assignment, AssignmentSetSummary, Attempt, CustomWordList, LearnerOverview, ProgressSnapshot, QuizDeck } from './progress.js'
+import type { Assignment, AssignmentSetSummary, Attempt, CustomWordList, DayString, LearnerOverview, ProgressSnapshot, QuizDeck } from './progress.js'
+import type {
+  Assessment,
+  Course,
+  MaturityBandLike,
+  PlannerComment,
+  PlannerEvent,
+  PlannerItem,
+  PlannerPrefs,
+  PlannerWeek,
+  ProposedSession,
+} from './planner.js'
 
 export interface ApiErrorBody {
   code: string
@@ -115,4 +126,75 @@ export interface ChildSessionResponse {
     refreshToken: string
     expiresIn: number
   }
+}
+
+// --- the planner --------------------------------------------------------------
+
+/** The assembled week: stored cards plus everything the app already knows for those days. */
+export interface PlannerWeekResponse {
+  week: PlannerWeek
+  band: MaturityBandLike
+  /** Whether the caller may change this planner. The learner, the owner, a managing guardian. */
+  canWrite: boolean
+  items: PlannerItem[]
+  /** Open tasks from before today, still waiting. The "still?" strip. */
+  carryOver: PlannerItem[]
+  assessments: Assessment[]
+  assignments: Assignment[]
+  /** Spaced review falling due, per day. */
+  reviewDue: Record<DayString, number>
+  /** Study sessions per test in view, across weeks: done and not-skipped. */
+  sessionCounts: Record<string, { done: number; total: number }>
+  comments: PlannerComment[]
+  courses: Course[]
+  prefs: PlannerPrefs
+}
+
+export interface CoursesResponse {
+  courses: Course[]
+}
+
+export interface CourseResponse {
+  course: Course
+}
+
+export interface PlannerItemResponse {
+  item: PlannerItem
+}
+
+export interface PlannerItemsResponse {
+  items: PlannerItem[]
+}
+
+export interface AssessmentResponse {
+  assessment: Assessment
+}
+
+export interface AssessmentsResponse {
+  assessments: Assessment[]
+}
+
+export interface ProposeResponse {
+  sessions: ProposedSession[]
+  wanted: number
+  shortRunway: boolean
+  message: string | null
+  calibrated: boolean
+  calibrationNote: string | null
+}
+
+export interface PlannerEventsResponse {
+  events: PlannerEvent[]
+}
+
+export interface PlannerCommentResponse {
+  comment: PlannerComment
+}
+
+export interface PlannerWeekRowResponse {
+  week: PlannerWeek
+}
+
+export interface PlannerPrefsResponse {
+  prefs: PlannerPrefs
 }

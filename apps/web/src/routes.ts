@@ -53,6 +53,14 @@ export type Route =
   | { name: 'library' }
   /** Hand over a document; get practice material back. */
   | { name: 'content-new' }
+  // The planner: the learner's week, and the two guided flows around it.
+  /** The week grid, or Today. No weekStart means this week. */
+  | { name: 'planner'; weekStart?: string; view?: 'today' | 'week' }
+  | { name: 'planner-plan' }
+  | { name: 'planner-wrap' }
+  | { name: 'planner-courses' }
+  /** The week for paper. */
+  | { name: 'planner-print'; weekStart?: string }
   /** "Pick your world" — the ten themes. Display only; changes nothing learned. */
   | { name: 'theme' }
   /** The collectibles earned so far, in whichever shape the theme uses. */

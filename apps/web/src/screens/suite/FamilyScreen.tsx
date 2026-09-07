@@ -27,6 +27,7 @@ import {
   type Learner,
 } from '../../lib/learners/api'
 import type { Navigate, Route } from '../../routes'
+import { plannerLine, todayString } from '@whizzo/shared'
 
 const AVATARS = ['🐱', '🐯', '🦊', '🐰', '🐨', '🐼', '🦁', '🐸', '🐧', '🦄']
 
@@ -409,9 +410,19 @@ function LearnerStatus({
         </span>
       </div>
 
+      {/* The planner line: one sentence, because one line stays one line. */}
+      {overview.planner && (
+        <p className="mb-3 text-sm font-bold text-muted">
+          🗓️ {plannerLine(overview.planner, todayString())}
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => onOpen({ name: 'tasks' })}>
           ✅ Tasks{openAssignments > 0 ? ` (${openAssignments})` : ''}
+        </Button>
+        <Button variant="ghost" onClick={() => onOpen({ name: 'planner' })}>
+          🗓️ Planner
         </Button>
         <Button variant="ghost" onClick={() => onOpen({ name: 'progress' })}>
           📊 History

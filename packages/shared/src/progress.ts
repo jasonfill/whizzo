@@ -2,6 +2,7 @@
 // adding a string here, not a new set of tables.
 
 import type { TrackId } from './tracks.js'
+import type { PlannerOverview } from './planner.js'
 
 export type Subject = 'spelling' | 'typing' | 'quiz'
 
@@ -286,6 +287,8 @@ export interface QuizDeck {
   sourceId?: string | null
   /** What that document was called, for the heading above its sets. */
   sourceTitle?: string | null
+  /** The learner's course this deck belongs to. Learner-owned decks only. */
+  courseId?: string | null
   title: string
   description: string
   tags: string[]
@@ -415,6 +418,12 @@ export function daysBetween(from: DayString, to: DayString): number {
  * these to the API, which is the only thing that turns it into rows.
  */
 export interface ProgressChange {
+  /**
+   * The learner's own calendar day when the round ended. The planner closes a
+   * study card on the day the learner saw it happen; the server's clock may
+   * already be tomorrow.
+   */
+  today?: DayString
   skill?: SkillState
   /**
    * Ability moved in more than one pool.
@@ -558,6 +567,8 @@ export interface Assignment {
   minAccuracy: number | null
   dueOn: DayString | null
   sortOrder: number
+  /** The learner's course this was filed under, if any. Per learner, never on the set. */
+  courseId?: string | null
   status: AssignmentStatus
   completedAt: number | null
   /** The round that closed this task. Always set when status is 'done'. */
@@ -638,4 +649,6 @@ export interface LearnerOverview {
   /** Accuracy over the last seven days, counting only answers the app checked. */
   verifiedAccuracyThisWeek: number | null
   currentStreakDays: number
+  /** The planner line: planned or not, the next test, heavy days. */
+  planner?: PlannerOverview | null
 }
