@@ -11,7 +11,7 @@ of that sentence.
 
 ## 1. What we have today
 
-Thirteen activities across three subjects.
+Fourteen activities across three subjects.
 
 | Subject | Activity | Graded (`isTest`) | Checked (`verified`) | What it actually asks for |
 | --- | --- | --- | --- | --- |
@@ -24,6 +24,7 @@ Thirteen activities across three subjects.
 | Quiz | Flashcards | no | **no** | self-report |
 | Quiz | Learn | yes (written only) | yes | escalates recognition → production |
 | Quiz | Match | no | yes | recognition |
+| Quiz | Multiple Choice | no | yes | recognition, every card, nothing typed |
 | Quiz | Test | yes (written only) | yes | mixed measurement |
 | Typing | Lesson | yes | yes (keystrokes) | motor skill |
 | Typing | Practice | no | yes | motor skill |

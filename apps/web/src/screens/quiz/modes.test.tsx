@@ -264,6 +264,31 @@ describe('a checked round', () => {
   })
 })
 
+describe('an all-multiple-choice round', () => {
+  function renderChoice() {
+    return render(<QuizPlay mode="choice" deckId={DECK.id} size={3} navigate={navigate} />)
+  }
+
+  it('is offered as its own mode, named for what it is', async () => {
+    renderChoice()
+    expect(await screen.findByText('Multiple Choice')).toBeTruthy()
+  })
+
+  it('asks every question as a pick, never as writing', async () => {
+    renderChoice()
+    await screen.findByText('0 of 3 done')
+    for (let i = 0; i < 3; i++) {
+      expect(screen.getByText('Pick the answer')).toBeTruthy()
+      expect(screen.queryByText(/Write it out/)).toBeNull()
+      expect(screen.queryByText('True or false')).toBeNull()
+      const choice = screen.queryAllByRole('button').find((b) => b.className.includes('text-left'))!
+      fireEvent.click(choice)
+      await waitFor(() => expect(screen.queryByText(/Next card|See how I did/)).toBeTruthy())
+      if (i < 2) fireEvent.keyDown(window, { key: 'Enter' })
+    }
+  })
+})
+
 describe('the matching game', () => {
   function renderMatch() {
     return render(<QuizPlay mode="match" deckId={DECK.id} navigate={navigate} />)

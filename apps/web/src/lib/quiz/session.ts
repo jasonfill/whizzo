@@ -8,7 +8,7 @@
 // forty cards at forty different stages and every question still lands at the
 // right level.
 
-import { supportLevelFromMastery } from '@whizzo/shared'
+import { MIN_POOL, supportLevelFromMastery } from '@whizzo/shared'
 import { isDue, MASTERED_THRESHOLD, overdueBy } from '../adaptive'
 import {
   cardKey,
@@ -21,7 +21,7 @@ import {
 } from '../progress/types'
 import type { Direction, QuestionKind } from './questions'
 
-export type StudyMode = 'flashcards' | 'learn' | 'test' | 'match' | 'review' | 'recall'
+export type StudyMode = 'flashcards' | 'learn' | 'choice' | 'test' | 'match' | 'review' | 'recall'
 
 /** 'mixed' alternates, which stops a learner memorising position rather than meaning. */
 export type DirectionSetting = Direction | 'mixed'
@@ -84,6 +84,16 @@ export const MODES: Array<{
     isTest: false,
   },
   {
+    id: 'choice',
+    name: 'Multiple Choice',
+    emoji: '🎯',
+    blurb: 'Every card as a quick four-way pick. Fast, checked, and a missed one comes back.',
+    // Checked, so every answer is honest evidence about the card — but it is
+    // recognition only, so it moves mastery and the schedule, never the
+    // learner's level. Learn is still the way up the ladder.
+    isTest: false,
+  },
+  {
     id: 'test',
     name: 'Test',
     emoji: '📝',
@@ -124,6 +134,7 @@ export function requeuePolicy(mode: StudyMode): RequeuePolicy | null {
     case 'flashcards':
       return { gap: 4, maxPasses: 3 }
     case 'learn':
+    case 'choice':
     case 'review':
       return { gap: 4, maxPasses: 3 }
     default:
@@ -299,6 +310,17 @@ export function planStudy(snapshot: ProgressSnapshot, opts: PlanOptions): Planne
     const ordered = learnOrder(candidates, today).slice(0, Math.max(MATCH_PAIRS * 3, 18))
     const size = Math.min(opts.size ?? MATCH_PAIRS, ordered.length)
     return build(mix(ordered).slice(0, size), () => 'written')
+  }
+
+  // All multiple choice, start to finish. The same cards Learn would pick,
+  // asked the way Learn asks a card it has never met — a quick, checked
+  // round with nothing to type. A deck too small to offer a real choice is
+  // asked written instead, the same degradation `kindFor` makes, rather than
+  // handing a learner a question with one option on it.
+  if (opts.mode === 'choice') {
+    const size = Math.min(opts.size ?? DEFAULT_LEARN_SIZE, candidates.length)
+    const chosen = mix(learnOrder(candidates, today).slice(0, size))
+    return build(chosen, (c) => (c.deck.cards.length < MIN_POOL ? 'written' : 'multiple-choice'))
   }
 
   if (opts.mode === 'test') {

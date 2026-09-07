@@ -66,6 +66,10 @@ export const ACTIVITY_STAGE: Readonly<Record<string, SupportLevel>> = Object.fre
   // Quiz
   flashcards: 0,
   match: 1,
+  // Every card asked as a four-way choice, start to finish. Recognition and
+  // nothing more, whatever the card's own rung — which is why it sits here
+  // and never at the rung Learn would have asked at.
+  choice: 1,
   learn: 3,
   // Unprompted free recall of a whole set: the least supported retrieval there
   // is, and the strongest evidence a rung can carry.

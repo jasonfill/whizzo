@@ -8,7 +8,7 @@
 // genuinely about to slip.
 
 import { describe, expect, it } from 'vitest'
-import { kindFor, masteryOf, planStudy } from './quiz/session'
+import { kindFor, masteryOf, planStudy, requeuePolicy } from './quiz/session'
 import { planPlacement, planSession } from './spelling/session'
 import { allDecks, deckStats, findDeck, normalizeDeck, parseImport } from './quiz/decks'
 import { defaultSkillState, emptySnapshot, masteryKey, todayString } from './progress/types'
@@ -215,6 +215,47 @@ describe('planning a study round', () => {
     const s = withMastery(snapshot, 'd1', 'c1', { mastery: 0.7 })
     expect(masteryOf(s, 'd1', 'c1')?.mastery).toBe(0.7)
     expect(masteryOf(s, 'd1', 'c2')).toBeUndefined()
+  })
+})
+
+describe('an all-multiple-choice round', () => {
+  const snapshot = { ...emptySnapshot(), decks: [deck(12)] }
+
+  it('asks every card as a choice, whatever its mastery', () => {
+    // A card Learn would already be asking written is still a four-way pick
+    // here. That is the whole offer: a fast round with nothing to type.
+    const sharp = withMastery(snapshot, 'd1', 'c1', { mastery: 0.95, correctStreak: 5, reps: 8 })
+    const plan = planStudy(sharp, { mode: 'choice', decks: [deck(12)], deckId: 'd1', size: 12 })
+    expect(plan).toHaveLength(12)
+    expect(plan.every((p) => p.kind === 'multiple-choice')).toBe(true)
+  })
+
+  it('falls back to written on a deck too small to offer a choice', () => {
+    const plan = planStudy(snapshot, { mode: 'choice', decks: [deck(3)], deckId: 'd1' })
+    expect(plan).toHaveLength(3)
+    expect(plan.every((p) => p.kind === 'written')).toBe(true)
+  })
+
+  it('leads with what needs work, the way Learn does', () => {
+    const withDue = withMastery(snapshot, 'd1', 'c5', {
+      mastery: 0.3,
+      dueOn: '2020-01-01',
+      lapses: 2,
+    })
+    const plan = planStudy(withDue, {
+      mode: 'choice',
+      decks: [deck(12)],
+      deckId: 'd1',
+      size: 4,
+      shuffle: (x) => x,
+    })
+    expect(plan[0]!.card.id).toBe('c5')
+    expect(plan[0]!.reason).toBe('due')
+  })
+
+  it('comes back to a missed card, like Learn and unlike Test', () => {
+    expect(requeuePolicy('choice')).toEqual(requeuePolicy('learn'))
+    expect(requeuePolicy('test')).toBeNull()
   })
 })
 

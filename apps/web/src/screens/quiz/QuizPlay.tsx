@@ -41,7 +41,7 @@ function defaultSize(mode: StudyMode, roundSize: number): number | undefined {
   if (mode === 'match') return MATCH_PAIRS
   // A check is a check: it stays long enough to mean something at every age.
   if (mode === 'test') return DEFAULT_TEST_SIZE
-  if (mode === 'learn' || mode === 'review') return roundSize
+  if (mode === 'learn' || mode === 'choice' || mode === 'review') return roundSize
   return undefined // flashcards run the whole deck
 }
 
@@ -180,7 +180,7 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
         />
       )}
       {mode === 'match' && <MatchGame session={session} onFinish={complete} />}
-      {(mode === 'learn' || mode === 'test' || mode === 'review') && (
+      {(mode === 'learn' || mode === 'choice' || mode === 'test' || mode === 'review') && (
         <QuestionRunner session={session} strict={mode === 'test'} onFinish={complete} />
       )}
     </div>

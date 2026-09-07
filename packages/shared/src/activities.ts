@@ -158,6 +158,19 @@ export const ACTIVITY_CATALOG: ActivityDef[] = [
     fallback: null,
   }),
   def({
+    id: 'choice',
+    name: 'Multiple Choice',
+    emoji: '🎯',
+    blurb: 'Every card as a quick four-way pick. Fast, checked, and a missed one comes back.',
+    subjects: ['quiz'],
+    isTest: false,
+    verified: true,
+    // Wrong answers are drawn from the rest of the deck, so a three-card set
+    // has nothing to offer as a choice.
+    requires: ['pool'],
+    fallback: 'learn',
+  }),
+  def({
     id: 'learn',
     name: 'Learn',
     emoji: '🧠',
