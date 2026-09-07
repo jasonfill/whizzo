@@ -215,10 +215,22 @@ describe('a practise round', () => {
     await expect(hintRound(grant, o.who, o.round)).rejects.toThrow(/No hints/)
 
     const practise = await startRound(grant, learner, null, { mode: 'practise', deckId: DECK, size: 3 })
-    // Fresh cards are asked as a choice; a hint there is "you already have all the help".
+    // Fresh cards are asked as a choice; a clue still comes, the letters do not.
     o = await open(practise.roundId)
     const h = await hintRound(grant, o.who, o.round)
-    expect(h.say).toMatch(/already has all the help/)
+    const asked = practise.question!
+    const card = deckRow.cards.find((c) => c.id === asked.cardId)!
+    if (card.example || card.explanation) {
+      expect(h.kind).toBe('clue')
+      expect(h.clue?.toLowerCase()).not.toContain(card.definition.toLowerCase())
+    } else {
+      expect(h.kind).toBe('none')
+      expect(h.say).toMatch(/one of the choices/)
+    }
+    o = await open(practise.roundId)
+    const again = await hintRound(grant, o.who, o.round)
+    expect(again.kind).toBe('none')
+    expect(again.scaffold).toBeNull()
     o = await open(practise.roundId)
     const a = await answerRound(grant, o.who, o.round, 'nope', false)
     expect(a.verdict).toBe('wrong')

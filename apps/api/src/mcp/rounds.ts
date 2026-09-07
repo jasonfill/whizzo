@@ -521,16 +521,16 @@ export interface HintResult {
 /**
  * Help, in two steps. First a clue about the answer, built from the card
  * with the answer masked out; then the first letter and shape. Either one is
- * a scaffold, so the answer is recorded at rung 2 from the first hint on.
- * A choice question already has all the help it gets; a test has none.
+ * a scaffold: a hinted answer is practice, not evidence. A test has none.
+ *
+ * A choice question gets the clue too — a child asking how to work it out
+ * deserves something about *this* card, not "it's one of the four" — and
+ * skips the letters, which the choices already give away.
  */
 export async function hintRound(grant: Grant, learner: LearnerInContext, round: RoundRow): Promise<HintResult> {
   await requireOpen(grant, learner, round)
   if (round.mode === 'test') throw new ToolRefused('No hints in a test round.')
   const question = round.plan.current!
-  if (question.kind === 'multiple-choice') {
-    return { kind: 'none', clue: null, scaffold: null, say: 'That question already has all the help it gets — the answer is one of the choices. Have a go.' }
-  }
   const planned = cardOf(round, question)
   const given = round.plan.currentHints
 
@@ -540,6 +540,22 @@ export async function hintRound(grant: Grant, learner: LearnerInContext, round: 
       round.plan.currentHints = 1
       await saveRound(round)
       return { kind: 'clue', clue: clue.text, scaffold: null, say: `Here's a clue. ${clue.say}` }
+    }
+  }
+
+  if (question.kind === 'multiple-choice') {
+    // No clue on the card, or it has been given. The choices are the rest of
+    // the help; the tutor can still coach around them.
+    round.plan.currentHints = Math.max(given, 1)
+    await saveRound(round)
+    return {
+      kind: 'none',
+      clue: null,
+      scaffold: null,
+      say:
+        given === 0
+          ? "There's no clue on this card, but the answer is one of the choices — rule out the ones that can't be right. Have a go."
+          : "That's all the help there is for this one — it's one of the choices. Have a go.",
     }
   }
 

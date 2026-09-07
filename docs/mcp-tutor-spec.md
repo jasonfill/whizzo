@@ -499,8 +499,9 @@ else its category, else its explanation — with the answer masked out, every
 acceptable answer and every word inside them replaced by a blank. The
 assistant puts the clue in its own words. The second call returns the
 letters: the rung-2 scaffold the app would have shown. Either marks the
-attempt `hintsUsed` and drops its `askedAt` to 2; a choice question has all
-the help it gets already, and a test has none.
+attempt `hintsUsed` and drops its `askedAt` to 2. A choice question — every
+card a learner has not met yet is asked as one — gets the clue but not the
+letters, which the choices already give away; a test has none.
 
 This is what makes the tutor a tutor rather than a quiz. A child who asks
 *"how do I work this out?"* gets a clue about *this* card, not a first

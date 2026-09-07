@@ -176,7 +176,7 @@ export const TOOL_DEFS: ToolDef[] = [
     name: 'hint',
     title: 'Give a hint',
     description:
-      'Help with the open question, when the learner asks for a hint or how to work it out. The first call returns a clue about the answer (put it in your own words, briefly); the second returns the first letter and shape. Either lowers the level the answer is recorded at. Not available in test rounds.',
+      'Help with the open question, when the learner asks for a hint or how to work it out — on any kind of question. The first call returns a clue about the answer (put it in your own words, briefly); the second returns the first letter and shape, except on a choice question where the choices are the rest of the help. Either lowers the level the answer is recorded at. Not available in test rounds.',
     inputSchema: {
       type: 'object',
       properties: { roundId: { type: 'string' } },
