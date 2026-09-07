@@ -176,7 +176,7 @@ export const TOOL_DEFS: ToolDef[] = [
     name: 'hint',
     title: 'Give a hint',
     description:
-      'The first letter and shape of the answer for the open question, when the learner asks for help. Lowers the level the answer is recorded at. Not available in test rounds.',
+      'Help with the open question, when the learner asks for a hint or how to work it out. The first call returns a clue about the answer (put it in your own words, briefly); the second returns the first letter and shape. Either lowers the level the answer is recorded at. Not available in test rounds.',
     inputSchema: {
       type: 'object',
       properties: { roundId: { type: 'string' } },
@@ -459,7 +459,7 @@ const handlers: Record<string, Handler> = {
     const args = z.object({ roundId: uuid }).parse(input)
     const { round, learner } = await roundContext(ctx, args.roundId)
     const result = await hintRound(ctx.grant, learner, round)
-    return { data: { scaffold: result.scaffold }, say: result.say }
+    return { data: { kind: result.kind, clue: result.clue, scaffold: result.scaffold }, say: result.say }
   },
 
   async end_round(ctx, input) {

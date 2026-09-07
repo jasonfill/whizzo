@@ -492,11 +492,23 @@ number would be a lie; fluency is reported from app rounds only.
 
 ### `hint`
 
-For the open question, when it is at rung 3 in practise or review mode.
-Returns the rung-2 scaffold the app would have shown, marks the attempt
-`hintsUsed: 1`, and drops its `askedAt` to 2. The model cannot invent a
-hint, because it does not have the answer, which is the point: a hint is a
-recorded event, not a favour.
+Help, in two steps, for the open question in practise or review mode.
+The first call returns a **clue**: something true about the answer, built
+from what the card carries — its authored hint, else its example sentence,
+else its category, else its explanation — with the answer masked out, every
+acceptable answer and every word inside them replaced by a blank. The
+assistant puts the clue in its own words. The second call returns the
+letters: the rung-2 scaffold the app would have shown. Either marks the
+attempt `hintsUsed` and drops its `askedAt` to 2; a choice question has all
+the help it gets already, and a test has none.
+
+This is what makes the tutor a tutor rather than a quiz. A child who asks
+*"how do I work this out?"* gets a clue about *this* card, not a first
+letter and not a lecture, and the assistant is told to coach in a sentence
+or two from what it knows of the subject — while never stating, spelling,
+or rhyming the answer, and never confirming a guess before it has been
+answered. The clue is server-built so it cannot say the answer by accident;
+`simulate:tutor` checks every clue against every card.
 
 ### `end_round`
 

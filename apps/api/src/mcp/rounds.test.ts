@@ -73,7 +73,7 @@ const deckRow = {
   description: '',
   tags: [],
   cards: [
-    { id: 'c1', term: 'Powerhouse of the cell', definition: 'Mitochondria', hint: null, difficulty: 2, explanation: 'It makes ATP.' },
+    { id: 'c1', term: 'Powerhouse of the cell', definition: 'Mitochondria', hint: null, difficulty: 2, explanation: 'It makes ATP.', example: 'Mitochondria turn sugar into energy the cell can use.' },
     { id: 'c2', term: 'Controls the cell', definition: 'Nucleus', hint: null, difficulty: 2 },
     { id: 'c3', term: 'Makes proteins', definition: 'Ribosome', hint: null, difficulty: 2 },
     { id: 'c4', term: 'Site of photosynthesis', definition: 'Chloroplast', hint: null, difficulty: 2 },
@@ -222,6 +222,42 @@ describe('a practise round', () => {
     o = await open(practise.roundId)
     const a = await answerRound(grant, o.who, o.round, 'nope', false)
     expect(a.verdict).toBe('wrong')
+  })
+
+  it('help comes as a clue first, then the letters, and lowers the rung either way', async () => {
+    const { startRound, hintRound, answerRound, endRound } = await import('./rounds.js')
+    // A card the learner has met enough to be asked at free recall, and due.
+    masteryRows = [{ ...masteredRow('c1'), due_on: '2026-01-01' }]
+    // Three cards, so the round has a review slot for the due one to fill first.
+    const r = await startRound(grant, learner, null, { mode: 'practise', deckId: DECK, size: 3 })
+    expect(r.question?.cardId).toBe('c1')
+    expect(r.question?.kind).toBe('written')
+
+    let o = await open(r.roundId)
+    const first = await hintRound(grant, o.who, o.round)
+    expect(first.kind).toBe('clue')
+    expect(first.clue).toBe('Think of this: ___ turn sugar into energy the cell can use.')
+    expect(first.say.toLowerCase()).not.toContain('mitochondria')
+
+    o = await open(r.roundId)
+    const second = await hintRound(grant, o.who, o.round)
+    expect(second.kind).toBe('letters')
+    expect(second.scaffold).toMatch(/^M_+$/)
+
+    o = await open(r.roundId)
+    const third = await hintRound(grant, o.who, o.round)
+    expect(third.kind).toBe('none')
+
+    o = await open(r.roundId)
+    await answerRound(grant, o.who, o.round, 'mitochondria', false)
+    o = await open(r.roundId)
+    await endRound(grant, o.who, o.round)
+    const attempts = query.mock.calls.find(([s]) => String(s).includes('insert into public.attempts'))
+    const values = attempts![1] as unknown[]
+    expect(values[3]).toBe(`${DECK}:c1`)
+    expect(values[5]).toBe(false) // hinted: not a test
+    expect(values[9]).toBe(2) // two hints
+    expect(values[14]).toBe(2) // asked at rung 2
   })
 
   it('a skip is a miss, and the card comes back once before the round ends', async () => {

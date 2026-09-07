@@ -294,6 +294,74 @@ export function questionFor(
   return { ...base, rung: 3, kind: 'written', say: lead }
 }
 
+// --- Hints -------------------------------------------------------------------------
+
+export interface TutorHint {
+  /** `clue`: something about the answer, in words. `letters`: its first letter and shape. */
+  kind: 'clue' | 'letters'
+  text: string
+  say: string
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Take the answer out of a sentence that mentions it. Every acceptable
+ * answer, every alternative, and every word of four letters or more inside
+ * them is replaced, so "the Golgi body packages proteins" becomes "the ___
+ * ___ packages proteins" rather than handing the answer over with a gap in
+ * it. Words shorter than four letters ("of", "the") stay, because masking
+ * them would gut the sentence for nothing.
+ */
+export function maskAnswer(text: string, card: QuizCard, direction: Direction): string {
+  const answers = [answerSide(card, direction), ...(card.altAnswers ?? [])]
+  const terms = new Set<string>()
+  for (const raw of answers) {
+    for (const alt of acceptableAnswers(raw)) {
+      const plain = richToPlain(alt).trim()
+      if (plain) terms.add(plain)
+      for (const word of plain.split(/[^\p{L}\p{N}]+/u)) {
+        if (word.length >= 4) terms.add(word)
+      }
+    }
+  }
+  let out = text
+  for (const term of [...terms].sort((a, b) => b.length - a.length)) {
+    out = out.replace(new RegExp(escapeRegExp(term), 'giu'), '___')
+  }
+  return out.replace(/(___\s*)+/g, '___ ')
+}
+
+/**
+ * Something to say when the learner asks how to work it out.
+ *
+ * Built from what the card carries — an authored hint, an example sentence,
+ * a category, the explanation — with the answer masked out, so a tutor with
+ * no answer in hand still has something true and specific to coach with. A
+ * clue is a scaffold: it lowers the rung the answer is recorded at, the same
+ * as the letters do.
+ */
+export function clueFor(card: QuizCard, direction: Direction): TutorHint | null {
+  const candidates = [
+    card.hint?.trim(),
+    card.example?.trim() && `Think of this: ${maskAnswer(card.example.trim(), card, direction)}`,
+    card.category?.trim() && `It's one of these: ${card.category.trim()}.`,
+    card.explanation?.trim() && maskAnswer(card.explanation.trim(), card, direction),
+  ]
+  for (const raw of candidates) {
+    if (!raw) continue
+    const text = maskAnswer(raw, card, direction).replace(/\s+/g, ' ').trim()
+    // A clue that is nothing but blanks, or that still says the answer, is
+    // no clue. The mask has run, so what is left is at least safe.
+    const words = text.replace(/___/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+    if (words.split(' ').filter(Boolean).length < 2) continue
+    return { kind: 'clue', text, say: text }
+  }
+  return null
+}
+
 export function studyCardFor(planned: PlannedTutorCard): TutorStudyCard {
   const { card, direction } = planned
   const prompt = plainPrompt(card, direction)
@@ -717,7 +785,10 @@ export function tutorInstructions(
     tools
       ? 'Never tell the learner an answer before `answer` has returned it. You do not have the answer until then.'
       : 'Never tell the learner an answer before they have tried.',
-    tools ? 'If the learner asks for a hint, call `hint`; do not make one up.' : 'If the learner asks for a hint, give the first letter only.',
+    tools
+      ? 'If the learner asks for help, or how to work it out, call `hint`: it returns a clue about the answer first and the first letter next. Put the clue in your own words, briefly.'
+      : 'If the learner asks for help, or how to work it out, give one short clue about the answer, then the first letter.',
+    'Coach like a tutor: when the learner asks what a word means or how to think about a question, explain in one or two sentences from what you know of the subject — but never state, spell, or rhyme the answer itself, and never confirm a guess before it has been answered.',
     tools
       ? 'After `answer`, use `praise` and, on a miss, the returned `answer` and `explanation` to teach in one or two sentences, then ask the next question from the result.'
       : 'After each answer, say whether it was right and, on a miss, teach in one or two sentences, then ask the next question.',

@@ -9,6 +9,8 @@ import { describe, expect, it } from 'vitest'
 import type { ItemMastery, QuizCard, QuizDeck } from './progress.js'
 import {
   attemptFor,
+  clueFor,
+  maskAnswer,
   gradeSpoken,
   normalizeSpoken,
   parseNumeric,
@@ -282,6 +284,36 @@ describe('exposure', () => {
     const low = summarizeRound([planned], [a], prior, '2026-09-06', 'middle', () => 1).mastery[0]!
     const high = summarizeRound([planned], [a], prior, '2026-09-06', 'middle', () => 5).mastery[0]!
     expect(high.intervalDays).toBeGreaterThan(low.intervalDays)
+  })
+})
+
+describe('clues', () => {
+  const golgi = card({ id: 'g', term: 'Packages proteins for transport', definition: 'Golgi apparatus / Golgi body', example: 'Proteins pass through the Golgi apparatus on their way out of the cell.', explanation: 'The Golgi body sorts and packages proteins.' })
+
+  it('masks every acceptable answer, and the words inside them', () => {
+    expect(maskAnswer('The Golgi body sorts proteins made by the Golgi apparatus.', golgi, 'term-first')).toBe('The ___ sorts proteins made by the ___ .')
+    expect(maskAnswer('Look for golgi in the diagram', golgi, 'term-first')).toBe('Look for ___ in the diagram')
+  })
+
+  it('prefers the authored hint, then a masked example, category, explanation', () => {
+    expect(clueFor(card({ hint: 'It sounds like a Scottish name.', example: 'x y z' }), 'term-first')?.text).toBe('It sounds like a Scottish name.')
+    expect(clueFor(golgi, 'term-first')?.text).toBe('Think of this: Proteins pass through the ___ on their way out of the cell.')
+    expect(clueFor(card({ category: 'Organelles' }), 'term-first')?.text).toBe("It's one of these: Organelles.")
+    expect(clueFor(card({ explanation: 'Mitochondria make ATP for the cell.' }), 'term-first')?.text).toBe('___ make ATP for the cell.')
+  })
+
+  it('gives no clue when there is nothing to build one from, or nothing left after masking', () => {
+    expect(clueFor(card(), 'term-first')).toBeNull()
+    expect(clueFor(card({ explanation: 'Mitochondria.' }), 'term-first')).toBeNull()
+  })
+
+  it('never lets the answer through', () => {
+    for (const c of CELLS.cards.filter((c) => c.id !== 'c8')) {
+      const clue = clueFor({ ...c, explanation: `The answer is ${c.definition}, obviously.` }, 'term-first')
+      if (!clue) continue
+      const answer = c.definition.split('/')[0]!.trim().toLowerCase()
+      expect(clue.text.toLowerCase()).not.toContain(answer)
+    }
   })
 })
 

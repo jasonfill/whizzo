@@ -14,6 +14,7 @@
 import {
   answerSide,
   attemptFor,
+  clueFor,
   defaultSkillState,
   gradeSpoken,
   isSpeakable,
@@ -510,26 +511,57 @@ export async function answerRound(
   }
 }
 
-export async function hintRound(
-  grant: Grant,
-  learner: LearnerInContext,
-  round: RoundRow,
-): Promise<{ scaffold: string | null; say: string }> {
+export interface HintResult {
+  kind: 'clue' | 'letters' | 'none'
+  clue: string | null
+  scaffold: string | null
+  say: string
+}
+
+/**
+ * Help, in two steps. First a clue about the answer, built from the card
+ * with the answer masked out; then the first letter and shape. Either one is
+ * a scaffold, so the answer is recorded at rung 2 from the first hint on.
+ * A choice question already has all the help it gets; a test has none.
+ */
+export async function hintRound(grant: Grant, learner: LearnerInContext, round: RoundRow): Promise<HintResult> {
   await requireOpen(grant, learner, round)
   if (round.mode === 'test') throw new ToolRefused('No hints in a test round.')
   const question = round.plan.current!
-  if (question.rung < 3) {
-    return { scaffold: question.scaffold ?? null, say: 'That question already has all the help it gets. Have a go.' }
+  if (question.kind === 'multiple-choice') {
+    return { kind: 'none', clue: null, scaffold: null, say: 'That question already has all the help it gets — the answer is one of the choices. Have a go.' }
   }
   const planned = cardOf(round, question)
+  const given = round.plan.currentHints
+
+  if (given === 0) {
+    const clue = clueFor(planned.card, planned.direction)
+    if (clue) {
+      round.plan.currentHints = 1
+      await saveRound(round)
+      return { kind: 'clue', clue: clue.text, scaffold: null, say: `Here's a clue. ${clue.say}` }
+    }
+  }
+
+  // The letters, unless they have been given already.
+  if (question.kind === 'letter-hint' && given >= 1) {
+    return { kind: 'none', clue: null, scaffold: question.scaffold ?? null, say: "That's all the help there is for this one. Have a go." }
+  }
   const scaffolded = questionFor({ ...planned, rung: 2 }, [], question.index, question.total)
   if (scaffolded.kind !== 'letter-hint') {
-    return { scaffold: null, say: "There's no hint for this one — it's a number. Have a go." }
+    round.plan.currentHints = Math.max(given, 1)
+    await saveRound(round)
+    return { kind: 'none', clue: null, scaffold: null, say: "There's no more help for this one — it's a number. Have a go." }
   }
   round.plan.current = scaffolded
-  round.plan.currentHints = 1
+  round.plan.currentHints = given + 1
   await saveRound(round)
-  return { scaffold: scaffolded.scaffold ?? null, say: scaffolded.say.replace(/^Question \d+ of \d+\. /, '') }
+  return {
+    kind: 'letters',
+    clue: null,
+    scaffold: scaffolded.scaffold ?? null,
+    say: scaffolded.say.replace(/^Question \d+ of \d+\. /, ''),
+  }
 }
 
 export async function endRound(grant: Grant, learner: LearnerInContext, round: RoundRow): Promise<RoundSummaryOut> {

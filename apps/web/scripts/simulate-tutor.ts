@@ -18,6 +18,7 @@
 import {
   acceptableAnswers,
   attemptFor,
+  clueFor,
   deriveLadderState,
   gradeSpoken,
   normalizeSpoken,
@@ -71,7 +72,11 @@ const deck: QuizDeck = {
   title: 'Cells and a little maths',
   description: '',
   tags: [],
-  cards: TERMS.map(([term, definition], i) => ({ id: `c${i}`, term, definition, hint: null, difficulty: 2 })),
+  cards: TERMS.map(([term, definition], i) => ({
+    id: `c${i}`, term, definition, hint: null, difficulty: 2,
+    example: `In class we said ${definition.split('/')[0]!.replace(/\$/g, '')} when we meant "${term.toLowerCase()}".`,
+    explanation: `${definition.split('/')[0]!.replace(/\$/g, '')}: ${term.toLowerCase()}.`,
+  })),
   source: 'user',
   termLabel: 'Term',
   definitionLabel: 'Definition',
@@ -151,6 +156,10 @@ for (const mode of ['practise', 'test', 'review', 'study'] as TutorMode[]) {
         const outside = q.kind === 'multiple-choice' ? { ...q, choices: undefined, say: undefined } : q
         const text = JSON.stringify(outside).toLowerCase()
         check(`no payload contains the answer (${q.kind})`, !text.includes(answerPlain), `${q.itemKey}: ${text}`)
+
+        // 1b. A clue, when there is one, never says the answer either.
+        const clue = clueFor(p.card, p.direction)
+        if (clue) check('a clue does not contain the answer', !clue.text.toLowerCase().includes(answerPlain), `${q.itemKey}: ${clue.text}`)
 
         // 2. Choices carry the answer, unmarked; the scaffold shows one letter.
         if (q.kind === 'multiple-choice') {
