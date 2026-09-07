@@ -16,7 +16,7 @@
 | 7 Generators | **done** | math fact banks — six out of the box, stable ids, difficulty as children meet it |
 | 8 Publishing | **partial** | units, prerequisites and `validateCatalog`. Groups, slots and the supplied catalog deliberately deferred |
 | 9 Planner | **done** | migration 0019, `planner.ts` + `simulate:planner`, courses, the week and Today, cards with drag, tests planned backwards, linked sessions closed by evidence, trigger-written history, comments, plan and wrap flows, print, the Family line — [weekly-planner-spec.md](weekly-planner-spec.md) |
-| 10 MCP | **proposed** | OAuth server, `/mcp`, the tutor tools, grading moved to shared, `channel` on attempts, migration 0020 — [mcp-tutor-spec.md](mcp-tutor-spec.md) |
+| 10 MCP | **code done, needs config** | OAuth server, `/mcp`, ten tools, grading and the adaptive engine moved to shared, `channel` on attempts, migration 0020, `simulate:tutor`. Needs `APP_URL` and `MCP_TOKEN_SECRET`, then the voice spike — see §3d |
 
 Three proposals exist, they overlap, and each one has its own "Phase 1". This
 document is the single authority on **what gets built when**, and on the
@@ -331,6 +331,27 @@ silently strip them. That is a migration to write once the first real
 subscriptions exist, not now.
 
 ---
+
+## 3d. Turning connected apps on
+
+The code is finished and tested; what remains is two variables and a phone.
+
+1. `APP_URL` — the app's real public origin. The OAuth server uses it as its
+   issuer and for the consent redirect, so it must be exact and must never be
+   derived from a request.
+2. `MCP_TOKEN_SECRET` — `openssl rand -base64 48`. Separate from every
+   Supabase secret; rotating it signs every assistant out and families
+   reconnect in a minute.
+
+Absent, the OAuth and `/mcp` routes answer `mcp_unconfigured` and the rest of
+the API runs. Migration 0020 applies at startup like the others.
+
+Then the spike the spec asks for, on Claude iOS: add the custom connector at
+`APP_URL/mcp`, approve on the consent screen, allow `start_round` and
+`answer` to run unsupervised in the connector's tool settings, open voice
+mode and say *"tutor Maya on her cells deck."* Two things to write down: how
+long a tool call takes inside a voice turn, and whether the unsupervised
+setting holds mid-conversation. Those set the default round length.
 
 ## 4. What can run in parallel
 

@@ -216,6 +216,27 @@ const schema = z.object({
    * which is the production shape.
    */
   APP_URL: z.string().default(''),
+
+  // --- MCP ---------------------------------------------------------------------
+  //
+  // The app as tools for an assistant (docs/mcp-tutor-spec.md). Optional like
+  // the other integrations: without a secret the OAuth and /mcp routes refuse
+  // politely and everything else runs.
+
+  /**
+   * Signs the access and refresh tokens the API's own OAuth server issues to
+   * assistants. Separate from every Supabase secret on purpose: those tokens
+   * are for the app, these are for `/mcp`, and neither is ever accepted by
+   * the other. Rotating this signs every assistant out; they reconnect.
+   */
+  MCP_TOKEN_SECRET: z.string().min(32).optional(),
+
+  /**
+   * The canonical URL of the MCP endpoint, e.g. https://whizzo.app/mcp — the
+   * audience every token is bound to (RFC 8707) and what the protected
+   * resource metadata names. Defaults to APP_URL + /mcp.
+   */
+  MCP_PUBLIC_URL: z.string().url().optional(),
 })
 
 /**

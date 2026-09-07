@@ -25,7 +25,10 @@ const target = join(here, 'app.rendered.yaml')
  * app that deploys and then cannot reach its database, which is a slower and
  * more confusing failure than refusing here.
  */
-const PLACEHOLDER = /\[YOUR-|<your-|<project-ref>|change-?me|xxxxx/i
+// `localhost` is on the list because APP_URL's development value is exactly
+// that, and a production app whose OAuth issuer is http://localhost:5173
+// deploys cleanly and then fails every family that tries to connect.
+const PLACEHOLDER = /\[YOUR-|<your-|<project-ref>|change-?me|xxxxx|localhost|127\.0\.0\.1/i
 
 const lines = (await readFile(source, 'utf8')).split('\n')
 const out = []

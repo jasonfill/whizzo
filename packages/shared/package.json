@@ -25,6 +25,14 @@
     "./rich": {
       "types": "./dist/rich/index.d.ts",
       "default": "./dist/rich/index.js"
+    },
+    "./grading": {
+      "types": "./dist/grading.d.ts",
+      "default": "./dist/grading.js"
+    },
+    "./adaptive": {
+      "types": "./dist/adaptive.d.ts",
+      "default": "./dist/adaptive.js"
     }
   },
   "files": [

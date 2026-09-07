@@ -16,7 +16,7 @@ the other specs.
 | [content-ingestion-spec.md](content-ingestion-spec.md) | proposal | How content *arrives*: a document in, a working set out. Upload, read, build, review, accept. |
 | [learning-activities-spec.md](learning-activities-spec.md) | proposal | What happens to content once it is here: the mastery ladder, the activity catalogue, engagement, rewards, the Mastery Path. |
 | [weekly-planner-spec.md](weekly-planner-spec.md) | **built** | The learner's week: courses as enrolments, tasks, tests planned backwards into study sessions with a purpose, priorities/wins/goals, and how grown-ups collaborate on it. |
-| [mcp-tutor-spec.md](mcp-tutor-spec.md) | proposal | The app as tools for Claude and ChatGPT: the OAuth server, the tool catalogue, the answer-withholding rule, how a tutor round becomes verified evidence, and what is true about the two clients' voice modes. |
+| [mcp-tutor-spec.md](mcp-tutor-spec.md) | **built, needs config** | The app as tools for Claude and ChatGPT: the OAuth server, the tool catalogue, the answer-withholding rule, how a tutor round becomes verified evidence, and what is true about the two clients' voice modes. |
 
 ## Reading order
 

@@ -21,6 +21,10 @@ import { progressRoutes } from './routes/progress.js'
 import { rewardRoutes } from './routes/rewards.js'
 import { billingRoutes } from './routes/billing.js'
 import { plannerRoutes } from './routes/planner.js'
+import { mcpGrantRoutes } from './routes/mcpGrants.js'
+import { oauthRoutes } from './mcp/oauth.js'
+import { mcpRoutes } from './mcp/server.js'
+import { mcpUnconfiguredReason } from './mcp/tokens.js'
 
 export async function buildServer() {
   const app = Fastify({
@@ -71,6 +75,11 @@ export async function buildServer() {
     // Behind App Platform every request shares the proxy's address unless we
     // key on the forwarded one.
     keyGenerator: (request) => request.ip,
+    // The assistant surfaces have their own limiters below, keyed on the
+    // grant rather than the address: every family on Claude arrives from
+    // the same few egress addresses, and one per-address bucket for all of
+    // them would 429 the twentieth family's round.
+    allowList: (request) => request.url === '/mcp' || request.url.startsWith('/api/oauth/'),
   })
 
   // One place to turn an exception into a response. Database refusals are
@@ -178,6 +187,46 @@ export async function buildServer() {
     })
     await scoped.register(contentRoutes, { prefix: '/api' })
   })
+
+  // Connected apps (docs/mcp-tutor-spec.md). Three scopes:
+  //
+  //   * the OAuth server, keyed on IP and tight, because a token endpoint is a
+  //     guess surface like any other;
+  //   * the MCP endpoint, keyed on the grant behind the token — a voice round is
+  //     a call every few seconds, with headroom, and a day's ceiling that no
+  //     family reaches and a script would;
+  //   * the Connected apps routes, ordinary signed-in routes.
+  await app.register(async (scoped) => {
+    await scoped.register(rateLimit, {
+      // Per address, and generous for the same reason the root limiter
+      // exempts this scope: hundreds of grants refreshing hourly from one
+      // assistant's egress must fit. The guess surface here is a 32-byte
+      // random code with PKCE behind it, not a four-digit PIN.
+      max: 600,
+      timeWindow: '10 minutes',
+      keyGenerator: (request) => request.ip,
+      // The well-known documents are read by every client on every connect
+      // and cost nothing; the consent screen's own calls are signed-in.
+      allowList: (request) =>
+        request.url.startsWith('/.well-known/') || request.url.startsWith('/api/oauth/authorize/'),
+    })
+    await scoped.register(oauthRoutes)
+  })
+  await app.register(async (scoped) => {
+    await scoped.register(rateLimit, {
+      max: 120,
+      timeWindow: '1 minute',
+      keyGenerator: (request) => {
+        const auth = request.headers.authorization
+        return typeof auth === 'string' && auth.length > 24 ? auth.slice(-24) : request.ip
+      },
+    })
+    await scoped.register(mcpRoutes)
+  })
+  await app.register(mcpGrantRoutes, { prefix: '/api' })
+  if (env.MCP_TOKEN_SECRET && mcpUnconfiguredReason()) {
+    app.log.warn(`connected apps are off: ${mcpUnconfiguredReason()}`)
+  }
 
   // Redeeming is a guess surface: a short code, typed by a human. The database
   // refuses expired and used codes, but nothing there slows down someone trying

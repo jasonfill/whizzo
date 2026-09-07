@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { LibraryResponse } from '@whizzo/shared'
 import { useAuth } from '../../auth/AuthProvider'
 import MyTutorCode from '../../components/suite/MyTutorCode'
+import ConnectedApps from '../../components/suite/ConnectedApps'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import { loadLibrary } from '../../lib/assignments/library'
 import { Button, Card, Pill } from '../../components/ui'
@@ -202,6 +203,8 @@ export default function AccountScreen({ navigate }: { navigate: Navigate }) {
           </Pill>
         </div>
       </Card>
+
+      <ConnectedApps />
 
       <MyTutorCode />
 

@@ -56,6 +56,59 @@ export const SUBJECTS: Subject[] = [
   },
 ]
 
+/** The line the whole product is held to, and the one place it is written down. */
+export const TAGLINE = 'Learn it. Prove it. Keep it.'
+
+export interface PromiseBeat {
+  word: string
+  title: string
+  body: string
+  points: string[]
+}
+
+/**
+ * The tagline, unpacked.
+ *
+ * Three words, three commitments, and each one names something the app
+ * actually enforces rather than something it hopes for. "Learn it" is the
+ * mastery ladder and the path that walks it. "Prove it" is the rule that only
+ * unaided, machine-checked work counts. "Keep it" is the review schedule and
+ * the retention picture built on top of it. If any of these ever stops being
+ * true of the code, this is the copy that has to change first.
+ */
+export const PROMISE: PromiseBeat[] = [
+  {
+    word: 'Learn it',
+    title: 'Every item climbs its own ladder',
+    body: 'Nothing is drilled forty words at a time. A set is placed first, so what a child already knows starts near the top, and the rest is introduced a handful at a time. Each item is met where it is: recognise it, recall it with a scaffold, then produce it from nothing.',
+    points: [
+      'A grown-up sets a goal — master this set by Friday — and the app picks each round',
+      'New items arrive in batches of six, worked up together before the next batch opens',
+      'The activity is chosen per item, by the rung that item is on',
+    ],
+  },
+  {
+    word: 'Prove it',
+    title: 'Only unaided, checked work moves anything',
+    body: 'A hint, a word bank, a scrambled set of letters — all good practice, none of it evidence. An item advances only on answers the server graded, given without help, on two different days. Getting it right again four cards later fixes the miss; it does not count as remembering.',
+    points: [
+      'The server grades every answer and recomputes every score from the answers themselves',
+      'Nobody taps “I got it” — flashcards are recorded as unchecked, and never count',
+      'Two unaided corrects on two different days before an item moves up a rung',
+    ],
+  },
+  {
+    word: 'Keep it',
+    title: 'Mastered means still there weeks later',
+    body: 'Most apps stop at the first correct answer. Here every item carries its own review date, the gap grows only while the item survives it, and the report says plainly which items are holding, which are slipping, and which are about to. A reward hangs off checked work, and once earned it is never taken back.',
+    points: [
+      'Right, and the gap grows 1 → 2 → 4 → 8 → 16 → 32 → 60 days; wrong, and it is due now',
+      'The report counts what is secure, what is fragile and what is slipping this week',
+      'Rewards are earned on verified work and latch: no tidy-up can un-earn one',
+    ],
+  },
+]
+
 /** The engine, in the three claims that make it different from a shuffle. */
 export const ENGINE_STEPS: Array<{ title: string; body: string }> = [
   {

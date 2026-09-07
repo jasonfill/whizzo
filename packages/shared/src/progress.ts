@@ -104,7 +104,20 @@ export interface Attempt {
    * time.
    */
   askedAt?: number | null
+  /**
+   * Where the attempt came from: the app, or a tutor round run through an
+   * assistant over MCP (docs/mcp-tutor-spec.md). Set by the server, never by
+   * the caller. Absent means the app, which is what every row was before the
+   * column existed.
+   *
+   * A column rather than a `meta` key for the same reason `verified` is:
+   * anything that wants to compare the two kinds of evidence — the accuracy
+   * gap the spec asks for — should be able to ask for it without parsing.
+   */
+  channel?: AttemptChannel | null
 }
+
+export type AttemptChannel = 'app' | 'mcp'
 
 export interface SessionRecord {
   id: string

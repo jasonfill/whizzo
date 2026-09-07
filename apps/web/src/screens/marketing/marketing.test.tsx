@@ -33,6 +33,7 @@ import { ACTIVITIES } from '../../lib/spelling/activities'
 import { FREE_PERKS, money } from '../../lib/plans'
 import { PRICE_EXTRA_LEARNER_CENTS, PRICE_FIRST_LEARNER_CENTS, monthlyPriceCents } from '@whizzo/shared'
 import { AUDIENCES, AUDIENCE_ORDER } from './audiences'
+import { PROMISE, TAGLINE } from './copy'
 import AudienceScreen from './AudienceScreen'
 import FaqScreen from './FaqScreen'
 import FeaturesScreen from './FeaturesScreen'
@@ -62,8 +63,18 @@ function doors(): HTMLButtonElement[] {
 describe('the front page', () => {
   it('says what the thing is before it asks for anything', () => {
     render(<MarketingScreen navigate={navigate} />)
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(TAGLINE)
     expect(screen.getByText('Practice that knows what your child can actually do.')).toBeTruthy()
     expect(screen.getByText(/Only unaided work counts/)).toBeTruthy()
+  })
+
+  it('unpacks every word of the tagline into a rule the app enforces', () => {
+    render(<MarketingScreen navigate={navigate} />)
+    for (const beat of PROMISE) {
+      expect(TAGLINE).toContain(beat.word)
+      expect(screen.getByRole('heading', { name: `${beat.word}.` })).toBeTruthy()
+      expect(screen.getByText(beat.title)).toBeTruthy()
+    }
   })
 
   it('offers every audience a page of their own', () => {

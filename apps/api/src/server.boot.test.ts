@@ -52,6 +52,12 @@ vi.mock('./env.js', () => ({
   webOrigins: [],
 }))
 
+// Assembling every plugin is the whole point, and it is not fast: six
+// rate-limited scopes, helmet, cors and every route. Under the full suite's
+// parallel load a build that takes 800 ms alone can take several seconds,
+// and a timeout here would say nothing about the server.
+const BOOT_TIMEOUT_MS = 20_000
+
 describe('the server as production assembles it', () => {
   it('boots with every plugin registered', async () => {
     // The assertion is not the point; reaching it is. `buildServer` throwing
@@ -61,7 +67,7 @@ describe('the server as production assembles it', () => {
     await app.ready()
     expect(app.hasRoute({ method: 'POST', url: '/api/billing/webhook' })).toBe(true)
     await app.close()
-  })
+  }, BOOT_TIMEOUT_MS)
 
   it('gives the billing scope its own body parser without disturbing the rest', async () => {
     // Both halves matter. The webhook needs the raw bytes; every other route
@@ -93,7 +99,7 @@ describe('the server as production assembles it', () => {
     expect(ordinary.statusCode).toBe(401)
 
     await app.close()
-  })
+  }, BOOT_TIMEOUT_MS)
 
   it('still boots with no Stripe configuration at all', async () => {
     // A contributor without a Stripe account has to be able to run the API,
@@ -120,5 +126,5 @@ describe('the server as production assembles it', () => {
     await app.ready()
     expect(app.hasRoute({ method: 'POST', url: '/api/billing/webhook' })).toBe(true)
     await app.close()
-  })
+  }, BOOT_TIMEOUT_MS)
 })

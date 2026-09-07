@@ -71,6 +71,10 @@ export const ACTIVITY_STAGE: Readonly<Record<string, SupportLevel>> = Object.fre
   // is, and the strongest evidence a rung can carry.
   recall: 3,
   review: 2,
+  // A tutor round run through an assistant is Learn from outside: each card is
+  // asked at its own rung and records it in `askedAt`, so the mode's rung is
+  // only the fallback, and it is the same one Learn has.
+  tutor: 3,
 
   // Typing rounds are a motor skill rather than a retrieval, but a lesson is
   // unaided production of what was just shown, so it sits where that sits.

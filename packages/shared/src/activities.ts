@@ -27,7 +27,7 @@ export type ActivitySubject = 'spelling' | 'quiz' | 'typing'
 // Added one at a time, with the activity that needs it. A requirement nothing
 // declares is a branch nothing exercises, and the capability matrix is the last
 // place worth carrying speculative code: it decides what a learner is offered.
-export type ContentRequirement = 'plain-answer' | 'example' | 'pool'
+export type ContentRequirement = 'plain-answer' | 'example' | 'pool' | 'speakable'
 
 export interface ActivityDef {
   id: string
@@ -185,6 +185,23 @@ export const ACTIVITY_CATALOG: ActivityDef[] = [
   }),
 
   // --- New: the free rungs ------------------------------------------------
+  def({
+    id: 'tutor',
+    name: 'Tutor round',
+    emoji: '🗣️',
+    blurb: 'Practise out loud with the assistant you already use.',
+    subjects: ['quiz'],
+    stage: 3,
+    isTest: true,
+    verified: true,
+    // Both sides have to be sayable: a figure cannot be read aloud and an
+    // equation the plain-text projection cannot voice is not a question.
+    requires: ['speakable'],
+    fallback: 'learn',
+    // Not a task a grown-up can set: a tutor round is how a Learn task gets
+    // done out loud, and closes the same task (docs/mcp-tutor-spec.md).
+    assignable: false,
+  }),
   def({
     id: 'first-letter',
     assignable: false,

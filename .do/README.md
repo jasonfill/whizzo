@@ -22,7 +22,7 @@ spent.
 GitHub and authorise the `jasonfill/whizzo` repository. The spec's
 `github:` blocks fail without it.
 
-**2. Fill in the secrets.** `app.yaml` declares eight secrets with no values, on
+**2. Fill in the secrets.** `app.yaml` declares ten secrets with no values, on
 purpose — they must not be committed. An app created from the spec as-is comes up
 with an empty `DATABASE_URL`, and the API validates its environment at boot and
 exits, so you get a crash loop rather than a clear error. Render a filled copy:
