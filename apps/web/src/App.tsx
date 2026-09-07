@@ -47,6 +47,8 @@ import SpellingHome from './screens/spelling/SpellingHome'
 import SpellingLists from './screens/spelling/SpellingLists'
 import SpellingPlay from './screens/spelling/SpellingPlay'
 import AccountScreen from './screens/suite/AccountScreen'
+import ConnectScreen from './screens/suite/ConnectScreen'
+import { clearPendingConnect, keepPendingConnect, readPendingConnect } from './lib/mcp/pending'
 import FamilyScreen from './screens/suite/FamilyScreen'
 import ContentScreen from './screens/content/ContentScreen'
 import LibraryScreen from './screens/suite/LibraryScreen'
@@ -99,6 +101,21 @@ function useAppNavigate(): Navigate {
   return useCallback((route) => navigate(routeToPath(route)), [navigate])
 }
 
+/**
+ * The signed-out door in front of the consent screen. Remembers the
+ * assistant's request for the sign-in round trip, then stays put: once the
+ * session exists the signed-in table renders the consent screen at this
+ * address, or the effect above brings the browser back to it.
+ */
+function ConnectDoor({ onBack }: { onBack: () => void }) {
+  const [query] = useSearchParams()
+  const req = query.get('req')
+  useEffect(() => {
+    if (req) keepPendingConnect(req)
+  }, [req])
+  return <AuthScreen onDone={() => undefined} onBack={onBack} />
+}
+
 function Router() {
   const game = useGameState()
   const { ready } = useProgress()
@@ -133,9 +150,26 @@ function Router() {
       return
     }
     if (learnerStatus !== 'ready' || learners.length > 0 || sentToSetup.current) return
+    // A grown-up on the consent screen is not here to set up; that screen
+    // says so itself when there is nobody to share, and offers the way.
+    if (location.pathname === '/connect') return
     sentToSetup.current = true
     navigate({ name: 'family' })
-  }, [authStatus, learnerStatus, learners.length, navigate])
+  }, [authStatus, learnerStatus, learners.length, location.pathname, navigate])
+
+  // An assistant sent a grown-up to /connect?req=…, and signing in with Google
+  // or a magic link comes back to "/" without the query. The request is put
+  // aside when the signed-out door is shown — and again by the consent screen
+  // when it sends a new parent off to add a child — and picked up here, on
+  // the next signed-in page that is not the consent screen itself. One
+  // reader, and the key is spent the moment it is read.
+  useEffect(() => {
+    if (authStatus !== 'signed-in') return
+    const req = readPendingConnect()
+    if (!req) return
+    clearPendingConnect()
+    if (location.pathname !== '/connect') navigate({ name: 'connect', req })
+  }, [authStatus, location.pathname, navigate])
 
   // Nothing in the app is reachable while signed out. Practice only means
   // something when it is attributed to a learner — the level, the review
@@ -162,6 +196,18 @@ function Router() {
           }
         />
         <Route path="/" element={<MarketingScreen navigate={navigate} />} />
+
+        {/* An assistant has sent a grown-up here to approve a connection. They
+            sign in and stay put: the address keeps the request, and the
+            signed-in table below renders the consent screen at it. */}
+        <Route
+          path="/connect"
+          element={
+            <ConnectDoor
+              onBack={() => navigate({ name: 'marketing' })}
+            />
+          }
+        />
 
         {/* The rest of the marketing site. Signed out is the only state the
             sales pages are reachable in: a signed-in grown-up wanting to know
@@ -202,6 +248,7 @@ function Router() {
       />
       <Route path="/family" element={<FamilyScreen navigate={navigate} />} />
       <Route path="/account" element={<AccountScreen navigate={navigate} />} />
+      <Route path="/connect" element={<ConnectScreen navigate={navigate} />} />
       <Route path="/upgrade" element={<UpgradeScreen navigate={navigate} />} />
       <Route path="/progress" element={<ProgressScreen game={game} navigate={navigate} />} />
       <Route path="/progress/print" element={<PrintableReport navigate={navigate} />} />

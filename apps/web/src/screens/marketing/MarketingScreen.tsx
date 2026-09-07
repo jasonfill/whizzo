@@ -15,7 +15,7 @@ import {
   Section,
   Steps,
 } from './chrome'
-import { CORE_FAQ, ENGINE_STEPS, EVIDENCE, GROWNUP, SUBJECTS } from './copy'
+import { CORE_FAQ, ENGINE_STEPS, EVIDENCE, GROWNUP, PROMISE, SUBJECTS, TAGLINE } from './copy'
 
 /**
  * The front page.
@@ -41,6 +41,8 @@ export default function MarketingScreen({ navigate }: { navigate: Navigate }) {
   return (
     <MarketingPage current={here} navigate={navigate}>
       <Hero onStart={toAuth} />
+
+      <ThePromise navigate={navigate} />
 
       <Section
         eyebrow="Three subjects, one record"
@@ -128,10 +130,20 @@ function Hero({ onStart }: { onStart: () => void }) {
     <section className="grid grid-cols-1 items-center gap-6 rounded-[26px] bg-chalk p-7 ring-1 ring-hair md:grid-cols-[1fr_280px] md:p-10">
       <div>
         <Eyebrow>Spelling · Typing · Study decks</Eyebrow>
-        <h1 className="mt-2 font-display text-[40px] font-extrabold leading-[1.05] tracking-[-0.02em] text-ink md:text-[52px]">
-          Practice that knows what your child can actually do.
+        <h1 className="mt-2 font-display text-[44px] font-extrabold leading-[1.05] tracking-[-0.02em] text-ink md:text-[58px]">
+          {/* Each beat is unbreakable, so a narrow column wraps between "Prove it."
+              and "Keep it." rather than stranding "it." on a line of its own. */}
+          {TAGLINE.split(/(?<=\.)\s+/).map((beat, index, all) => (
+            <span key={beat}>
+              <span className="inline-block">{beat}</span>
+              {index < all.length - 1 ? ' ' : ''}
+            </span>
+          ))}
         </h1>
-        <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-body">
+        <p className="mt-4 max-w-xl text-[19px] font-bold leading-snug text-ink">
+          Practice that knows what your child can actually do.
+        </p>
+        <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-body">
           Whizzo works out a learner’s real level from the work they attempt, then keeps them at the
           edge of it. Set the work, and every task closes on a round the app graded — never on a
           child saying it is done.
@@ -159,6 +171,45 @@ function Hero({ onStart }: { onStart: () => void }) {
         />
       </div>
     </section>
+  )
+}
+
+/**
+ * The tagline, unpacked.
+ *
+ * Three words is a promise only if each one can be pointed at. This section
+ * does the pointing: one card per word, each naming the rule in the app that
+ * makes it true, and a way through to the page where that rule is shown in
+ * full. The copy lives in `copy.ts` next to the tagline it explains.
+ */
+function ThePromise({ navigate }: { navigate: Navigate }) {
+  return (
+    <Section
+      eyebrow="The promise"
+      title="Three words, and what each one is held to"
+      lede="A tagline is cheap. These are the three rules the product is built around, and none of them is a setting somebody can switch off."
+    >
+      <ol className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {PROMISE.map((beat, index) => (
+          <li key={beat.word} className="rounded-[22px] border border-hair bg-chalk p-5">
+            <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-spark">
+              {String(index + 1).padStart(2, '0')}
+            </div>
+            <h3 className="mt-1 font-display text-3xl font-extrabold tracking-[-0.02em] text-ink">
+              {beat.word}.
+            </h3>
+            <p className="mt-2 text-lg font-extrabold text-ink">{beat.title}</p>
+            <p className="mt-2 text-[15px] leading-relaxed text-body">{beat.body}</p>
+            <CheckList className="mt-3" items={beat.points} />
+          </li>
+        ))}
+      </ol>
+      <p className="mt-4 text-sm font-bold text-stone">
+        <PageLink to={{ name: 'how' }} navigate={navigate} className="underline">
+          How each of these is enforced, rule by rule →
+        </PageLink>
+      </p>
+    </Section>
   )
 }
 

@@ -8,12 +8,16 @@ import { listKey, todayString, type QuizCard } from '../../lib/progress/types'
 import { allDecks, copyDeck, deckStats, findDeck, masteryForCard } from '../../lib/quiz/decks'
 import { MODES, type DirectionSetting } from '../../lib/quiz/session'
 import type { Navigate } from '../../routes'
+import { bandForGrade, tutorPacket } from '@whizzo/shared'
+import { useLearners } from '../../lib/learners'
 
 export default function DeckScreen({ deckId, navigate }: { deckId: string; navigate: Navigate }) {
   const { snapshot, saveDeck, deleteDeck } = useProgress()
   const [direction, setDirection] = useState<DirectionSetting>('term-first')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [packetCopied, setPacketCopied] = useState(false)
+  const { active } = useLearners()
   const today = todayString()
 
   const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
@@ -112,6 +116,39 @@ export default function DeckScreen({ deckId, navigate }: { deckId: string; navig
             ))}
           </div>
         </>
+      )}
+
+      {/* The tutor packet: a prompt plus the cards, for a voice conversation
+          with no tools at all. It records nothing and says so — the real
+          thing is a connected app (Account → Connected apps); this is for the
+          car this afternoon. */}
+      {!tooSmall && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={async () => {
+              const text = tutorPacket(
+                deck,
+                bandForGrade(active?.gradeHint),
+                active?.displayName.split(/\s+/)[0] || 'the learner',
+                active?.gradeHint ?? null,
+              )
+              try {
+                await navigator.clipboard.writeText(text)
+                setPacketCopied(true)
+                setTimeout(() => setPacketCopied(false), 2500)
+              } catch {
+                /* nothing to do; the clipboard is unavailable here */
+              }
+            }}
+          >
+            {packetCopied ? 'Copied ✓' : '🗣️ Copy for a voice assistant'}
+          </Button>
+          <span className="text-sm font-bold text-stone">
+            Paste into any assistant to practise out loud. Not recorded here — connect the app to
+            count it.
+          </span>
+        </div>
       )}
 
       {/* Deck management */}

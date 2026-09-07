@@ -50,6 +50,8 @@ export function routeToPath(route: Route): string {
       return '/progress/print'
     case 'account':
       return '/account'
+    case 'connect':
+      return route.req ? `/connect?req=${encodeURIComponent(route.req)}` : '/connect'
     case 'family':
       return '/family'
     case 'upgrade':

@@ -1,6 +1,6 @@
 # Build sequence — the three specs as one plan
 
-**Status:** in progress · **Date:** 2026-08-31 · **Governs:** activities, structure, ingestion, billing
+**Status:** in progress · **Date:** 2026-09-06 · **Governs:** activities, structure, ingestion, billing, planner, MCP
 
 | Stage | | |
 | --- | --- | --- |
@@ -15,6 +15,8 @@
 | 6 Fluency & engagement | **done** | maturity band + band-aware praise, `brain-dump` grading, `speed-recall` fluency from `responseMs` |
 | 7 Generators | **done** | math fact banks — six out of the box, stable ids, difficulty as children meet it |
 | 8 Publishing | **partial** | units, prerequisites and `validateCatalog`. Groups, slots and the supplied catalog deliberately deferred |
+| 9 Planner | **proposed** | courses, the week, tests planned backwards, verified study sessions, grown-up comments — [weekly-planner-spec.md](weekly-planner-spec.md) |
+| 10 MCP | **code done, needs config** | OAuth server, `/mcp`, ten tools, grading and the adaptive engine moved to shared, `channel` on attempts, migration 0020, `simulate:tutor`. Needs `APP_URL` and `MCP_TOKEN_SECRET`, then the voice spike — see §3d |
 
 Three proposals exist, they overlap, and each one has its own "Phase 1". This
 document is the single authority on **what gets built when**, and on the
@@ -107,6 +109,9 @@ six.
 | 0015 | `assignments.goal` and the goal-completion predicate | 4 |
 | 0016 | `rewards`, `reward_points`, `award_matching_rewards()` | 5 |
 | 0017 | `content_sources`, `content_jobs`, `source_id`, `accepted_at` | 3 |
+| 0018 | Stripe: customer and subscription ids, webhook bookkeeping | 0.6 |
+| 0019 | `courses`, `planner_weeks`, `assessments`, `planner_items`, `planner_comments`, `planner_prefs`, `course_id` on decks / word lists / assignments | 9 |
+| 0020 | `mcp_clients`, `mcp_grants`, `mcp_auth_codes`, `mcp_refresh_tokens`, `mcp_rounds`, `attempts.channel` | 10 |
 
 Numbers follow the stages except ingestion, which is built third and numbered
 last: rewards is the smaller and more certain change, and there is no value in
@@ -227,6 +232,51 @@ billing model that is still open.
 
 ---
 
+### Stage 9 — The weekly planner
+
+*Proposed. Depends on nothing unbuilt: tracks (1), the Mastery Path (4) and
+retention are all in place.*
+
+Courses as per-learner enrolments citing a track; the week grid with tasks,
+assessments and the app's own due work pulled in; `proposeStudyPlan()` with
+`simulate:planner` in the same pull request; linked study sessions closed in
+the round's transaction by the same mechanism as assignments; grown-up view,
+attributed writes and comments; the Family line. Scope in
+[weekly-planner-spec.md](weekly-planner-spec.md).
+
+Sits after 8 in number only. It can start now, and it is the first stage whose
+value is visible to a learner who never opens a deck.
+
+### Stage 10 — MCP: renting the tutor
+
+*Proposed. Depends on the ladder (2) and the Mastery Path (4), both built.
+Independent of 9; the two can run side by side.*
+
+The app as a tool surface for Claude and ChatGPT, so the assistant a family
+already pays for can run a practice round out loud and the answers land in
+`attempts` as verified evidence. Scope in
+[mcp-tutor-spec.md](mcp-tutor-spec.md).
+
+**Claude voice mode calls custom connectors** (confirmed 2026-09-06), and
+that is the whole point: a child practising out loud with the assistant the
+family already pays for. ChatGPT gets the same server and the text-chat
+tutor until its voice mode grows tools.
+
+**Starts with a one-day spike, before any of the rest**: a stub server with
+one read and one write tool, connected to Claude on iOS, to measure the tool
+round trip inside a voice turn and confirm an *allow always* tool runs
+without a prompt mid-conversation. Those two numbers set the round length
+and decide whether grading and the next question can stay one call.
+
+Then, in order: grading moved from `apps/web` to `packages/shared` (the
+`rich` move again — file move, old path re-exports); the OAuth server and
+consent screen; `/mcp` and the tool catalogue with `simulate:tutor` in the
+same pull request; migration 0020; the `tutor` activity and `speakable`
+requirement; Learn tasks closed by tutor sessions; the tutor packet.
+
+No model call is made from this code and `llm_usage` gains nothing from it,
+which is why it is free at every tier.
+
 ## 3b. Deliberately not built
 
 Stage 8's second half — **groups, slots, offer-into-a-slot, pinning, and the
@@ -281,6 +331,27 @@ silently strip them. That is a migration to write once the first real
 subscriptions exist, not now.
 
 ---
+
+## 3d. Turning connected apps on
+
+The code is finished and tested; what remains is two variables and a phone.
+
+1. `APP_URL` — the app's real public origin. The OAuth server uses it as its
+   issuer and for the consent redirect, so it must be exact and must never be
+   derived from a request.
+2. `MCP_TOKEN_SECRET` — `openssl rand -base64 48`. Separate from every
+   Supabase secret; rotating it signs every assistant out and families
+   reconnect in a minute.
+
+Absent, the OAuth and `/mcp` routes answer `mcp_unconfigured` and the rest of
+the API runs. Migration 0020 applies at startup like the others.
+
+Then the spike the spec asks for, on Claude iOS: add the custom connector at
+`APP_URL/mcp`, approve on the consent screen, allow `start_round` and
+`answer` to run unsupervised in the connector's tool settings, open voice
+mode and say *"tutor Maya on her cells deck."* Two things to write down: how
+long a tool call takes inside a voice turn, and whether the unsupervised
+setting holds mid-conversation. Those set the default round length.
 
 ## 4. What can run in parallel
 

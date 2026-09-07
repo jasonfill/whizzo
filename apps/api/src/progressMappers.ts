@@ -144,6 +144,7 @@ export function toAttempt(row: any): Attempt {
     given: row.given,
     at: epoch(row.created_at),
     sessionId: row.session_id,
+    channel: row.channel ?? 'app',
   }
 }
 

@@ -77,6 +77,29 @@ There is no `down`. Reversing a column rename across ten tables plus a backfill
 is not something anyone should trigger by typing one word; recovery is a forward
 migration or a restore.
 
+## Connected apps
+
+`/mcp` is a Model Context Protocol endpoint (Streamable HTTP, no sessions) so
+Claude and ChatGPT can tutor a learner out loud on their own decks —
+[docs/mcp-tutor-spec.md](../../docs/mcp-tutor-spec.md). It is a resource
+server, and the API carries its own small OAuth 2.1 authorization server for
+it: the two well-known documents, dynamic registration and Client ID Metadata
+Documents, PKCE (S256 only), resource indicators, refresh rotation. The
+consent screen is the web app's `/connect`.
+
+Assistants never hold a Supabase token, and `/mcp` never accepts one. An
+access token is signed under `MCP_TOKEN_SECRET`, bound to the canonical `/mcp`
+URL as its audience, and carries the grant it belongs to; the grant is read on
+every call so a disconnect on the Account screen takes effect on the next
+request, not at the hour mark. Inside the endpoint every tool runs under
+`withUser`, so RLS applies exactly as it does for the browser.
+
+Two rules the tests pin: no question payload ever contains the answer to the
+card it asks (the answer arrives only from the grading call), and a round's
+attempts are written through `writeProgressChange` with `channel = 'mcp'` —
+the same code the browser's rounds use, so the evidence means the same thing
+whichever way it arrived.
+
 ## Child sign-in
 
 A four-digit PIN is not a password, so the PIN is never the Supabase password.

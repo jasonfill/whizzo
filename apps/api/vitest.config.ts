@@ -4,6 +4,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: false,
+    // Only the sources. `tsc` compiles the test files into dist/ alongside
+    // everything else, and a compiled copy from an earlier build is a test of
+    // code that no longer exists.
+    include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'text'],

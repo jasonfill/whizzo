@@ -17,7 +17,7 @@
 
 import { activityDef, ACTIVITY_CATALOG, type ActivityDef, type ActivitySubject } from './activities.js'
 import type { QuizCard, QuizDeck } from './progress.js'
-import { hasRich, parseRich } from './rich/index.js'
+import { hasRich, parseRich, richToPlain } from './rich/index.js'
 
 export type Availability = 'ready' | 'partial' | 'locked'
 
@@ -50,6 +50,30 @@ export function hasPlainAnswer(card: Pick<QuizCard, 'definition'>): boolean {
   return parseRich(card.definition).every((node) => node.type === 'text')
 }
 
+/**
+ * Whether both sides of a card can be said out loud.
+ *
+ * The tutor (docs/mcp-tutor-spec.md) asks the prompt and listens for the
+ * answer, so a figure on either side is out, as is a photograph. Maths passes
+ * when its plain-text projection is something a person would say — `3/4`
+ * speaks, `\\frac{dy}{dx}` does not, and the projection is where that is
+ * decided: anything still carrying a backslash after projection is not
+ * speakable yet.
+ */
+export function isSpeakable(card: Pick<QuizCard, 'term' | 'definition' | 'media'>): boolean {
+  if (card.media) return false
+  for (const side of [card.term, card.definition]) {
+    if (!side?.trim()) return false
+    // A figure is unsayable whether or not it validates: a broken one reads
+    // aloud as a paragraph of JSON, which is worse.
+    if (/\[\[\s*figure\b/i.test(side)) return false
+    if (!hasRich(side)) continue
+    if (parseRich(side).some((node) => node.type === 'figure')) return false
+    if (richToPlain(side).includes('\\')) return false
+  }
+  return true
+}
+
 function cardSupports(card: QuizCard, activity: ActivityDef, poolSize: number): boolean {
   for (const need of activity.requires) {
     switch (need) {
@@ -64,6 +88,9 @@ function cardSupports(card: QuizCard, activity: ActivityDef, poolSize: number): 
         // three-card deck cannot support them, which is why `buildQuestion`
         // already degrades to written rather than showing one option.
         if (poolSize < MIN_POOL) return false
+        break
+      case 'speakable':
+        if (!isSpeakable(card)) return false
         break
     }
   }
@@ -120,6 +147,11 @@ function reasonFor(
       : `Works on ${usable} of ${total} — the rest are equations or figures.`
   }
   if (missing.includes('example')) return `${usable} of ${total} cards have an example sentence.`
+  if (missing.includes('speakable')) {
+    return status === 'locked'
+      ? 'These cards carry figures or photographs, which cannot be read aloud.'
+      : `Works on ${usable} of ${total} — the rest carry figures or photographs.`
+  }
   return `Works on ${usable} of ${total} cards.`
 }
 

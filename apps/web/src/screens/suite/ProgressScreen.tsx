@@ -17,7 +17,7 @@ import { addDays, todayString } from '../../lib/progress/types'
 import { breakdown, gradeBreakdown, troubleWords, turnaroundWords } from '../../lib/spelling/stats'
 import { errorPattern } from '../../lib/spelling/activities'
 import { trackReadings, unaidedAccuracy } from '../../lib/progress/summary'
-import { forecast, retentionReading } from '@whizzo/shared'
+import { activityDef, forecast, retentionReading } from '@whizzo/shared'
 import { useTheme } from '../../lib/theme/ThemeProvider'
 import { useAssignments } from '../../hooks/useAssignments'
 import { useLearners } from '../../lib/learners/LearnerProvider'
@@ -589,6 +589,10 @@ function activityLabel(activity: string, subject: string): string {
     const quizMode = MODES.find((m) => m.id === activity)
     if (quizMode) return quizMode.name
     if (activity === 'review') return 'Card review'
+    // Rounds the app itself cannot start — a tutor round run through an
+    // assistant — are named by the catalogue.
+    const def = activityDef(activity)
+    if (def) return def.name
     return activity
   }
   const known = ACTIVITIES.find((a) => a.id === activity)

@@ -17,6 +17,21 @@ export default defineConfig({
         target: process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8787',
         changeOrigin: true,
       },
+      // The MCP endpoint and the OAuth discovery documents sit outside /api by
+      // specification (docs/mcp-tutor-spec.md); production routes them to the
+      // API in .do/app.yaml, and this keeps development identical.
+      '/mcp': {
+        target: process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
+      '/.well-known/oauth-protected-resource': {
+        target: process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
+      '/.well-known/oauth-authorization-server': {
+        target: process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
     },
   },
 })

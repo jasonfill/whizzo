@@ -41,6 +41,8 @@ export type Route =
   // Suite
   | { name: 'home' }
   | { name: 'account' }
+  /** An assistant asking to connect: the consent screen (docs/mcp-tutor-spec.md). */
+  | { name: 'connect'; req?: string }
   | { name: 'family' }
   | { name: 'upgrade' }
   | { name: 'progress' }

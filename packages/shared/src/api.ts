@@ -116,3 +116,31 @@ export interface ChildSessionResponse {
     expiresIn: number
   }
 }
+
+// --- Connected apps (docs/mcp-tutor-spec.md) -------------------------------------
+
+export interface McpGrant {
+  id: string
+  /** Which assistant, as best the client's own name says. */
+  client: 'claude' | 'chatgpt' | 'other'
+  clientName: string
+  learners: Array<{ id: string; name: string }>
+  currentLearnerId: string | null
+  scope: string
+  createdAt: number
+  lastUsedAt: number | null
+}
+
+export interface McpGrantsResponse {
+  grants: McpGrant[]
+  /** False in a build with no MCP_TOKEN_SECRET. */
+  enabled: boolean
+  /** The URL a family pastes into the assistant. */
+  serverUrl: string | null
+}
+
+export interface McpPendingResponse {
+  clientName: string
+  clientLabel: 'claude' | 'chatgpt' | 'other'
+  scope: string
+}

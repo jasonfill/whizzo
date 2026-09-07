@@ -88,6 +88,21 @@ services:
       - key: MIGRATION_DATABASE_URL
         scope: RUN_TIME
         type: SECRET
+      # Where the app lives, e.g. https://whizzo.app. The OAuth server that
+      # lets Claude and ChatGPT connect (docs/mcp-tutor-spec.md) uses it as
+      # its issuer and for the consent redirect, and Stripe uses it for return
+      # links. It must be the real public origin — never derived from a
+      # request, which an attacker controls.
+      - key: APP_URL
+        scope: RUN_TIME
+        type: SECRET
+      # Signs the tokens issued to connected assistants. Generate with
+      # `openssl rand -base64 48`. Rotating it signs every assistant out;
+      # families reconnect in a minute. Separate from every Supabase secret
+      # on purpose: those tokens are for the app, these are for /mcp.
+      - key: MCP_TOKEN_SECRET
+        scope: RUN_TIME
+        type: SECRET
 
 static_sites:
   - name: web
@@ -123,6 +138,29 @@ ingress:
         # route is registered under /api. Leaving it off 404s the entire API.
         # It also keeps production identical to development, where Vite proxies
         # /api straight through to the service.
+        preserve_path_prefix: true
+    # Connected apps (docs/mcp-tutor-spec.md). The MCP endpoint and the two
+    # OAuth discovery documents live outside /api by specification: an
+    # assistant finds the authorization server from the 401 on /mcp, and RFC
+    # 9728 puts the metadata at a well-known path on the origin. Without these
+    # three rules the static site answers them with its 404 page.
+    - match:
+        path:
+          prefix: /mcp
+      component:
+        name: api
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /.well-known/oauth-protected-resource
+      component:
+        name: api
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /.well-known/oauth-authorization-server
+      component:
+        name: api
         preserve_path_prefix: true
     - match:
         path:

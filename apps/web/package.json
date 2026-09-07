@@ -13,7 +13,8 @@
     "simulate:adaptive": "tsx scripts/simulate-adaptive.ts",
     "test:unit": "vitest run",
     "test:watch": "vitest",
-    "simulate:ladder": "tsx scripts/simulate-ladder.ts"
+    "simulate:ladder": "tsx scripts/simulate-ladder.ts",
+    "simulate:tutor": "tsx scripts/simulate-tutor.ts"
   },
   "dependencies": {
     "@fontsource-variable/nunito": "^5.3.0",
