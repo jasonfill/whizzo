@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -85,6 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // What the listener compares an incoming session against. A ref rather than
+  // the state itself so the subscription, which is set up once, always sees the
+  // current session instead of the one from its first render.
+  const sessionRef = useRef<Session | null>(null)
+  sessionRef.current = session
 
   const loadProfile = useCallback(async (userId: string) => {
     if (!supabase) return
@@ -141,6 +147,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, next) => {
       if (cancelled) return
+      const prev = sessionRef.current
+
+      // Supabase re-checks the session every time the tab regains focus and
+      // announces the result as SIGNED_IN or TOKEN_REFRESHED even when nothing
+      // changed. Treating that as a fresh sign-in reloads the profile, the
+      // learner list and the progress store, which unmounts whatever screen
+      // the learner was on — halfway through a deck of flashcards, say. So:
+      //
+      //   * same user, same token: nothing happened; ignore it;
+      //   * same user, new token: keep the new token so requests keep working,
+      //     but the account has not changed, so nothing else moves;
+      //   * a different user, or none: a real change; handle it in full.
+      if (next?.user && prev?.user && next.user.id === prev.user.id) {
+        if (next.access_token !== prev.access_token) setSession(next)
+        return
+      }
+
       setSession(next)
       if (next?.user) {
         await loadProfile(next.user.id)
@@ -267,12 +290,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [profile],
   )
 
+  // Identity-stable across token refreshes: a refreshed session carries a new
+  // user object describing the same person, and anything keyed on `user`
+  // (the learner list, for one) must not reload because a token rotated.
+  const userId = session?.user?.id ?? null
+  const user = useMemo(() => session?.user ?? null, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
       configured: isSupabaseConfigured,
       session,
-      user: session?.user ?? null,
+      user,
       profile,
       error,
       signUp,
@@ -287,6 +316,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       status,
       session,
+      user,
       profile,
       error,
       signUp,

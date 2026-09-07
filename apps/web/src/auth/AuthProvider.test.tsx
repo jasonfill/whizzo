@@ -434,6 +434,56 @@ describe('a session that changes underneath the app', () => {
     expect(screen.getByTestId('profile')).toHaveTextContent('Sam')
   })
 
+  // Supabase re-announces the session whenever the tab regains focus. That is
+  // not a sign-in, and treating it as one reloads everything downstream and
+  // throws a learner out of the round they were in.
+  it('holds still when the tab comes back and the session is unchanged', async () => {
+    let handler: ((e: string, s: unknown) => Promise<void>) | null = null
+    ;(authApi.onAuthStateChange as unknown as { mockImplementation: (f: unknown) => void })
+      .mockImplementation((fn: unknown) => {
+        handler = fn as never
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
+      })
+    signedInWith({ id: 'u1', display_name: 'Sam' })
+    authApi.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u1' }, access_token: 't1' } },
+      error: null,
+    } as never)
+    renderAuth()
+    await waitFor(() => expect(screen.getByTestId('profile')).toHaveTextContent('Sam'))
+    const profileReads = supabaseMock.from.mock.calls.length
+
+    await act(async () => {
+      await handler!('SIGNED_IN', { user: { id: 'u1' }, access_token: 't1' })
+    })
+    expect(supabaseMock.from.mock.calls.length).toBe(profileReads)
+    expect(screen.getByTestId('status')).toHaveTextContent('signed-in')
+    expect(screen.getByTestId('profile')).toHaveTextContent('Sam')
+  })
+
+  it('takes a rotated token without reloading the account', async () => {
+    let handler: ((e: string, s: unknown) => Promise<void>) | null = null
+    ;(authApi.onAuthStateChange as unknown as { mockImplementation: (f: unknown) => void })
+      .mockImplementation((fn: unknown) => {
+        handler = fn as never
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
+      })
+    signedInWith({ id: 'u1', display_name: 'Sam' })
+    authApi.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u1' }, access_token: 't1' } },
+      error: null,
+    } as never)
+    renderAuth()
+    await waitFor(() => expect(screen.getByTestId('profile')).toHaveTextContent('Sam'))
+    const profileReads = supabaseMock.from.mock.calls.length
+
+    await act(async () => {
+      await handler!('TOKEN_REFRESHED', { user: { id: 'u1' }, access_token: 't2' })
+    })
+    expect(supabaseMock.from.mock.calls.length).toBe(profileReads)
+    expect(screen.getByTestId('profile')).toHaveTextContent('Sam')
+  })
+
   it('drops the profile when the session ends elsewhere', async () => {
     let handler: ((e: string, s: unknown) => Promise<void>) | null = null
     ;(authApi.onAuthStateChange as unknown as { mockImplementation: (f: unknown) => void })

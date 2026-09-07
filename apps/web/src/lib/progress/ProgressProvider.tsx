@@ -88,6 +88,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   // signing out, or a parent switching from one child to another. Selecting a
   // learner pulls their cloud snapshot and folds any guest play into it first,
   // so a kid who practised before their account existed keeps everything.
+  //
+  // Keyed on the learner's id, not the record: the list is refetched now and
+  // then (adding a sibling, a refresh) and hands back a new object for the same
+  // child. Rebooting the store on that would drop `ready` and unmount the
+  // screen they are on, mid-round.
+  const activeId = active?.id ?? null
   useEffect(() => {
     if (status === 'loading') return
     // Wait for the learner list before deciding: booting into local mode and
@@ -99,8 +105,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     async function boot() {
       setSync('loading')
       try {
-        if (status === 'signed-in' && active) {
-          const cloud = new ApiProgressRepo(active.id)
+        if (status === 'signed-in' && activeId) {
+          const cloud = new ApiProgressRepo(activeId)
           const cloudSnapshot = await cloud.load()
           if (cancelled) return
 
@@ -108,12 +114,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
           const hasGuestPlay =
             Object.keys(local.mastery).length > 0 || Object.keys(local.skills).length > 0
 
-          if (hasGuestPlay && !alreadyMerged(active.id)) {
+          if (hasGuestPlay && !alreadyMerged(activeId)) {
             setSync('merging')
             const merged = mergeSnapshots(cloudSnapshot, local)
             await cloud.pushSnapshot(merged)
             if (cancelled) return
-            markMerged(active.id)
+            markMerged(activeId)
             clearLocalProgress()
             repoRef.current = cloud
             setSnapshot(merged)
@@ -143,7 +149,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [status, learnerStatus, active])
+  }, [status, learnerStatus, activeId])
 
   const commit = useCallback(async (change: ProgressChange) => {
     // Reconciled first, so the optimistic snapshot and the stored one are the
