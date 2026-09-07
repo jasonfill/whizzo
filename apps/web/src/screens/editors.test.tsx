@@ -247,6 +247,17 @@ describe('a deck’s own screen', () => {
     )
   })
 
+  it('offers to run the whole deck through multiple choice, and only there', () => {
+    render(<DeckScreen deckId="d1" navigate={navigate} />)
+    const all = screen.getAllByText(/^Run through all \d+ cards$/)
+    expect(all).toHaveLength(1)
+    fireEvent.click(all[0]!)
+    const cards = testState.snapshot.decks.find((d) => d.id === 'd1')!.cards.length
+    expect(navigate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'quiz-play', deckId: 'd1', mode: 'choice', size: cards }),
+    )
+  })
+
   it('refuses to study a deck with fewer than two cards', () => {
     testState.snapshot = {
       ...emptySnapshot(),

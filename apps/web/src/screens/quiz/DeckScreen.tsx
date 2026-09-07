@@ -94,26 +94,46 @@ export default function DeckScreen({ deckId, navigate }: { deckId: string; navig
           </div>
 
           <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {MODES.map((mode) => (
-              <button
-                key={mode.id}
-                onClick={() =>
-                  navigate({ name: 'quiz-play', mode: mode.id, deckId: deck.id, direction })
-                }
-                className="rounded-3xl bg-white/85 p-5 text-left shadow-xl ring-1 ring-hair backdrop-blur transition-transform hover:-translate-y-1 hover:shadow-2xl"
-              >
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="text-3xl">{mode.emoji}</span>
-                  <h3 className="text-xl font-extrabold text-ink">{mode.name}</h3>
-                  {mode.isTest && (
-                    <Pill className="bg-rose-100 text-rose-600" title="Counts toward your score">
-                      Graded
-                    </Pill>
+            {MODES.map((mode) => {
+              const play = (size?: number) =>
+                navigate({ name: 'quiz-play', mode: mode.id, deckId: deck.id, direction, size })
+              return (
+                <div
+                  key={mode.id}
+                  className="flex flex-col rounded-3xl bg-white/85 shadow-xl ring-1 ring-hair backdrop-blur transition-transform hover:-translate-y-1 hover:shadow-2xl"
+                >
+                  <button onClick={() => play()} className="flex-1 p-5 text-left">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="text-3xl">{mode.emoji}</span>
+                      <h3 className="text-xl font-extrabold text-ink">{mode.name}</h3>
+                      {mode.isTest && (
+                        <Pill className="bg-rose-100 text-rose-600" title="Counts toward your score">
+                          Graded
+                        </Pill>
+                      )}
+                    </div>
+                    <p className="font-bold text-muted">{mode.blurb}</p>
+                  </button>
+                  {/* A quick round is the default, but a four-way pick is fast
+                      enough that the whole deck in one sitting is a reasonable
+                      ask — and the way to make sure nothing was skipped. The
+                      length rides in the route, so the link is shareable. */}
+                  {mode.id === 'choice' && (
+                    <div className="flex flex-wrap items-center gap-2 border-t border-hair px-5 py-3">
+                      <span className="text-xs font-extrabold uppercase tracking-wide text-stone">
+                        Or
+                      </span>
+                      <button
+                        onClick={() => play(deck.cards.length)}
+                        className="rounded-xl bg-quiet px-3 py-1.5 text-sm font-extrabold text-ink transition-colors hover:bg-ink hover:text-white"
+                      >
+                        Run through all {deck.cards.length} cards
+                      </button>
+                    </div>
                   )}
                 </div>
-                <p className="font-bold text-muted">{mode.blurb}</p>
-              </button>
-            ))}
+              )
+            })}
           </div>
         </>
       )}
