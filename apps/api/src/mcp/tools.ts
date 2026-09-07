@@ -106,7 +106,7 @@ export const TOOL_DEFS: ToolDef[] = [
     name: 'list_materials',
     title: 'List decks',
     description:
-      'The decks available to a learner, with how many cards are due today and how many can be asked out loud, plus any task a grown-up set on them. Call before start_round to find the deck the parent means; pass a few words of its title as query.',
+      'The decks available to a learner, with how many cards are due today and how many can be asked out loud, plus any task a grown-up set on them. Call before start_round to find the deck the parent means; pass a few words of its title as query. The deck ids are in the JSON after the spoken line — start_round needs one.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -137,7 +137,7 @@ export const TOOL_DEFS: ToolDef[] = [
     name: 'start_round',
     title: 'Start a round',
     description:
-      'Begin a round of practice and get the first question, plus the tutoring instructions to follow for the whole round. Modes: practise (default; each card asked at the level the learner is at), study (teach the cards first — the only mode whose result carries answers), test (every card from memory, no hints), review (whatever is due across all decks; no materialId needed). Starting a new round closes any round still open.',
+      'Begin a round of practice and get the first question, plus the tutoring instructions to follow for the whole round. The result JSON carries roundId, which every answer, hint and end_round call needs. Modes: practise (default; each card asked at the level the learner is at), study (teach the cards first — the only mode whose result carries answers), test (every card from memory, no hints), review (whatever is due across all decks; no materialId needed). Starting a new round closes any round still open.',
     inputSchema: {
       type: 'object',
       properties: {

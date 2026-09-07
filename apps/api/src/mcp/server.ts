@@ -35,6 +35,7 @@ const LIST_TTL_MS = 60 * 60 * 1000
 const SERVER_INSTRUCTIONS =
   'Whizzo is a learning app for children. These tools let you tutor a learner out loud on their own flashcard decks. ' +
   'Call whoami first. Use list_materials to find the deck, start_round to begin, and answer for every reply — send exactly what the learner said. ' +
+  'Every result is a spoken line followed by JSON: read the line aloud, and take ids (deck ids, roundId) and the next question from the JSON. ' +
   'Follow the instructions returned by start_round for the whole round. You are never given an answer before the learner has tried.'
 
 const TUTOR_PROMPT = {
@@ -220,8 +221,15 @@ async function dispatch(
         throw new RpcError(INVALID_PARAMS, `Unknown tool: ${params.data.name}`)
       }
       const result = await callTool(ctx, params.data.name, params.data.arguments ?? {})
+      // The spoken line first, then the data as JSON in the same text block.
+      // `structuredContent` carries the same data for clients that read it,
+      // but the assistants' chat clients hand the model the *text* — and a
+      // model that only ever saw "Caroline has three decks" could never call
+      // start_round, because the deck ids were in a field it was not shown.
+      const hasData = Object.keys(result.data).length > 0
+      const text = hasData ? `${result.say}\n\n${JSON.stringify(result.data)}` : result.say
       return {
-        content: [{ type: 'text', text: result.say }],
+        content: [{ type: 'text', text }],
         structuredContent: { ...result.data, say: result.say },
         isError: Boolean(result.isError),
         ...meta,

@@ -320,6 +320,10 @@ describe('the whole dance', () => {
     expect(result.isError).toBe(false)
     expect(result.content[0].text).toContain('Maya Example')
     expect(result.structuredContent.learners[0]).toMatchObject({ name: 'Maya Example', current: true })
+    // The text the model is shown carries the data too — the ids it must act
+    // on are not hidden in a field its client may not surface.
+    expect(result.content[0].text).toContain(LEARNER)
+    expect(JSON.parse(result.content[0].text.split('\n\n')[1]).learners[0].id).toBe(LEARNER)
   })
 
   it('a child signed in with a PIN cannot approve a connection', async () => {
@@ -467,7 +471,7 @@ describe('the endpoint', () => {
     const result = res.json().result
     expect(result.isError).toBe(false)
     expect(result.structuredContent.needsLearner).toBe(true)
-    expect(result.content[0].text).toBe('Which child is this for — Maya or Theo?')
+    expect(result.content[0].text).toMatch(/^Which child is this for — Maya or Theo\?/)
   })
 
   it('a notification gets a 202 and nothing else', async () => {
