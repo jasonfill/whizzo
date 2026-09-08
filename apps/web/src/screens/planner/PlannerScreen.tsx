@@ -39,6 +39,7 @@ import PlannerCard from '../../components/planner/PlannerCard'
 import QuickAdd from '../../components/planner/QuickAdd'
 import Timeline from '../../components/planner/Timeline'
 import ScreenHeader from '../../components/suite/ScreenHeader'
+import HereNow from '../../components/planner/HereNow'
 import { Button, Card } from '../../components/ui'
 import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { usePlannerWeek } from '../../hooks/usePlannerWeek'
@@ -67,7 +68,7 @@ export default function PlannerScreen({
   const { active } = useLearners()
   const { snapshot } = useProgress()
   const coverage = useCoverage()
-  const planner = usePlannerWeek(weekStart)
+  const planner = usePlannerWeek(weekStart, { announce: true })
   const { data, today, load, courseById } = planner
 
   const band = data?.band ?? 'growing'
@@ -323,6 +324,7 @@ export default function PlannerScreen({
         onBack={() => navigate({ name: 'home' })}
         right={
           <div className="flex flex-wrap items-center gap-2">
+            <HereNow watchers={planner.watchers} />
             <Button variant="ghost" onClick={() => navigate({ name: 'planner', weekStart: addDays(planner.weekStart, -7) })} aria-label="Previous week">
               ‹
             </Button>

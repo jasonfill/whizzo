@@ -165,6 +165,11 @@ export async function plannerMock() {
       letGo: vi.fn(async () => {}),
       saveWeek: spies.plannerSaveWeek,
       setData: vi.fn(),
+      // The live channel is not exercised through the screen: these tests mock
+      // the hook, so there is no subscription. `testState.watchers` lets a test
+      // that cares about presence set it.
+      liveStatus: 'open' as const,
+      watchers: testState.watchers ?? [],
     }),
   }
 }

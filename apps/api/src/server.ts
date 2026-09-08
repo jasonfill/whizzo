@@ -21,6 +21,7 @@ import { progressRoutes } from './routes/progress.js'
 import { rewardRoutes } from './routes/rewards.js'
 import { billingRoutes } from './routes/billing.js'
 import { plannerRoutes } from './routes/planner.js'
+import { closeLiveStreams, liveRoutes } from './routes/live.js'
 import { mcpGrantRoutes } from './routes/mcpGrants.js'
 import { oauthRoutes } from './mcp/oauth.js'
 import { mcpRoutes } from './mcp/server.js'
@@ -152,6 +153,24 @@ export async function buildServer() {
   await app.register(childLoginAdminRoutes, { prefix: '/api' })
   await app.register(rewardRoutes, { prefix: '/api' })
   await app.register(plannerRoutes, { prefix: '/api' })
+
+  // The live channel (docs/realtime-spec.md). Its own scope for one reason:
+  // these requests are held open for half an hour rather than answered, so the
+  // ceiling that matters is *connections opened*, not requests served, and the
+  // global 300/min is the wrong shape for it. Generous, because a flaky
+  // network reconnects with backoff and a family on three devices is normal;
+  // low enough that a script cannot churn sockets.
+  await app.register(async (scoped) => {
+    // Before the limiter, so it can key on the caller rather than on one
+    // household's shared address.
+    scoped.addHook('onRequest', requireCaller)
+    await scoped.register(rateLimit, {
+      max: 60,
+      timeWindow: '5 minutes',
+      keyGenerator: (request) => callerOf(request).id,
+    })
+    await scoped.register(liveRoutes, { prefix: '/api' })
+  })
 
   // Billing sits in its own scope with a tighter limiter than the rest: every
   // route here either opens a Stripe session or changes what somebody is
@@ -322,6 +341,10 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, 'shutting down')
     try {
+      // Before app.close(), not inside an onClose hook: a live stream is an
+      // in-flight request, close waits for those, and the hook that would end
+      // them runs only after that wait. Watchers reconnect on their own.
+      closeLiveStreams()
       await app.close()
       await closePool()
       process.exit(0)

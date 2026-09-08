@@ -37,6 +37,7 @@ import {
   type PlannerWeek,
 } from '@whizzo/shared'
 import { callerOf, requireCaller } from '../auth.js'
+import { publishLearner } from '../live/publish.js'
 import { withUser, type Queryable } from '../db.js'
 import { badRequest, notFound } from '../errors.js'
 import { dayOf, toAssignment } from '../progressMappers.js'
@@ -679,6 +680,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
       if (!rows.length) throw notFound('No such week')
       return toPlannerWeek(rows[0])
     })
+    publishLearner(request, id, 'planner.week', week)
     return { week }
   })
 
@@ -715,6 +717,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
       await ensureWeek(db, id, d.weekStart)
       return insertItem(db, id, caller.id, d)
     })
+    publishLearner(request, id, 'planner.item', item)
     reply.code(201)
     return { item }
   })
@@ -790,6 +793,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
       if (!rows.length) throw notFound('No such card')
       return toPlannerItem(rows[0])
     })
+    publishLearner(request, id, 'planner.item', item)
     return { item }
   })
 
@@ -805,6 +809,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
       )
       if (!rowCount) throw notFound('No such card')
     })
+    publishLearner(request, id, 'planner.item.removed', { itemId })
     reply.code(204)
     return null
   })
@@ -821,6 +826,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
       if (!rows.length) throw notFound('No such card')
       return toPlannerItem(rows[0])
     })
+    publishLearner(request, id, 'planner.item', item)
     return { item }
   })
 
@@ -842,6 +848,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
         target: null,
       })
     })
+    publishLearner(request, id, 'planner.item', item)
     reply.code(201)
     return { item }
   })
@@ -1134,6 +1141,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
       )
       return toComment(rows[0])
     })
+    publishLearner(request, id, 'planner.comment', comment)
     reply.code(201)
     return { comment }
   })

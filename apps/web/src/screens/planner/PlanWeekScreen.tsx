@@ -35,7 +35,7 @@ type Step = 0 | 1 | 2 | 3 | 4
 
 export default function PlanWeekScreen({ navigate }: { navigate: Navigate }) {
   const { active } = useLearners()
-  const planner = usePlannerWeek()
+  const planner = usePlannerWeek(undefined, { announce: true })
   const { data, today, load, courseById } = planner
   const [step, setStep] = useState<Step>(0)
   const [lastGoals, setLastGoals] = useState<WeekPriority[]>([])
@@ -149,7 +149,8 @@ export default function PlanWeekScreen({ navigate }: { navigate: Navigate }) {
   const isThisWeek = planner.weekStart === weekStartOf(today)
 
   return (
-    <div className="mx-auto w-full max-w-2xl py-4">
+    // Somebody else's edit to the week waits while a field here has focus.
+    <div className="mx-auto w-full max-w-2xl py-4" data-live-key="week">
       <ScreenHeader
         title="Plan your week"
         subtitle={`Step ${step + 1} of 5`}

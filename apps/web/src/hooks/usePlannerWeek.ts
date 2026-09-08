@@ -8,6 +8,20 @@
 //
 // Undo is a five-second stack of inverse operations. It is the reason every
 // action can be a single tap: a wrong tap costs one more tap, not a form.
+//
+// Since stage 11 the same week can be open in two places at once — a parent and
+// a learner planning together — so changes also arrive from the live channel
+// (docs/realtime-spec.md §7). Three rules keep that from fighting the
+// optimistic writes above:
+//
+//   * **Newer wins, by the server's clock.** `land()` applies a card only when
+//     its `updatedAt` is at least the local copy's. Every timestamp comes from
+//     Postgres, so there are no client clocks to disagree. This is what makes a
+//     remote change racing an in-flight local one converge rather than flicker,
+//     and it is why responses land through the same door as remote events.
+//   * **Your own echo is ignored**, filtered by origin in useLiveLearner.
+//   * **A field with focus is never overwritten**, only deferred — losing a
+//     half-typed sentence is worse than being briefly stale.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -17,12 +31,17 @@ import {
   weekLoad,
   weekStartOf,
   type DayLoad,
+  type LiveEvent,
+  type PlannerComment,
   type PlannerItem,
   type PlannerItemDraft,
+  type PlannerWeek,
   type PlannerWeekPatch,
 } from '@whizzo/shared'
 import { ApiError } from '../lib/api/client'
 import { useLearners } from '../lib/learners/LearnerProvider'
+import { DeferredEdits } from '../lib/live/editing'
+import { useLiveLearner } from './useLiveChannel'
 import {
   createItem,
   deleteItem,
@@ -43,13 +62,42 @@ export interface Toast {
 
 const UNDO_MS = 5000
 
+/** Put `item` where it belongs in the week, or take it out if it left. */
+function withItem(d: PlannerWeekResponse, item: PlannerItem): PlannerWeekResponse {
+  const inWeek = item.weekStart === d.week.weekStart && !item.deletedAt
+  const items = d.items.filter((i) => i.id !== item.id)
+  const carryOver = d.carryOver
+    .map((i) => (i.id === item.id ? item : i))
+    .filter((i) => i.status === 'open' && !i.deletedAt)
+  return { ...d, items: inWeek ? [...items, item] : items, carryOver }
+}
+
+function withoutItem(d: PlannerWeekResponse, itemId: string): PlannerWeekResponse {
+  return {
+    ...d,
+    items: d.items.filter((i) => i.id !== itemId),
+    carryOver: d.carryOver.filter((i) => i.id !== itemId),
+  }
+}
+
 function messageOf(err: unknown): string {
   if (err instanceof ApiError) return err.message
   if (err instanceof Error) return err.message
   return 'Something went wrong'
 }
 
-export function usePlannerWeek(weekStart?: string) {
+export interface PlannerWeekOptions {
+  /**
+   * Show this screen's viewer to everyone else in the week.
+   *
+   * For the screens that are actually showing the week, and deliberately not
+   * for the home screen's Today strip, which subscribes to the same channel
+   * without anybody being "in" anything.
+   */
+  announce?: boolean
+}
+
+export function usePlannerWeek(weekStart?: string, options: PlannerWeekOptions = {}) {
   const { active } = useLearners()
   const learnerId = active?.id ?? null
   const today = todayString()
@@ -104,13 +152,25 @@ export function usePlannerWeek(weekStart?: string) {
     setData((d) => (d ? { ...d, items: fn(d.items), carryOver: d.carryOver } : d))
   }, [])
 
+  /** Unconditional — for this tab's own optimistic changes and rollbacks. */
   const replaceItem = useCallback((item: PlannerItem) => {
+    setData((d) => (d ? withItem(d, item) : d))
+  }, [])
+
+  /**
+   * Apply a card the server has spoken about — a write's response, or somebody
+   * else's change off the live channel — unless what we already hold is newer.
+   *
+   * Every `updatedAt` compared here was set by Postgres, so this is one clock
+   * ordering itself, not two clients disagreeing. It is what makes a remote
+   * change that races an in-flight local one settle instead of ping-pong.
+   */
+  const land = useCallback((item: PlannerItem) => {
     setData((d) => {
       if (!d) return d
-      const inWeek = item.weekStart === d.week.weekStart && !item.deletedAt
-      const items = d.items.filter((i) => i.id !== item.id)
-      const carryOver = d.carryOver.map((i) => (i.id === item.id ? item : i)).filter((i) => i.status === 'open' && !i.deletedAt)
-      return { ...d, items: inWeek ? [...items, item] : items, carryOver }
+      const local = d.items.find((i) => i.id === item.id) ?? d.carryOver.find((i) => i.id === item.id)
+      if (local && item.updatedAt < local.updatedAt) return d
+      return withItem(d, item)
     })
   }, [])
 
@@ -187,7 +247,7 @@ export function usePlannerWeek(weekStart?: string) {
       replaceItem(optimistic)
       try {
         const saved = await updateItem(learnerId, item.id, changes)
-        replaceItem(saved)
+        land(saved)
         if (label) {
           say(
             label,
@@ -206,7 +266,7 @@ export function usePlannerWeek(weekStart?: string) {
         return null
       }
     },
-    [learnerId, replaceItem, say],
+    [learnerId, land, replaceItem, say],
   )
 
   /**
@@ -339,6 +399,64 @@ export function usePlannerWeek(weekStart?: string) {
     [learnerId, data],
   )
 
+  // --- the same week, open somewhere else -----------------------------------
+
+  const deferred = useRef(new DeferredEdits())
+  useEffect(() => {
+    const edits = deferred.current
+    return () => edits.dispose()
+  }, [])
+
+  // A change from another tab or another person. This tab's own echoes never
+  // reach here — useLiveLearner drops them by origin.
+  const onLive = useCallback(
+    (event: LiveEvent) => {
+      switch (event.kind) {
+        case 'planner.item': {
+          const item = event.payload as PlannerItem
+          deferred.current.applyOrDefer(item.id, () => land(item))
+          break
+        }
+        case 'planner.item.removed': {
+          const { itemId } = event.payload as { itemId: string }
+          // Drop any edit still waiting on a focused field, or it would run on
+          // blur and bring the card back from the dead.
+          deferred.current.cancel(itemId)
+          setData((d) => (d ? withoutItem(d, itemId) : d))
+          break
+        }
+        case 'planner.week': {
+          const week = event.payload as PlannerWeek
+          deferred.current.applyOrDefer('week', () =>
+            setData((d) => (d && d.week.weekStart === week.weekStart ? { ...d, week } : d)),
+          )
+          break
+        }
+        case 'planner.comment': {
+          const comment = event.payload as PlannerComment
+          setData((d) =>
+            d && comment.weekStart === d.week.weekStart && !d.comments.some((c) => c.id === comment.id)
+              ? { ...d, comments: [...d.comments, comment] }
+              : d,
+          )
+          break
+        }
+        default:
+          // Other kinds ride the same channel — a round's ticks, presence.
+          // Not this hook's business.
+          break
+      }
+    },
+    [land],
+  )
+
+  // The channel keeps no history, so a reconnect re-reads rather than replays.
+  const live = useLiveLearner(learnerId, {
+    onEvent: onLive,
+    onResync: refresh,
+    announce: options.announce ?? false,
+  })
+
   const load7 = useMemo<DayLoad[]>(
     () => (data ? weekLoad(data.items, data.week.weekStart, data.band, data.prefs.dailyMinutes) : []),
     [data],
@@ -371,6 +489,10 @@ export function usePlannerWeek(weekStart?: string) {
     letGo,
     saveWeek,
     setData,
+    /** 'open' when live changes are arriving; 'offline' while reconnecting. */
+    liveStatus: live.status,
+    /** Everyone else in this week right now — "Mom is here". */
+    watchers: live.others,
   }
 }
 

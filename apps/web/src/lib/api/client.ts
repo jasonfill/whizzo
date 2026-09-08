@@ -8,10 +8,23 @@
 // components of one DigitalOcean app), and proxied there by Vite in
 // development, so the base path is just `/api` in both.
 
-import type { ErrorResponse } from '@whizzo/shared'
+import { ORIGIN_HEADER, type ErrorResponse } from '@whizzo/shared'
 import { supabase } from '../supabase'
 
 const BASE = '/api'
+
+/**
+ * This tab, for the lifetime of this tab.
+ *
+ * Every mutating request carries it, and the live channel echoes it back on
+ * the event the write produced — which is how a tab recognises the echo of its
+ * own optimistic change and ignores it. Two tabs of the same person get
+ * different ids and therefore *do* see each other, which is what you want.
+ */
+export const ORIGIN_ID: string =
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `t${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`
 
 export class ApiError extends Error {
   constructor(
@@ -41,7 +54,7 @@ interface RequestOptions {
   signal?: AbortSignal
 }
 
-async function authHeader(): Promise<Record<string, string>> {
+export async function authHeader(): Promise<Record<string, string>> {
   if (!supabase) return {}
   // getSession refreshes an expired token on the way through, so this is also
   // what keeps a long practice session from dying mid-round.
@@ -60,6 +73,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   const headers: Record<string, string> = { accept: 'application/json' }
   if (body !== undefined && !isForm) headers['content-type'] = 'application/json'
+  // Only on writes: a GET produces no event for anyone to filter.
+  if (method !== 'GET') headers[ORIGIN_HEADER] = ORIGIN_ID
   if (!anonymous) Object.assign(headers, await authHeader())
 
   let response: Response

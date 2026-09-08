@@ -9,6 +9,7 @@
 
 import { defaultSkillState, emptySnapshot } from '../lib/progress/types'
 import type { ProgressSnapshot, SkillState, Subject } from '../lib/progress/types'
+import type { LiveWatcher } from '@whizzo/shared'
 import type { Learner } from '../lib/learners'
 import type { Assignment } from '../lib/assignments/api'
 import type { PlannerWeekResponse } from '../lib/planner/api'
@@ -39,6 +40,8 @@ export interface TestState {
   theme: Theme
   assignments: Assignment[]
   plannerWeek: PlannerWeekResponse | null
+  /** Who else is in the week, for the presence line. */
+  watchers: LiveWatcher[]
 }
 
 export const testState: TestState = createState()
@@ -55,6 +58,7 @@ function createState(): TestState {
     learnerStatus: 'unavailable',
     isOwner: true,
 
+    watchers: [],
     snapshot: emptySnapshot(),
     skills: {},
     progressMode: 'local',

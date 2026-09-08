@@ -345,3 +345,106 @@ describe('the week', () => {
     expect(res.statusCode).toBe(400)
   })
 })
+
+// --- the live channel --------------------------------------------------------
+//
+// The planner is consumer one of docs/realtime-spec.md. What matters is not
+// that events happen but *when*: after the write, never instead of it, and
+// never for a write that did not land.
+describe('planner writes announce themselves', () => {
+  async function collect(learnerId: string) {
+    const { bus } = await import('../live/bus.js')
+    const { learnerChannel } = await import('@whizzo/shared')
+    const seen: Array<{ kind: string; originId: string | null; payload: unknown }> = []
+    const off = bus.subscribe(learnerChannel(learnerId), (e) =>
+      seen.push({ kind: e.kind, originId: e.originId, payload: e.payload }),
+    )
+    return { seen, off }
+  }
+
+  it('publishes the saved card, tagged with the tab that wrote it', async () => {
+    const app = await buildApp()
+    answer([
+      [/^select 1 from public\.learners/, [{ '?column?': 1 }]],
+      [/from public\.planner_items i where i\.id/, [itemRow()]],
+      [/update public\.planner_items set/, [itemRow({ title: 'Bio worksheet, done' })]],
+    ])
+    const { seen, off } = await collect(LEARNER)
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/api/learners/${LEARNER}/planner/items/${ITEM}`,
+      headers: { ...(await auth()), 'x-live-origin': 'tab-abc' },
+      payload: { title: 'Bio worksheet, done' },
+    })
+    off()
+
+    expect(res.statusCode).toBe(200)
+    expect(seen).toHaveLength(1)
+    expect(seen[0]!.kind).toBe('planner.item')
+    // The row itself, so a watching client needs no follow-up read.
+    expect((seen[0]!.payload as { id: string }).id).toBe(ITEM)
+    // Echoed back so the tab that made the change can ignore its own event.
+    expect(seen[0]!.originId).toBe('tab-abc')
+  })
+
+  it('says which card went, on a delete', async () => {
+    const app = await buildApp()
+    answer([[/update public\.planner_items set deleted_at/, [{}]]])
+    const { seen, off } = await collect(LEARNER)
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/learners/${LEARNER}/planner/items/${ITEM}`,
+      headers: await auth(),
+    })
+    off()
+
+    expect(res.statusCode).toBe(204)
+    expect(seen).toEqual([
+      { kind: 'planner.item.removed', originId: null, payload: { itemId: ITEM } },
+    ])
+  })
+
+  // The announcement is after the transaction, so a refused write announces
+  // nothing — otherwise every watcher would apply a change that never happened.
+  it('announces nothing when the write is refused', async () => {
+    const app = await buildApp()
+    answer([
+      [/^select 1 from public\.learners/, [{ '?column?': 1 }]],
+      [/from public\.planner_items i where i\.id/, [
+        itemRow({ kind: 'study', target_subject: 'quiz', target_activity: 'learn', target_id: 'deck-1' }),
+      ]],
+    ])
+    const { seen, off } = await collect(LEARNER)
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/api/learners/${LEARNER}/planner/items/${ITEM}`,
+      headers: await auth(),
+      payload: { status: 'done' },
+    })
+    off()
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('linked_card')
+    expect(seen).toEqual([])
+  })
+
+  // An origin is only ever compared for equality against what the same client
+  // sent, but it still ends up in a payload every watcher parses.
+  it('ignores an origin header that is not a plain token', async () => {
+    const app = await buildApp()
+    answer([[/update public\.planner_items set deleted_at/, [{}]]])
+    const { seen, off } = await collect(LEARNER)
+
+    await app.inject({
+      method: 'DELETE',
+      url: `/api/learners/${LEARNER}/planner/items/${ITEM}`,
+      headers: { ...(await auth()), 'x-live-origin': '<script>alert(1)</script>' },
+    })
+    off()
+
+    expect(seen[0]!.originId).toBeNull()
+  })
+})

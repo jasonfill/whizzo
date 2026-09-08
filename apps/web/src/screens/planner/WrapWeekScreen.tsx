@@ -26,7 +26,7 @@ type Step = 0 | 1 | 2 | 3
 export default function WrapWeekScreen({ navigate }: { navigate: Navigate }) {
   const { active } = useLearners()
   const { snapshot } = useProgress()
-  const planner = usePlannerWeek()
+  const planner = usePlannerWeek(undefined, { announce: true })
   const { data, today } = planner
   const [step, setStep] = useState<Step>(0)
   const [wins, setWins] = useState<WeekWin[]>([])
@@ -115,7 +115,8 @@ export default function WrapWeekScreen({ navigate }: { navigate: Navigate }) {
   const prompt = reflectionPrompt(data.band, data.week.weekStart)
 
   return (
-    <div className="mx-auto w-full max-w-2xl py-4">
+    // Somebody else's edit to the week waits while a field here has focus.
+    <div className="mx-auto w-full max-w-2xl py-4" data-live-key="week">
       <ScreenHeader title="Wrap up the week" subtitle={`Step ${step + 1} of 4`} onBack={() => navigate({ name: 'planner' })} backLabel="Later" />
       <div className="mb-4 flex gap-1">
         {[0, 1, 2, 3].map((i) => (

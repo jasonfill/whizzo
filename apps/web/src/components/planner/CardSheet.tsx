@@ -116,6 +116,9 @@ export default function CardSheet({
     >
       <div
         className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-hair bg-chalk p-5 shadow-xl"
+        // Live changes to this card wait while a field in here has focus.
+        // See lib/live/editing.ts.
+        data-live-key={item.id}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex gap-1 rounded-xl bg-tray p-1 text-sm font-extrabold">

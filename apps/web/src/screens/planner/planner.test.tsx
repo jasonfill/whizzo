@@ -224,6 +224,21 @@ describe('the grown-up view', () => {
     expect(screen.getByTitle('Added by You')).toBeTruthy()
   })
 
+  // The consent rule from docs/realtime-spec.md §9, at the one place it is
+  // visible today: nobody is in a week silently, in either direction.
+  it('says who else is in the week, and says nothing when nobody is', async () => {
+    testState.user = { id: 'parent-1', email: 'p@example.com' }
+    testState.plannerWeek = week([item({})])
+
+    const alone = render(<PlannerScreen navigate={navigate} view="week" />)
+    expect(screen.queryByText(/is here/)).toBeNull()
+    alone.unmount()
+
+    testState.watchers = [{ userId: 'kid-1', name: 'Ada', isLearner: true }]
+    render(<PlannerScreen navigate={navigate} view="week" />)
+    expect(screen.getByText('Ada is here')).toBeTruthy()
+  })
+
   it('opens the week history on request', async () => {
     net.weekHistory.mockResolvedValueOnce([
       { id: 1, learnerId: 'l1', entity: 'item', entityId: 'i1', at: Date.now(), actorId: 'u1', actorName: 'Ada',
