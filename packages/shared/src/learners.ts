@@ -39,13 +39,20 @@ export interface ConnectionCode {
 /**
  * Which pairing system a typed code belongs to.
  *
- * There are two, and they run opposite ways: an `invite` is minted by the
- * owner of one child and *gives* the redeemer access; a `connection` code is
- * minted by a tutor and the redeemer *grants* them access. Both are eight
- * characters from the same alphabet, so nothing on the paper tells them
- * apart — the server decides, and the one entry box follows.
+ * Three operations wearing the same eight characters:
+ *
+ *   `connection`  minted by a tutor; the redeemer *grants* them access
+ *   `invite`      minted by a child's owner; the redeemer *gains* access
+ *   `self_login`  minted by a child's owner for a 13+ learner; the redeemer
+ *                 *becomes* that learner — no guardian link is made at all,
+ *                 and the app offers no way back
+ *
+ * Nothing on the paper tells them apart, so the server decides and the one
+ * entry box follows. The last is split out from `invite` because describing
+ * it as one told a teenager they were gaining oversight of somebody, when
+ * that somebody is who they were about to become.
  */
-export type CodeKind = 'connection' | 'invite' | 'unknown'
+export type CodeKind = 'connection' | 'invite' | 'self_login' | 'unknown'
 
 /** What somebody is told about a code before they accept it. */
 export interface ConnectionCodePreview {

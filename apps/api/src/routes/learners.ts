@@ -303,75 +303,6 @@ export async function learnerRoutes(app: FastifyInstance): Promise<void> {
     return null
   })
 
-  /**
-   * Who is behind a code, before anybody accepts it.
-   *
-   * A person typing eight characters and hoping is not consent, so this says
-   * whose code it is and what accepting would allow. It reveals nothing about
-   * the tutor's other students.
-   *
-   * It resolves *either* kind of code — a tutor's connection code or a
-   * per-learner invite — because the two are indistinguishable on paper and
-   * asking somebody to know which one they were handed is asking them to know
-   * something only we know. `kind` tells the client which way to redeem it.
-   */
-  app.get('/connection-codes/:code/describe', async (request) => {
-    const caller = callerOf(request)
-    const { code } = parse(z.object({ code: codeString }), request.params)
-
-    const described = await withUser(caller.id, async (db) => {
-      const { rows } = await db.query('select * from public.describe_any_code($1)', [code])
-      const row = rows[0]
-      // No row at all is a fault, not an answer — but it must still read as
-      // something a person can act on. A row that says `valid` carries no
-      // reason, and must not inherit one.
-      if (!row) {
-        return {
-          kind: 'unknown',
-          valid: false,
-          reason: 'That code does not exist',
-          ownerName: null,
-          label: null,
-          role: null,
-          canManageContent: null,
-        }
-      }
-      return {
-        kind: row.kind ?? 'unknown',
-        valid: row.valid ?? false,
-        reason: row.reason ?? null,
-        ownerName: row.owner_name ?? null,
-        label: row.label ?? null,
-        role: row.role ?? null,
-        canManageContent: row.can_manage_content ?? null,
-      }
-    })
-
-    return described
-  })
-
-  /**
-   * The consent step: grant a tutor access to one learner.
-   *
-   * Refused unless the caller owns that learner, which the database checks —
-   * a parent for their child, or a 13+ learner acting for themselves.
-   */
-  app.post('/connection-codes/:code/redeem', async (request) => {
-    const caller = callerOf(request)
-    const { code } = parse(z.object({ code: codeString }), request.params)
-    const { learnerIds } = parse(
-      z.object({ learnerIds: z.array(uuid).min(1).max(20) }),
-      request.body,
-    )
-
-    await withUser(caller.id, async (db) => {
-      for (const learnerId of learnerIds) {
-        await db.query('select public.redeem_connection_code($1, $2)', [code, learnerId])
-      }
-    })
-
-    return { connected: learnerIds.length }
-  })
 
   app.post('/learners', async (request, reply) => {
     const caller = callerOf(request)
@@ -539,6 +470,90 @@ export async function learnerRoutes(app: FastifyInstance): Promise<void> {
   })
 }
 
+/**
+ * Resolving and redeeming a code somebody handed you.
+ *
+ * Separate from learnerRoutes for one reason: these take a short code typed by
+ * a person, which makes them a guess surface, and server.ts registers them
+ * behind the same strict limiter as invite redemption. Left where they were,
+ * resolving an invite would have been ~300x cheaper to brute-force than
+ * redeeming one, which is not a distinction worth offering.
+ *
+ * The code travels in the body rather than the path, so a live code never
+ * reaches an access log, a proxy, or browser history.
+ */
+export async function codeRoutes(app: FastifyInstance): Promise<void> {
+  app.addHook('preHandler', requireCaller)
+
+  /**
+   * Who is behind a code, before anybody accepts it.
+   *
+   * A person typing eight characters and hoping is not consent, so this says
+   * whose code it is and what accepting would actually do. It reveals nothing
+   * about the tutor's other students.
+   *
+   * It resolves every kind of code — a tutor's connection code, an invite to
+   * help with a child, a 13+ learner's own account-linking code — because they
+   * are indistinguishable on paper, and asking somebody to know which one they
+   * were handed is asking them to know something only we know. `kind` tells the
+   * client which way to redeem it, and which promise it is allowed to make.
+   */
+  app.post('/codes/describe', async (request) => {
+    const caller = callerOf(request)
+    const { code } = parse(z.object({ code: codeString }), request.body)
+
+    return withUser(caller.id, async (db) => {
+      const { rows } = await db.query('select * from public.describe_any_code($1)', [code])
+      const row = rows[0]
+      // No row at all is a fault, not an answer — but it must still read as
+      // something a person can act on. A row that says `valid` carries no
+      // reason, and must not inherit one.
+      if (!row) {
+        return {
+          kind: 'unknown',
+          valid: false,
+          reason: 'That code does not exist',
+          ownerName: null,
+          label: null,
+          role: null,
+          canManageContent: null,
+        }
+      }
+      return {
+        kind: row.kind ?? 'unknown',
+        valid: row.valid ?? false,
+        reason: row.reason ?? null,
+        ownerName: row.owner_name ?? null,
+        label: row.label ?? null,
+        role: row.role ?? null,
+        canManageContent: row.can_manage_content ?? null,
+      }
+    })
+  })
+
+  /**
+   * The consent step for a tutor's code: grant them access to one learner.
+   *
+   * Refused unless the caller owns that learner, which the database checks —
+   * a parent for their child, or a 13+ learner acting for themselves.
+   */
+  app.post('/codes/redeem', async (request) => {
+    const caller = callerOf(request)
+    const { code, learnerIds } = parse(
+      z.object({ code: codeString, learnerIds: z.array(uuid).min(1).max(20) }),
+      request.body,
+    )
+
+    await withUser(caller.id, async (db) => {
+      for (const learnerId of learnerIds) {
+        await db.query('select public.redeem_connection_code($1, $2)', [code, learnerId])
+      }
+    })
+
+    return { connected: learnerIds.length }
+  })
+}
+
 export async function inviteRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireCaller)
 
@@ -562,8 +577,8 @@ export async function inviteRoutes(app: FastifyInstance): Promise<void> {
       if (kinds[0]?.kind === 'connection') {
         throw badRequest(
           'That is a tutor or teacher asking to see one of your learners, not an ' +
-            'invite to join one. Check the code on the Family screen and choose who ' +
-            'they can see.',
+            'invite to join one. Enter it on the Family screen and choose who they ' +
+            'can see.',
           'wrong_code_kind',
         )
       }

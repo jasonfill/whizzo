@@ -51,7 +51,7 @@ async function auth(sub = CALLER) {
 
 async function buildApp() {
   const Fastify = (await import('fastify')).default
-  const { learnerRoutes, inviteRoutes } = await import('./learners.js')
+  const { learnerRoutes, inviteRoutes, codeRoutes } = await import('./learners.js')
   const { HttpError, fromDatabaseError } = await import('../errors.js')
   const app = Fastify()
   app.setErrorHandler((error, _request, reply) => {
@@ -70,6 +70,7 @@ async function buildApp() {
       .send({ error: { code: 'error', message: (error as Error).message } })
   })
   await app.register(learnerRoutes, { prefix: '/api' })
+  await app.register(codeRoutes, { prefix: '/api' })
   if (inviteRoutes) await app.register(inviteRoutes, { prefix: '/api' })
   await app.ready()
   return app
@@ -272,14 +273,15 @@ describe('connection codes', () => {
     // The preview a tutor sees before they accept. It must be safe to call
     // with a guessed code, so it answers rather than erroring.
     query.mockResolvedValue({
-      rows: [{ valid: true, reason: null, owner_name: 'A parent', label: 'Class 4B', role: 'teacher', can_manage_content: true }],
+      rows: [{ kind: 'connection', valid: true, reason: null, owner_name: 'A parent', label: 'Class 4B', role: 'teacher', can_manage_content: true }],
       rowCount: 1,
     })
     const app = await buildApp()
     const res = await app.inject({
-      method: 'GET',
-      url: '/api/connection-codes/CODE1234/describe',
+      method: 'POST',
+      url: '/api/codes/describe',
       headers: await auth(),
+      payload: { code: 'CODE1234' },
     })
     expect(res.statusCode).toBe(200)
     const inserts = query.mock.calls
@@ -290,14 +292,15 @@ describe('connection codes', () => {
 
   it('answers for a code that does not exist rather than erroring', async () => {
     query.mockResolvedValue({
-      rows: [{ valid: false, reason: 'not_found', owner_name: null, label: null, role: null, can_manage_content: null }],
+      rows: [{ kind: 'unknown', valid: false, reason: 'That code does not exist', owner_name: null, label: null, role: null, can_manage_content: null }],
       rowCount: 1,
     })
     const app = await buildApp()
     const res = await app.inject({
-      method: 'GET',
-      url: '/api/connection-codes/NOSUCHCODE/describe',
+      method: 'POST',
+      url: '/api/codes/describe',
       headers: await auth(),
+      payload: { code: 'NOSUCHCO' },
     })
     expect(res.statusCode).toBe(200)
     expect(res.json().valid ?? res.json().preview?.valid).toBe(false)
@@ -309,9 +312,9 @@ describe('connection codes', () => {
     const app = await buildApp()
     const res = await app.inject({
       method: 'POST',
-      url: '/api/connection-codes/CODE1234/redeem',
+      url: '/api/codes/redeem',
       headers: await auth(),
-      payload: { learnerIds: [LEARNER] },
+      payload: { code: 'CODE1234', learnerIds: [LEARNER] },
     })
     expect(res.statusCode).toBeLessThan(400)
     const values = query.mock.calls.flatMap(([, v]) => (v ?? []) as unknown[])
@@ -322,9 +325,9 @@ describe('connection codes', () => {
     const app = await buildApp()
     const res = await app.inject({
       method: 'POST',
-      url: '/api/connection-codes/CODE1234/redeem',
+      url: '/api/codes/redeem',
       headers: await auth(),
-      payload: { learnerIds: [] },
+      payload: { code: 'CODE1234', learnerIds: [] },
     })
     expect(res.statusCode).toBe(400)
   })
@@ -333,9 +336,9 @@ describe('connection codes', () => {
     const app = await buildApp()
     const res = await app.inject({
       method: 'POST',
-      url: '/api/connection-codes/CODE1234/redeem',
+      url: '/api/codes/redeem',
       headers: await auth(),
-      payload: { learnerIds: ['not-a-uuid'] },
+      payload: { code: 'CODE1234', learnerIds: ['not-a-uuid'] },
     })
     expect(res.statusCode).toBe(400)
   })

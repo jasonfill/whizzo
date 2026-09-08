@@ -89,12 +89,14 @@ update public.profiles set display_name = 'Sam'
 \set mum      '''dddddddd-2100-0000-0000-000000000002'''
 \set other    '''dddddddd-2100-0000-0000-000000000003'''
 \set pupil    '''dddddddd-2100-0000-0000-00000000000a'''
+\set teen     '''dddddddd-2100-0000-0000-00000000000c'''
 
 set role authenticated;
 
 select pg_temp.become(:mum);
 insert into public.learners (id, owner_id, display_name, birth_year) values
-  (:pupil::uuid, :mum::uuid, 'Pupil21', extract(year from current_date)::int - 10)
+  (:pupil::uuid, :mum::uuid, 'Pupil21', extract(year from current_date)::int - 10),
+  (:teen::uuid,  :mum::uuid, 'Teen21',  extract(year from current_date)::int - 15)
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
@@ -129,6 +131,21 @@ select pg_temp.check('and names who is sharing',
 select pg_temp.check('and which child it is about, so nobody accepts blind',
   (select label from public.describe_any_code(:'inv')), 'Pupil21');
 
+-- A 13+ learner's linking code wears the same eight characters and does
+-- something else entirely: it hands them the learner profile rather than
+-- oversight of it. Described as an invite, the consent screen told a teenager
+-- they were gaining sight of somebody called Ada, when Ada is who they become.
+select pg_temp.become(:mum);
+select public.mint_link_invite(:teen::uuid, 'parent', 'self_login') as linkcode \gset
+
+select pg_temp.become(:other);
+select pg_temp.check('an account-linking code is not described as an invite',
+  (select kind from public.describe_any_code(:'linkcode')), 'self_login');
+select pg_temp.check('and promises no content rights, because it creates no link at all',
+  (select can_manage_content from public.describe_any_code(:'linkcode')), false);
+select pg_temp.check('and still names who it is about',
+  (select label from public.describe_any_code(:'linkcode')), 'Teen21');
+
 select pg_temp.check('a code from neither system is reported, not guessed at',
   (select kind from public.describe_any_code('ZZZZZZZZ')), 'unknown');
 select pg_temp.check('and says so plainly',
@@ -154,6 +171,11 @@ select pg_temp.check('and told to be given away rather than used',
 select pg_temp.become(:mum);
 select pg_temp.check('your own invite is refused too',
   (select valid from public.describe_any_code(:'inv')), false);
+-- And refused by the redemption, not only by the preview: a rule that lives in
+-- one layer is a rule anything skipping that layer does not have.
+select pg_temp.check_denied('redeeming your own invite is refused, not just discouraged',
+  'select public.redeem_link_invite(' || quote_literal(:'inv') || ')',
+  'your own code', '23514');
 
 select pg_temp.become(:mum);
 select public.mint_link_invite(:pupil::uuid, 'parent', 'guardian', interval '-1 hour') as stale \gset

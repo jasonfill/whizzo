@@ -143,15 +143,16 @@ export async function revokeConnectionCode(code: string): Promise<void> {
 /**
  * Who is behind a code, so a person can see what they are agreeing to.
  *
- * Resolves either kind — a tutor's connection code or a per-learner invite —
- * and says which in `kind`. Nobody can tell them apart by looking, so the one
- * entry box asks and then redeems whichever way that answer calls for.
+ * Resolves every kind — a tutor's connection code, an invite to help with a
+ * child, a 13+ learner's own account-linking code — and says which in `kind`.
+ * Nobody can tell them apart by looking, so the one entry box asks and then
+ * redeems whichever way that answer calls for.
+ *
+ * POST rather than GET, and the code in the body: a live code in a path would
+ * be written to every access log and proxy between here and the database.
  */
-export async function describeCode(code: string, signal?: AbortSignal) {
-  return api.get<ConnectionCodePreview>(
-    `/connection-codes/${encodeURIComponent(code.trim())}/describe`,
-    signal,
-  )
+export async function describeCode(code: string) {
+  return api.post<ConnectionCodePreview>('/codes/describe', { code: code.trim() })
 }
 
 /** The consent step. Refused unless the caller owns every learner named. */
@@ -159,10 +160,10 @@ export async function redeemConnectionCode(
   code: string,
   learnerIds: string[],
 ): Promise<number> {
-  const { connected } = await api.post<{ connected: number }>(
-    `/connection-codes/${encodeURIComponent(code)}/redeem`,
-    { learnerIds },
-  )
+  const { connected } = await api.post<{ connected: number }>('/codes/redeem', {
+    code: code.trim(),
+    learnerIds,
+  })
   return connected
 }
 

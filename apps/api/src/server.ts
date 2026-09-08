@@ -14,7 +14,7 @@ import { fromDatabaseError, HttpError, fromValidationError } from './errors.js'
 import { pendingMigrations, runMigrations } from './migrate.js'
 import { childLoginAdminRoutes, childLoginPublicRoutes } from './routes/childLogin.js'
 import { devLoginRoutes } from './routes/devLogin.js'
-import { inviteRoutes, learnerRoutes } from './routes/learners.js'
+import { codeRoutes, inviteRoutes, learnerRoutes } from './routes/learners.js'
 import { callerOf, requireCaller } from './auth.js'
 import { contentRoutes } from './routes/content.js'
 import { progressRoutes } from './routes/progress.js'
@@ -228,16 +228,22 @@ export async function buildServer() {
     app.log.warn(`connected apps are off: ${mcpUnconfiguredReason()}`)
   }
 
-  // Redeeming is a guess surface: a short code, typed by a human. The database
-  // refuses expired and used codes, but nothing there slows down someone trying
-  // thousands, so this does.
+  // Every route that takes a short code typed by a human is a guess surface.
+  // The database refuses expired, used and withdrawn codes, but nothing there
+  // slows down someone trying thousands, so this does — and they share one
+  // bucket, because resolving a code and redeeming it are the same guess.
+  //
+  // Twenty rather than ten now that resolving is in here too: a legitimate
+  // attempt costs two requests (look, then accept), and somebody reading a
+  // code off a scrap of paper is allowed to mistype it a few times.
   await app.register(async (scoped) => {
     await scoped.register(rateLimit, {
-      max: 10,
+      max: 20,
       timeWindow: '10 minutes',
       keyGenerator: (request) => request.ip,
     })
     await scoped.register(inviteRoutes, { prefix: '/api' })
+    await scoped.register(codeRoutes, { prefix: '/api' })
   })
 
   // The only unauthenticated write in the product, guarding a four-digit PIN.

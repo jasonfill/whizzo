@@ -146,17 +146,24 @@ describe('tutor connection codes', () => {
     expect(last()!.url).toBe('/connection-codes/a%2Fb%3Fc')
   })
 
-  it('escapes a code on the describe path too', async () => {
-    nextResponse = { valid: true }
-    await learners.describeCode('a/b')
-    expect(last()!.url).toBe('/connection-codes/a%2Fb/describe')
+  it('sends a code in the body, never in the path', async () => {
+    // A code in a URL is a code in an access log, a proxy log and the
+    // browser's history — and these are live until somebody redeems them.
+    nextResponse = { kind: 'connection', valid: true }
+    await learners.describeCode('  a/b  ')
+    expect(last()).toMatchObject({
+      method: 'POST',
+      url: '/codes/describe',
+      body: { code: 'a/b' },
+    })
   })
 
   it('redeems for the learners named, and only those', async () => {
     // Consent is per child. There is no "all of them" here by design.
     nextResponse = { connected: 2 }
     await expect(learners.redeemConnectionCode('CODE', ['a', 'b'])).resolves.toBe(2)
-    expect(last()!.body).toEqual({ learnerIds: ['a', 'b'] })
+    expect(last()).toMatchObject({ method: 'POST', url: '/codes/redeem' })
+    expect(last()!.body).toEqual({ code: 'CODE', learnerIds: ['a', 'b'] })
   })
 })
 

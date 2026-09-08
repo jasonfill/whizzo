@@ -42,20 +42,20 @@ export default function HaveACode({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(0)
-  const [joined, setJoined] = useState(false)
+  const [joined, setJoined] = useState<'invite' | 'self_login' | null>(null)
 
   const reset = () => {
     setPreview(null)
     setSelected([])
     setConnected(0)
-    setJoined(false)
+    setJoined(null)
   }
 
   const look = async () => {
     setBusy(true)
     setError(null)
     setConnected(0)
-    setJoined(false)
+    setJoined(null)
     try {
       const found = await describeCode(code)
       setPreview(found)
@@ -69,22 +69,40 @@ export default function HaveACode({
     }
   }
 
+  /**
+   * Reload the family, without letting that stand in for the redemption.
+   *
+   * A code is spent the moment the server accepts it. If the reload afterwards
+   * fails, the screen is stale — which the provider reports for itself — and
+   * the code is still spent. Folding that into the same catch told people
+   * their code had not worked and sent them back to re-enter it, and the
+   * second attempt then failed for real, on a single-use code.
+   */
+  const refreshQuietly = async () => {
+    try {
+      await onChanged()
+    } catch {
+      /* a stale list, not a failed redemption */
+    }
+  }
+
   /** A tutor's code: we give, so we choose who to give. */
   const grant = async () => {
     setBusy(true)
     setError(null)
     try {
       const n = await redeemConnectionCode(code.trim(), selected)
-      await onChanged()
       setConnected(n)
       setPreview(null)
       setCode('')
       setSelected([])
     } catch (err) {
       setError(messageOf(err, 'Could not connect them. The code may have been withdrawn since.'))
+      return
     } finally {
       setBusy(false)
     }
+    await refreshQuietly()
   }
 
   /** An invite: we receive, so there is nothing to choose. */
@@ -93,23 +111,27 @@ export default function HaveACode({
     setError(null)
     try {
       await redeemInvite(code)
-      await onChanged()
-      setJoined(true)
+      // Committed before the reload, deliberately: on a first-ever join that
+      // reload repaints the Family screen out of its empty state and takes
+      // this card with it, so a confirmation set afterwards is never seen.
+      setJoined(preview?.kind === 'self_login' ? 'self_login' : 'invite')
       setPreview(null)
       setCode('')
     } catch (err) {
       setError(messageOf(err, 'Could not use that code. It may have been used since.'))
+      return
     } finally {
       setBusy(false)
     }
+    await refreshQuietly()
   }
 
   return (
     <Card className="mt-4">
       <h3 className="mb-1 text-lg font-extrabold text-ink">Have a code?</h3>
       <p className="mb-3 text-sm font-bold text-muted">
-        Whether another grown-up shared a learner with you, or a tutor gave you their code,
-        enter it here — we will work out which it is.
+        A grown-up sharing a learner with you, a tutor&apos;s code, or your own linking code —
+        enter it here and we will work out which it is.
       </p>
 
       <div className="mb-3 flex flex-wrap gap-2">
@@ -130,8 +152,14 @@ export default function HaveACode({
 
       {error && <p className="mb-2 font-bold text-rose-500">{error}</p>}
 
-      {joined && (
+      {joined === 'invite' && (
         <p className="font-bold text-emerald-700">✅ Added. You can see their progress now.</p>
+      )}
+
+      {joined === 'self_login' && (
+        <p className="font-bold text-emerald-700">
+          ✅ Linked. Signing in with this account now brings you straight to your own work.
+        </p>
       )}
 
       {connected > 0 && (
@@ -156,6 +184,30 @@ export default function HaveACode({
           <div className="flex flex-wrap gap-2">
             <Button disabled={busy} onClick={accept}>
               {busy ? 'Joining…' : 'Join'}
+            </Button>
+            <Button variant="ghost" onClick={reset}>
+              Never mind
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* A linking code is not an invite to help with somebody: it hands the
+          learner profile to whoever is signed in. Told plainly, because it is
+          the one action here that cannot be undone from the app. */}
+      {preview?.valid && preview.kind === 'self_login' && (
+        <div className="rounded-2xl bg-quiet p-4">
+          <p className="mb-1 font-extrabold text-ink">
+            This links {preview.label ?? 'a learner'} to the account you are signed in with
+          </p>
+          <p className="mb-3 text-sm font-bold text-muted">
+            {preview.label ?? 'That learner'}&apos;s work, streak and rewards become yours to
+            sign in to, and {preview.ownerName} stays the grown-up who looks after the profile.
+            Only do this if {preview.label ?? 'that learner'} is you — it cannot be undone here.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button disabled={busy} onClick={accept}>
+              {busy ? 'Linking…' : 'Yes, that is me'}
             </Button>
             <Button variant="ghost" onClick={reset}>
               Never mind

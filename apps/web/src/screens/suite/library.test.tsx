@@ -457,6 +457,70 @@ describe('letting a tutor in', () => {
     expect(onConnected).toHaveBeenCalled()
   })
 
+  it('describes a linking code as becoming the learner, not as helping them', async () => {
+    // A self_login code hands over the learner profile. Described as an
+    // ordinary invite it told a teenager they were gaining oversight of
+    // somebody, when that somebody is who they are about to become.
+    codes.describeCode.mockResolvedValueOnce({
+      kind: 'self_login',
+      valid: true,
+      reason: null,
+      ownerName: 'Mrs Patel',
+      label: 'Ada',
+      role: 'parent',
+      canManageContent: false,
+    } as never)
+    render(<HaveACode ownedLearners={[]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'SELF1234' } })
+    fireEvent.click(screen.getByText('Check code'))
+    expect(await screen.findByText(/This links Ada to the account you are signed in with/)).toBeTruthy()
+    expect(screen.queryByText(/shared Ada with you/)).toBeNull()
+    expect(screen.queryByText(/set them work/)).toBeNull()
+    expect(screen.getByText(/cannot be undone here/)).toBeTruthy()
+  })
+
+  it('confirms a linking code in its own words', async () => {
+    codes.describeCode.mockResolvedValueOnce({
+      kind: 'self_login',
+      valid: true,
+      reason: null,
+      ownerName: 'Mrs Patel',
+      label: 'Ada',
+      role: 'parent',
+      canManageContent: false,
+    } as never)
+    render(<HaveACode ownedLearners={[]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'SELF1234' } })
+    fireEvent.click(screen.getByText('Check code'))
+    fireEvent.click(await screen.findByText('Yes, that is me'))
+    await waitFor(() => expect(codes.redeemInvite).toHaveBeenCalledWith('SELF1234'))
+    expect(await screen.findByText(/Signing in with this account/)).toBeTruthy()
+  })
+
+  it('still confirms when the refresh afterwards fails', async () => {
+    // The code is spent the moment the server accepts it. Reporting a failed
+    // refresh as a failed redemption sent people back to re-enter something
+    // that had already worked, and the second attempt genuinely fails.
+    const onChanged = vi.fn(async () => {
+      throw new Error('offline')
+    })
+    codes.describeCode.mockResolvedValueOnce({
+      kind: 'invite',
+      valid: true,
+      reason: null,
+      ownerName: 'Mrs Patel',
+      label: 'Ada',
+      role: 'parent',
+      canManageContent: true,
+    } as never)
+    render(<HaveACode ownedLearners={[]} onChanged={onChanged} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'INV12345' } })
+    fireEvent.click(screen.getByText('Check code'))
+    fireEvent.click(await screen.findByText('Join'))
+    expect(await screen.findByText(/You can see their progress now/)).toBeTruthy()
+    expect(screen.queryByText(/It may have been used since/)).toBeNull()
+  })
+
   it('passes the server\u2019s own reason through when redeeming fails', async () => {
     // "That is your own code" is something a person can act on; the house
     // sentence about withdrawal is not.

@@ -66,6 +66,7 @@ const testFiles = [
 ]
 
 let total = 0
+const failed = []
 for (const relative of testFiles) {
   const testFile = join(root, relative)
   console.log(`running ${testFile}\n`)
@@ -82,8 +83,13 @@ for (const relative of testFiles) {
     const detail = err instanceof Error && 'stderr' in err ? String(err.stderr) : String(err)
     console.error(detail)
     console.error(`\n${relative} FAILED`)
-    process.exit(1)
+    failed.push(relative)
   }
+}
+
+if (failed.length) {
+  console.error(`\n${failed.length} suite(s) failed: ${failed.join(', ')}`)
+  process.exit(1)
 }
 
 console.log(`\n${total} security assertion(s) passed`)

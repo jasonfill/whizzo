@@ -80,9 +80,11 @@ insert into public.decks (id, learner_id, title) values (:owndeck::uuid, :pupil:
 -- A library belongs to its author
 -- ---------------------------------------------------------------------------
 select pg_temp.become(:tutor);
-insert into public.decks (id, owner_user_id, title) values
-  (:setwork::uuid, :tutor::uuid, 'Fractions — week 1'),
-  (:private::uuid, :tutor::uuid, 'Draft I have not shared');
+-- accepted_at on the one that gets set as work: the gate added in 0017 refuses
+-- to assign a deck still sitting in review, and this fixture predates it.
+insert into public.decks (id, owner_user_id, title, accepted_at) values
+  (:setwork::uuid, :tutor::uuid, 'Fractions — week 1', now()),
+  (:private::uuid, :tutor::uuid, 'Draft I have not shared', null);
 
 select pg_temp.check('a grown-up can keep decks of their own',
   (select count(*)::int from public.decks where owner_user_id = :tutor::uuid), 2);
