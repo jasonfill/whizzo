@@ -148,7 +148,7 @@ describe('tutor connection codes', () => {
 
   it('escapes a code on the describe path too', async () => {
     nextResponse = { valid: true }
-    await learners.describeConnectionCode('a/b')
+    await learners.describeCode('a/b')
     expect(last()!.url).toBe('/connection-codes/a%2Fb/describe')
   })
 

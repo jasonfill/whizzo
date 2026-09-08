@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import { clearSignupIntent, readSignupIntent } from '../../auth/signupIntent'
 import Mascot from '../../components/Mascot'
-import ConnectTutor from '../../components/suite/ConnectTutor'
+import HaveACode from '../../components/suite/HaveACode'
 import ThemeChoice from '../../components/suite/ThemeChoice'
 import { themeById } from '../../lib/themes'
 import MyTutorCode from '../../components/suite/MyTutorCode'
@@ -17,7 +17,6 @@ import {
   canUseSelfSignIn,
   listGuardians,
   mintInvite,
-  redeemInvite,
   removeChildLogin,
   revokeGuardian,
   setChildLogin,
@@ -191,12 +190,12 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
           </>
         )}
 
-        <JoinWithCode
-          onJoined={async () => {
+        <HaveACode
+          ownedLearners={[]}
+          onChanged={async () => {
             setError(null)
             await refresh()
           }}
-          onError={setError}
         />
 
         <button
@@ -256,19 +255,17 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
         }}
       />
 
-      <JoinWithCode
-        onJoined={async () => {
-          setError(null)
-          await refresh()
-        }}
-        onError={setError}
-      />
-
-      <ConnectTutor
+      {/* One box for both kinds of code. Two boxes meant a code entered in the
+          wrong one came back "not valid any more", and nothing on the code
+          itself said which one it belonged to. */}
+      <HaveACode
         // Only learners this person owns: granting access to somebody else's
         // child is not theirs to do, and the database refuses it anyway.
         ownedLearners={learners.filter((l) => l.ownerId === user?.id)}
-        onConnected={refresh}
+        onChanged={async () => {
+          setError(null)
+          await refresh()
+        }}
       />
     </div>
   )
@@ -803,62 +800,6 @@ function AddLearner({
           )}
         </div>
       </div>
-    </Card>
-  )
-}
-
-function JoinWithCode({
-  onJoined,
-  onError,
-}: {
-  onJoined: () => Promise<void>
-  onError: (message: string | null) => void
-}) {
-  const [code, setCode] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState(false)
-
-  return (
-    <Card className="mt-4">
-      <h3 className="mb-1 text-lg font-extrabold text-ink">Have a code?</h3>
-      <p className="mb-3 text-sm font-bold text-muted">
-        If another grown-up shared a learner with you, enter their code here.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <input
-          value={code}
-          onChange={(e) => {
-            setCode(e.target.value.toUpperCase().slice(0, 12))
-            setDone(false)
-          }}
-          placeholder="ABCD2345"
-          className="flex-1 rounded-xl border-2 border-edge px-3 py-2 font-mono text-lg font-extrabold tracking-widest text-ink outline-none focus:border-ink"
-        />
-        <Button
-          disabled={busy || code.trim().length < 6}
-          onClick={async () => {
-            setBusy(true)
-            onError(null)
-            try {
-              await redeemInvite(code)
-              await onJoined()
-              setCode('')
-              setDone(true)
-            } catch (err) {
-              onError(messageOf(err))
-            } finally {
-              setBusy(false)
-            }
-          }}
-        >
-          {busy ? 'Checking…' : 'Join'}
-        </Button>
-      </div>
-      {done && (
-        <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
-          Added! You can see their progress now.
-        </p>
-      )}
     </Card>
   )
 }

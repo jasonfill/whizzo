@@ -140,10 +140,16 @@ export async function revokeConnectionCode(code: string): Promise<void> {
   await api.del<void>(`/connection-codes/${encodeURIComponent(code)}`)
 }
 
-/** Who is behind a code, so a family can see who they are letting in. */
-export async function describeConnectionCode(code: string, signal?: AbortSignal) {
+/**
+ * Who is behind a code, so a person can see what they are agreeing to.
+ *
+ * Resolves either kind — a tutor's connection code or a per-learner invite —
+ * and says which in `kind`. Nobody can tell them apart by looking, so the one
+ * entry box asks and then redeems whichever way that answer calls for.
+ */
+export async function describeCode(code: string, signal?: AbortSignal) {
   return api.get<ConnectionCodePreview>(
-    `/connection-codes/${encodeURIComponent(code)}/describe`,
+    `/connection-codes/${encodeURIComponent(code.trim())}/describe`,
     signal,
   )
 }

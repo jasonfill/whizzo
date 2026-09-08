@@ -79,7 +79,7 @@ import AuthScreen from './auth/AuthScreen'
 import DeckEditor from './screens/quiz/DeckEditor'
 import GamePlay from './components/GamePlay'
 import LearnerChip from './components/suite/LearnerChip'
-import ConnectTutor from './components/suite/ConnectTutor'
+import HaveACode from './components/suite/HaveACode'
 import MyTutorCode from './components/suite/MyTutorCode'
 import SharedWork from './components/suite/SharedWork'
 import VoicePicker from './components/suite/VoicePicker'
@@ -315,19 +315,19 @@ describe('the small grown-up components', () => {
     await waitFor(() => expect(document.body.textContent).toBeTruthy())
   })
 
-  it('ConnectTutor takes a code and offers to look it up', async () => {
+  it('HaveACode takes a code and offers to look it up', async () => {
     // The preview is debounced or button-driven depending on the flow; what
     // matters here is that typing a code does not link anything on its own.
-    render(<ConnectTutor ownedLearners={[aLearner()]} onConnected={async () => {}} />)
+    render(<HaveACode ownedLearners={[aLearner()]} onChanged={async () => {}} />)
     const input = screen.getAllByRole('textbox')[0]!
     await userEvent.type(input, 'TUTOR-1')
     expect(learnersApi.redeemConnectionCode).not.toHaveBeenCalled()
   })
 
-  it('ConnectTutor will not link without a child chosen', () => {
+  it('HaveACode will not link without a child chosen', () => {
     // Consent is per child: connecting a tutor to "all of them" by default
     // would be the wrong default.
-    render(<ConnectTutor ownedLearners={[aLearner()]} onConnected={async () => {}} />)
+    render(<HaveACode ownedLearners={[aLearner()]} onChanged={async () => {}} />)
     const connect = screen
       .getAllByRole('button')
       .find((b) => /connect|link/i.test(b.textContent ?? ''))

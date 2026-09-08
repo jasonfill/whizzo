@@ -34,12 +34,14 @@ const net = vi.hoisted(() => ({
   listConnectionCodes: vi.fn(async () => []),
   mintConnectionCode: vi.fn(async () => ({ code: 'TUT12345' })),
   revokeConnectionCode: vi.fn(async () => {}),
-  describeConnectionCode: vi.fn(async () => ({
+  describeCode: vi.fn(async () => ({
+    kind: 'invite',
     valid: true,
-    ownerName: 'A tutor',
-    label: 'Maths',
-    role: 'teacher',
-    canManageContent: false,
+    reason: null,
+    ownerName: 'A grown-up',
+    label: 'Bo',
+    role: 'parent',
+    canManageContent: true,
   })),
   redeemConnectionCode: vi.fn(async () => 1),
 }))
@@ -494,50 +496,98 @@ describe('adding a learner from the list', () => {
 describe('joining a learner somebody else shared', () => {
   beforeEach(() => {
     signIn()
+    net.describeCode.mockClear()
+    net.redeemInvite.mockClear()
   })
 
-  /** The join box, not the tutor-code box below it — both take a code. */
-  function joinBox() {
+  /**
+   * One box now, for both kinds of code.
+   *
+   * There used to be two — "Have a code?" for an invite and a tutor-code box
+   * below it — and a code put in the wrong one came back "not valid any more".
+   * Nothing on an eight-character code says which system minted it, so the
+   * server decides and this box follows.
+   */
+  function codeBox() {
     const card = screen.getByText('Have a code?').closest('div')!
     return {
       input: within(card).getByPlaceholderText('ABCD2345') as HTMLInputElement,
-      button: within(card).getByText('Join') as HTMLButtonElement,
+      check: within(card).getByText('Check code') as HTMLButtonElement,
       card,
     }
   }
 
   it('will not send a code too short to be one', async () => {
     render(<FamilyScreen navigate={navigate} />)
-    const { input, button } = joinBox()
-    expect(button.disabled).toBe(true)
+    const { input, check } = codeBox()
+    expect(check.disabled).toBe(true)
     fireEvent.change(input, { target: { value: 'AB' } })
-    expect(button.disabled).toBe(true)
+    expect(check.disabled).toBe(true)
   })
 
   it('uppercases what is typed, because a code is read off paper', async () => {
     render(<FamilyScreen navigate={navigate} />)
-    const { input } = joinBox()
+    const { input } = codeBox()
     fireEvent.change(input, { target: { value: 'abcd2345' } })
     expect(input.value).toBe('ABCD2345')
+  })
+
+  it('says whose learner it is before joining anything', async () => {
+    // Typing eight characters and hoping is not consent, and that now holds
+    // for an invite too, not only for a tutor's code.
+    render(<FamilyScreen navigate={navigate} />)
+    const { input, check } = codeBox()
+    fireEvent.change(input, { target: { value: 'ABCD2345' } })
+    fireEvent.click(check)
+    expect(await screen.findByText(/A grown-up shared Bo with you/)).toBeTruthy()
+    expect(net.redeemInvite).not.toHaveBeenCalled()
   })
 
   it('confirms when the learner has been added', async () => {
     const { refreshLearners } = (await import('../../test/mockProviders')).spies
     render(<FamilyScreen navigate={navigate} />)
-    const { input, button } = joinBox()
+    const { input, check } = codeBox()
     fireEvent.change(input, { target: { value: 'ABCD2345' } })
-    fireEvent.click(button)
+    fireEvent.click(check)
+    fireEvent.click(await screen.findByText('Join'))
     await waitFor(() => expect(net.redeemInvite).toHaveBeenCalledWith('ABCD2345'))
     expect(await screen.findByText(/You can see their progress now/)).toBeTruthy()
     expect(refreshLearners).toHaveBeenCalled()
   })
 
   it('says what was wrong with a code that did not work', async () => {
-    net.redeemInvite.mockRejectedValueOnce(new Error('That code has expired'))
+    net.describeCode.mockResolvedValueOnce({
+      kind: 'invite',
+      valid: false,
+      reason: 'That code has expired',
+      ownerName: null,
+      label: null,
+      role: null,
+      canManageContent: null,
+    } as never)
     render(<FamilyScreen navigate={navigate} />)
-    const { input, button } = joinBox()
+    const { input, check } = codeBox()
     fireEvent.change(input, { target: { value: 'ABCD2345' } })
-    fireEvent.click(button)
+    fireEvent.click(check)
     expect(await screen.findByText('That code has expired')).toBeTruthy()
+    expect(net.redeemInvite).not.toHaveBeenCalled()
+  })
+
+  it('takes a tutor code in the same box and grants instead of joining', async () => {
+    net.describeCode.mockResolvedValueOnce({
+      kind: 'connection',
+      valid: true,
+      reason: null,
+      ownerName: 'Mrs Patel',
+      label: 'Tuesday maths',
+      role: 'tutor',
+      canManageContent: true,
+    } as never)
+    render(<FamilyScreen navigate={navigate} />)
+    const { input, check } = codeBox()
+    fireEvent.change(input, { target: { value: 'TUT12345' } })
+    fireEvent.click(check)
+    expect(await screen.findByText(/Mrs Patel — Tuesday maths/)).toBeTruthy()
+    expect(net.redeemInvite).not.toHaveBeenCalled()
   })
 })

@@ -306,27 +306,44 @@ export async function learnerRoutes(app: FastifyInstance): Promise<void> {
   /**
    * Who is behind a code, before anybody accepts it.
    *
-   * A family typing eight characters and hoping is not consent, so this says
+   * A person typing eight characters and hoping is not consent, so this says
    * whose code it is and what accepting would allow. It reveals nothing about
    * the tutor's other students.
+   *
+   * It resolves *either* kind of code — a tutor's connection code or a
+   * per-learner invite — because the two are indistinguishable on paper and
+   * asking somebody to know which one they were handed is asking them to know
+   * something only we know. `kind` tells the client which way to redeem it.
    */
   app.get('/connection-codes/:code/describe', async (request) => {
     const caller = callerOf(request)
     const { code } = parse(z.object({ code: codeString }), request.params)
 
     const described = await withUser(caller.id, async (db) => {
-      const { rows } = await db.query(
-        'select * from public.describe_connection_code($1)',
-        [code],
-      )
+      const { rows } = await db.query('select * from public.describe_any_code($1)', [code])
       const row = rows[0]
+      // No row at all is a fault, not an answer — but it must still read as
+      // something a person can act on. A row that says `valid` carries no
+      // reason, and must not inherit one.
+      if (!row) {
+        return {
+          kind: 'unknown',
+          valid: false,
+          reason: 'That code does not exist',
+          ownerName: null,
+          label: null,
+          role: null,
+          canManageContent: null,
+        }
+      }
       return {
-        valid: row?.valid ?? false,
-        reason: row?.reason ?? 'That code does not exist',
-        ownerName: row?.owner_name ?? null,
-        label: row?.label ?? null,
-        role: row?.role ?? null,
-        canManageContent: row?.can_manage_content ?? null,
+        kind: row.kind ?? 'unknown',
+        valid: row.valid ?? false,
+        reason: row.reason ?? null,
+        ownerName: row.owner_name ?? null,
+        label: row.label ?? null,
+        role: row.role ?? null,
+        canManageContent: row.can_manage_content ?? null,
       }
     })
 
@@ -533,6 +550,24 @@ export async function inviteRoutes(app: FastifyInstance): Promise<void> {
     )
 
     const learnerId = await withUser(caller.id, async (db) => {
+      // A connection code sent here is the commonest way this fails, and
+      // "not valid any more" is a lie about a code that is perfectly good —
+      // it is simply redeemed the other way round. The app's own code box
+      // resolves the kind first and never lands here, so this is for anything
+      // else holding the old shape of this endpoint.
+      const { rows: kinds } = await db.query(
+        'select kind from public.describe_any_code($1)',
+        [code.toUpperCase()],
+      )
+      if (kinds[0]?.kind === 'connection') {
+        throw badRequest(
+          'That is a tutor or teacher asking to see one of your learners, not an ' +
+            'invite to join one. Check the code on the Family screen and choose who ' +
+            'they can see.',
+          'wrong_code_kind',
+        )
+      }
+
       const { rows } = await db.query('select public.redeem_link_invite($1) as learner_id', [
         code.toUpperCase(),
       ])

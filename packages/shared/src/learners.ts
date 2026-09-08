@@ -36,11 +36,24 @@ export interface ConnectionCode {
   createdAt: number
 }
 
-/** What a family is told about a code before they accept it. */
+/**
+ * Which pairing system a typed code belongs to.
+ *
+ * There are two, and they run opposite ways: an `invite` is minted by the
+ * owner of one child and *gives* the redeemer access; a `connection` code is
+ * minted by a tutor and the redeemer *grants* them access. Both are eight
+ * characters from the same alphabet, so nothing on the paper tells them
+ * apart — the server decides, and the one entry box follows.
+ */
+export type CodeKind = 'connection' | 'invite' | 'unknown'
+
+/** What somebody is told about a code before they accept it. */
 export interface ConnectionCodePreview {
+  kind: CodeKind
   valid: boolean
   reason: string | null
   ownerName: string | null
+  /** The tutor's own note, or for an invite the learner it is about. */
   label: string | null
   role: GuardianRole | null
   canManageContent: boolean | null

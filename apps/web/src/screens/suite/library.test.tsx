@@ -49,7 +49,8 @@ const codes = vi.hoisted(() => ({
   listConnectionCodes: vi.fn(async () => [] as unknown[]),
   mintConnectionCode: vi.fn(async () => ({ code: 'TUT12345' })),
   revokeConnectionCode: vi.fn(async () => {}),
-  describeConnectionCode: vi.fn(async () => ({
+  describeCode: vi.fn(async () => ({
+    kind: 'connection',
     valid: true,
     reason: null,
     ownerName: 'Mrs Patel',
@@ -58,6 +59,7 @@ const codes = vi.hoisted(() => ({
     canManageContent: false,
   })),
   redeemConnectionCode: vi.fn(async () => 1),
+  redeemInvite: vi.fn(async () => 'l1'),
 }))
 vi.mock('../../lib/learners/api', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
@@ -67,7 +69,8 @@ vi.mock('../../lib/learners/api', async (orig) => ({
 import { spies } from '../../test/mockProviders'
 import { aLearner, signIn, testState } from '../../test/state'
 import { emptySnapshot } from '../../lib/progress/types'
-import ConnectTutor from '../../components/suite/ConnectTutor'
+import { ApiError } from '../../lib/api/client'
+import HaveACode from '../../components/suite/HaveACode'
 import MyTutorCode from '../../components/suite/MyTutorCode'
 import LibraryScreen from './LibraryScreen'
 
@@ -322,30 +325,40 @@ describe('letting a tutor in', () => {
 
   beforeEach(() => onConnected.mockClear())
 
-  it('shows nothing to somebody who owns no children', () => {
-    // Nothing to grant access to, so nothing to ask.
-    const { container } = render(<ConnectTutor ownedLearners={[]} onConnected={onConnected} />)
-    expect(container.textContent).toBe('')
+  it('is offered even to somebody who owns no children', () => {
+    // An invite hands them a learner and needs none of their own. Hiding the
+    // box left exactly that person with nowhere to type their code.
+    render(<HaveACode ownedLearners={[]} onChanged={onConnected} />)
+    expect(screen.getByLabelText('Pairing code')).toBeTruthy()
+  })
+
+  it('explains a tutor code to somebody who has no learner to point it at', async () => {
+    render(<HaveACode ownedLearners={[]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
+    fireEvent.click(screen.getByText('Check code'))
+    expect(await screen.findByText(/Add a learner first/)).toBeTruthy()
+    expect(codes.redeemConnectionCode).not.toHaveBeenCalled()
   })
 
   it('looks a code up before asking for consent to anything', async () => {
     // Typing eight characters and hoping is not consent.
-    render(<ConnectTutor ownedLearners={[ada, ben]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    render(<HaveACode ownedLearners={[ada, ben]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     expect(await screen.findByText(/Mrs Patel — Tuesday maths/)).toBeTruthy()
     expect(codes.redeemConnectionCode).not.toHaveBeenCalled()
   })
 
   it('says what accepting would allow, and what it would not', async () => {
-    render(<ConnectTutor ownedLearners={[ada, ben]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    render(<HaveACode ownedLearners={[ada, ben]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     expect(await screen.findByText(/They will not see anyone else in your family/)).toBeTruthy()
   })
 
   it('says so when the code also lets them set work', async () => {
-    codes.describeConnectionCode.mockResolvedValueOnce({
+    codes.describeCode.mockResolvedValueOnce({
+      kind: 'connection',
       valid: true,
       reason: null,
       ownerName: 'Mrs Patel',
@@ -353,31 +366,31 @@ describe('letting a tutor in', () => {
       role: 'teacher',
       canManageContent: true,
     } as never)
-    render(<ConnectTutor ownedLearners={[ada]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     expect(await screen.findByText(/and set them work/)).toBeTruthy()
   })
 
   it('will not check a code too short to be one', () => {
-    render(<ConnectTutor ownedLearners={[ada]} onConnected={onConnected} />)
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
     const button = screen.getByText('Check code') as HTMLButtonElement
     expect(button.disabled).toBe(true)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'AB' } })
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'AB' } })
     expect(button.disabled).toBe(true)
   })
 
   it('preselects the only child there is, but never presumes with several', async () => {
-    render(<ConnectTutor ownedLearners={[ada]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     await screen.findByText('Who can they see?')
     expect(screen.getByText('Ada').closest('button')!.getAttribute('aria-pressed')).toBe('true')
   })
 
   it('grants access only to the children named', async () => {
-    render(<ConnectTutor ownedLearners={[ada, ben]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    render(<HaveACode ownedLearners={[ada, ben]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     await screen.findByText('Who can they see?')
     expect((screen.getByText('Give them access') as HTMLButtonElement).disabled).toBe(true)
@@ -391,15 +404,16 @@ describe('letting a tutor in', () => {
 
   it('confirms afterwards how many were connected', async () => {
     codes.redeemConnectionCode.mockResolvedValueOnce(2)
-    render(<ConnectTutor ownedLearners={[ada]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     fireEvent.click(await screen.findByText('Give them access'))
     expect(await screen.findByText(/They can now see 2 learners/)).toBeTruthy()
   })
 
   it('says why a code did not work', async () => {
-    codes.describeConnectionCode.mockResolvedValueOnce({
+    codes.describeCode.mockResolvedValueOnce({
+      kind: 'connection',
       valid: false,
       reason: 'That code has been withdrawn.',
       ownerName: null,
@@ -407,32 +421,67 @@ describe('letting a tutor in', () => {
       role: null,
       canManageContent: null,
     } as never)
-    render(<ConnectTutor ownedLearners={[ada]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'NOPE1234' } })
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'NOPE1234' } })
     fireEvent.click(screen.getByText('Check code'))
     expect(await screen.findByText('That code has been withdrawn.')).toBeTruthy()
   })
 
   it('says so when the lookup itself failed', async () => {
-    codes.describeConnectionCode.mockRejectedValueOnce(new Error('offline'))
-    render(<ConnectTutor ownedLearners={[ada]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    codes.describeCode.mockRejectedValueOnce(new Error('offline'))
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     expect(await screen.findByText('Could not check that code.')).toBeTruthy()
   })
 
+  it('takes an invite in the same box, and joins rather than grants', async () => {
+    // The bug this box exists to kill: an invite typed where a connection code
+    // was expected used to come back "that code is not valid any more".
+    codes.describeCode.mockResolvedValueOnce({
+      kind: 'invite',
+      valid: true,
+      reason: null,
+      ownerName: 'Mrs Patel',
+      label: 'Ada',
+      role: 'parent',
+      canManageContent: true,
+    } as never)
+    render(<HaveACode ownedLearners={[]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'INV12345' } })
+    fireEvent.click(screen.getByText('Check code'))
+    expect(await screen.findByText(/Mrs Patel shared Ada with you/)).toBeTruthy()
+    fireEvent.click(screen.getByText('Join'))
+    await waitFor(() => expect(codes.redeemInvite).toHaveBeenCalledWith('INV12345'))
+    expect(codes.redeemConnectionCode).not.toHaveBeenCalled()
+    expect(onConnected).toHaveBeenCalled()
+  })
+
+  it('passes the server\u2019s own reason through when redeeming fails', async () => {
+    // "That is your own code" is something a person can act on; the house
+    // sentence about withdrawal is not.
+    codes.redeemConnectionCode.mockRejectedValueOnce(
+      new ApiError(400, 'That is your own code', 'rejected'),
+    )
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
+    fireEvent.click(screen.getByText('Check code'))
+    fireEvent.click(await screen.findByText('Give them access'))
+    expect(await screen.findByText('That is your own code')).toBeTruthy()
+  })
+
   it('says so when the code was withdrawn between looking and accepting', async () => {
     codes.redeemConnectionCode.mockRejectedValueOnce(new Error('gone'))
-    render(<ConnectTutor ownedLearners={[ada]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     fireEvent.click(await screen.findByText('Give them access'))
     expect(await screen.findByText(/may have been withdrawn since/)).toBeTruthy()
   })
 
   it('can be backed out of after looking', async () => {
-    render(<ConnectTutor ownedLearners={[ada]} onConnected={onConnected} />)
-    fireEvent.change(screen.getByLabelText('Tutor code'), { target: { value: 'TUT12345' } })
+    render(<HaveACode ownedLearners={[ada]} onChanged={onConnected} />)
+    fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
     fireEvent.click(await screen.findByText('Never mind'))
     expect(screen.queryByText('Who can they see?')).toBeNull()
