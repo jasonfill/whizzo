@@ -61,6 +61,51 @@ const openPerCaller = new Map<string, number>()
  */
 const openStreams = new Set<() => void>()
 
+/**
+ * Rounds in progress, so that "Ada is practicing" can be *asked for* and not
+ * only broadcast.
+ *
+ * The first cut of this published `round.begin` and nothing else, which meant a
+ * grown-up saw it only if they happened to be on the right screen at the
+ * instant it started — a second later there was nothing to find. A one-shot
+ * event is the wrong shape for a question somebody asks on arrival.
+ *
+ * Still nothing stored, in keeping with Rule 1: this lives in memory, it dies
+ * with the process, and losing it costs a nudge rather than a record. A round
+ * whose device went quiet without saying goodbye ages out.
+ */
+interface RunningRound {
+  learnerId: string
+  learnerName: string | null
+  activity: string
+  title: string
+  cards: number
+  startedAt: number
+  /**
+   * The card they are on, and how the round is going.
+   *
+   * Held so somebody joining part-way sees the round as it is rather than a
+   * blank screen until the next card. The learner's client also re-sends the
+   * current card the moment a watcher arrives, so this covers the second
+   * watcher and the reconnect rather than the common case.
+   */
+  card?: Record<string, unknown>
+  draft?: string
+  answered: number
+  correct: number
+}
+
+const running = new Map<string, RunningRound>()
+
+/** How long a round is assumed to still be going without further word. */
+const ROUND_ASSUMED_MS = 20 * 60_000
+
+function forgetStaleRounds(): void {
+  const cutoff = Date.now() - ROUND_ASSUMED_MS
+  for (const [id, round] of running) if (round.startedAt < cutoff) running.delete(id)
+}
+
+
 let nextConnectionId = 1
 
 function watchersOn(channel: string): LiveWatcher[] {
@@ -428,6 +473,22 @@ export async function liveRoutes(app: FastifyInstance): Promise<void> {
       // already looking: it is how a grown-up finds out there is something to
       // join. Everything after it is only worth sending to somebody present.
       if (kind === 'round.begin' || kind === 'round.end') {
+        // Remembered so a grown-up arriving later can still find it.
+        if (kind === 'round.begin') {
+          const p = payload as { activity?: string; title?: string; cards?: number }
+          running.set(learnerId, {
+            learnerId,
+            learnerName,
+            activity: p.activity ?? 'practice',
+            title: p.title ?? '',
+            cards: p.cards ?? 0,
+            startedAt: Date.now(),
+            answered: 0,
+            correct: 0,
+          })
+        } else {
+          running.delete(learnerId)
+        }
         publishLearner(request, learnerId, kind, payload)
         // Both ends go to the grown-ups, not just the start: `begin` is how they
         // find out there is something to join, and `end` is what takes the
@@ -438,6 +499,22 @@ export async function liveRoutes(app: FastifyInstance): Promise<void> {
         // own silent subscription — the one this round is using to find out
         // whether anybody is here — and every round would look watched.
       } else if (watchersOn(learnerChannel(learnerId)).length > 0) {
+        const live = running.get(learnerId)
+        if (live) {
+          if (kind === 'round.draft') {
+            live.draft = (payload as { text?: string }).text ?? ''
+          } else {
+            const tick = payload as { outcome?: string | null }
+            live.card = payload as Record<string, unknown>
+            live.draft = ''
+            // Counted here rather than recomputed on read, because a card can
+            // be requeued and seen more than once.
+            if (tick.outcome) {
+              live.answered += 1
+              if (tick.outcome !== 'wrong') live.correct += 1
+            }
+          }
+        }
         publishLearner(request, learnerId, kind, payload)
       }
 
@@ -445,6 +522,54 @@ export async function liveRoutes(app: FastifyInstance): Promise<void> {
       return null
     },
   )
+
+  /**
+   * Who is practicing right now, of the learners this caller can see.
+   *
+   * Read on arrival, so a grown-up who opens the app mid-round finds it rather
+   * than having had to be watching when it started. The live channel keeps it
+   * current afterwards; this answers the question asked on mount.
+   */
+  app.get('/live/now', async (request) => {
+    const caller = callerOf(request)
+    forgetStaleRounds()
+    const ids = [...running.keys()]
+    if (!ids.length) return { rounds: [] }
+
+    // RLS decides which of them this caller may know about — the same gate as
+    // everywhere else, rather than a second rule that can drift from it.
+    const visible = await withUser(caller.id, async (db) => {
+      const { rows } = await db.query(
+        'select id from public.learners where id = any($1::uuid[])',
+        [ids],
+      )
+      return rows.map((r) => r.id as string)
+    })
+    return { rounds: visible.map((id) => running.get(id)).filter(Boolean) }
+  })
+
+  /**
+   * One learner's round, as it stands. What the watch screen reads on arrival.
+   *
+   * Returns `{ round: null }` when nothing is running, which is a real answer
+   * and not an error: a grown-up opening this before their child starts should
+   * be told so, and then see it fill in.
+   */
+  app.get('/live/learners/:id/now', async (request) => {
+    const caller = callerOf(request)
+    const parsed = z.object({ id: uuid }).safeParse(request.params)
+    if (!parsed.success) throw badRequest('That is not a valid id')
+    const learnerId = parsed.data.id
+
+    const visible = await withUser(caller.id, async (db) => {
+      const { rows } = await db.query('select 1 from public.learners where id = $1', [learnerId])
+      return rows.length > 0
+    })
+    if (!visible) throw notFound('No such learner')
+
+    forgetStaleRounds()
+    return { round: running.get(learnerId) ?? null }
+  })
 
   /** Addressed to one grown-up: job progress, an invite accepted, billing. */
   app.get('/live/me', async (request, reply) => {
@@ -524,4 +649,5 @@ export function resetPresence(): void {
   present.clear()
   openPerCaller.clear()
   openStreams.clear()
+  running.clear()
 }

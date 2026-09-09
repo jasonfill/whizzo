@@ -77,6 +77,17 @@ describe('a round nobody has joined', () => {
     // that, an unwatched round is free.
     expect(kinds()).toEqual(['round.begin'])
   })
+
+  // begin and end are a pair. Since begin goes out regardless, an end that did
+  // not would leave every unwatched round advertising itself on a grown-up's
+  // screen until it aged out twenty minutes later.
+  it('still reports the end, so the invitation is taken away again', () => {
+    const { result } = renderHook(() => useLiveRound())
+    act(() => result.current.begin(ROUND))
+    act(() => result.current.end({ roundId: 'r1', cards: 10, correct: 9 }))
+
+    expect(kinds()).toEqual(['round.begin', 'round.end'])
+  })
 })
 
 describe('a round somebody is following', () => {

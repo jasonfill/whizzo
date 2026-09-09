@@ -17,6 +17,15 @@ vi.mock('../lib/learners/LearnerProvider', async () =>
   (await import('../test/mockProviders')).learnersMock(),
 )
 
+// A lesson now says it has started, so a grown-up can find it. That needs the
+// auth provider and the live client, neither of which this file is about.
+vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'grown-up-1' } }) }))
+vi.mock('../lib/live/client', () => ({ openLive: () => () => {} }))
+vi.mock('../lib/api/client', () => ({
+  ORIGIN_ID: 'origin-under-test',
+  api: { post: async () => {} },
+}))
+
 import { aGame, spies } from '../test/mockProviders'
 import { CURRICULUM } from '../data/lessons'
 import CatRainScreen from './CatRainScreen'

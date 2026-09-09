@@ -434,6 +434,113 @@ describe('POST /api/live/learners/:id', () => {
   })
 })
 
+describe('finding a round that is already running', () => {
+  const begin = {
+    kind: 'round.begin',
+    roundId: 'r1',
+    activity: 'flashcards',
+    subject: 'quiz',
+    title: 'Capital cities',
+    cards: 10,
+  }
+
+  async function post(body: unknown, sub?: string) {
+    return fetch(`${base}/api/live/learners/${LEARNER}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${await token(sub)}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  }
+
+  async function get(path: string, sub?: string) {
+    const response = await fetch(`${base}${path}`, {
+      headers: { authorization: `Bearer ${await token(sub)}` },
+    })
+    // Deliberately loose: these cases assert on the shape, and a typed helper
+    // here would just restate the route's own types.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { status: response.status, body: (await response.json()) as any }
+  }
+
+  // The failure this exists to prevent: a grown-up who was not looking at the
+  // right screen at the right instant could not find the round at all.
+  it('reports a round that started before anybody asked', async () => {
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+    expect((await post(begin)).status).toBe(204)
+
+    query.mockResolvedValue({ rows: [{ id: LEARNER }] })
+    const now = await get('/api/live/now')
+    expect(now.status).toBe(200)
+    expect(now.body.rounds).toHaveLength(1)
+    expect(now.body.rounds[0]).toMatchObject({
+      learnerId: LEARNER,
+      learnerName: 'Ada',
+      title: 'Capital cities',
+      activity: 'flashcards',
+    })
+  })
+
+  it('says nothing is running once the round ends', async () => {
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+    await post(begin)
+    await post({ kind: 'round.end', roundId: 'r1', cards: 10, correct: 8 })
+
+    query.mockResolvedValue({ rows: [{ id: LEARNER }] })
+    expect((await get('/api/live/now')).body.rounds).toHaveLength(0)
+  })
+
+  // RLS decides, the same as everywhere else: a round is only discoverable by
+  // somebody who could see that learner anyway.
+  it('hides a round from a caller who cannot see the learner', async () => {
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+    await post(begin)
+
+    query.mockResolvedValue({ rows: [] })
+    expect((await get('/api/live/now', OTHER)).body.rounds).toHaveLength(0)
+  })
+
+  // What the watch screen reads, so following somebody shows the round rather
+  // than a blank screen until they move on.
+  it('hands the watch screen the card they are on', async () => {
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+    await post(begin)
+
+    // A tick only lands while somebody is present, so put a watcher there.
+    query.mockResolvedValue({ rows: [{ auth_user_id: null, display_name: 'Mom' }] })
+    const watching = listen(`/api/live/learners/${LEARNER}?announce=1`, await token())
+    await watching.response
+    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
+
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+    await post({
+      kind: 'round.tick',
+      roundId: 'r1',
+      at: 4,
+      cards: 10,
+      prompt: 'Capital of Peru?',
+      outcome: 'right',
+      answer: 'Lima',
+      selfGraded: true,
+      responseMs: 2400,
+    })
+
+    query.mockResolvedValue({ rows: [{ '?column?': 1 }] })
+    const now = await get(`/api/live/learners/${LEARNER}/now`)
+    expect(now.body.round).toMatchObject({ title: 'Capital cities', answered: 1, correct: 1 })
+    expect(now.body.round.card).toMatchObject({
+      at: 4,
+      prompt: 'Capital of Peru?',
+    })
+
+    watching.close()
+  })
+
+  it('is a 404 for a learner the caller cannot see', async () => {
+    query.mockResolvedValue({ rows: [] })
+    expect((await get(`/api/live/learners/${LEARNER}/now`)).status).toBe(404)
+  })
+})
+
 describe('shutdown', () => {
   // A hijacked stream is an in-flight request, and Fastify waits for those. A
   // SIGTERM that sits behind a watcher for half an hour is a deploy that ends

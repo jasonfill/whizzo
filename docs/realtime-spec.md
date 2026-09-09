@@ -288,7 +288,7 @@ POST /api/live/learners/:id   { kind: 'round.tick', … }   → 204, stores noth
 
 | Event | When | Carries |
 | --- | --- | --- |
-| `round.begin` | a round starts | activity, deck title, card count |
+| `round.begin` | a round starts | activity, deck or list title, card count |
 | `round.tick` | a card is shown, and again when answered | the prompt, position, outcome, `selfGraded` |
 | `round.draft` | typing **pauses** | what is in the box |
 | `round.end` | the round finishes | cards and correct |
@@ -313,12 +313,51 @@ Three rules about content, and each earns its place:
 activity where the learner marks their own work, and "said they got it right"
 is different information from "got it right".
 
-**Discovery.** Watching is useless if you have to already know to look, so
-`round.begin` fans out to each linked grown-up's `user:` channel — one
-subscription for a tutor with thirty students rather than thirty. `round.end`
-goes to the same people, and that half is not optional: without it the
-"practicing now" chip outlives the round it advertises and offers to follow
-something that finished. The lookup reads `guardian_links` with admin rights on
+**`begin` and `end` are a pair, and both go out unwatched.** Only the ticks and
+drafts between them are gated on somebody being present. Gating the end as well
+is the obvious-looking economy and it is wrong: `begin` is unconditional, so
+every unwatched round would advertise itself on a grown-up's screen until it
+aged out twenty minutes later.
+
+**Where each activity lands.** The quiz hook covers flashcards, choice, learn,
+test and review card by card. Spelling does the same, with one wrinkle: the
+prompt a learner hears is a sentence *containing* the word, so it is masked
+(`The dog ran across the ____`) until they answer and the word travels with the
+outcome — otherwise following along would mean being handed the answer first.
+Match, free recall and typing lessons report only their two ends, because they
+are judged as a whole rather than card by card; the watch screen says so rather
+than showing an empty frame.
+
+**Discovery has to be readable, not only broadcast.** This is the part the first
+cut got wrong. `round.begin` fans out to each linked grown-up's `user:` channel
+— one subscription for a tutor with thirty students rather than thirty — and
+`round.end` goes to the same people, without which the "practicing now" chip
+outlives the round it advertises. But a broadcast alone means a grown-up sees it
+only if they happen to be on the right screen at the instant it starts, and a
+second later there is nothing to find. So the server also keeps the rounds in
+progress in memory and answers two reads:
+
+```
+GET /api/live/now                      → the rounds this caller may see
+GET /api/live/learners/:id/now         → one learner's round, with the card they are on
+```
+
+Neither is storage in the Rule 1 sense: it lives in memory, it dies with the
+process, and losing it costs a nudge rather than a record. Rounds age out after
+twenty minutes for the device that went quiet without saying goodbye.
+
+The entry point belongs on the **home screen**, not only on Family. A way in
+that has to be gone looking for is not really a way in, and a grown-up is
+already on Home when a child opens a deck.
+
+**And joining shows the round immediately.** Two things make that true, and both
+are needed: the server hands over the current card on the read above, and the
+learner's client re-sends the card it is on the moment a watcher announces
+themselves — the shown-card effect takes `watched` as a dependency for exactly
+this reason. Without the second, following someone who is thinking hard about
+one card means staring at a blank screen until they move on. Without the first,
+a second watcher or a reconnect gets the same blank. Neither costs anything
+while nobody is watching, which is the property that had to survive. The lookup reads `guardian_links` with admin rights on
 purpose — a child cannot select their own learner's links, and the answer never
 reaches the caller; it only decides which channels get the ping.
 

@@ -123,11 +123,17 @@ export function useLiveRound(): LiveRound {
 
   // --- the round ------------------------------------------------------------
 
+  // `begin` and `end` are a pair, and both go out whether or not anybody is
+  // watching. `begin` is how a grown-up learns there is something to join;
+  // `end` is what takes that invitation away again — and since `begin` is
+  // unconditional, gating `end` on somebody watching would leave every
+  // unwatched round advertising itself until it aged out twenty minutes later.
+  //
+  // The ticks and drafts in between are the part that costs nothing when
+  // nobody is there.
   const begin = useCallback(
     (round: RoundBeginPayload) => {
       stopDrafting()
-      // The one message that goes out regardless: it is how a grown-up learns
-      // there is something to join.
       send({ kind: 'round.begin', ...round }, true)
     },
     [send, stopDrafting],
@@ -145,7 +151,7 @@ export function useLiveRound(): LiveRound {
   const end = useCallback(
     (summary: RoundEndPayload) => {
       stopDrafting()
-      send({ kind: 'round.end', ...summary })
+      send({ kind: 'round.end', ...summary }, true)
     },
     [send, stopDrafting],
   )

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GRADES, gradeAt, wordsInGrade, type CurriculumWord } from '../data/spelling'
 import { newlyUnlocked, type SpellingAchievement } from '../data/spellingAchievements'
 import {
@@ -12,6 +12,7 @@ import {
   type LevelDecision,
 } from '../lib/adaptive'
 import { useProgress } from '../lib/progress/ProgressProvider'
+import { useLiveRound } from './useLiveRound'
 import { applyChange, type ProgressChange } from '../lib/progress/repo'
 import {
   defaultSkillState,
@@ -100,8 +101,26 @@ function newSessionId(): string {
   return `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+/**
+ * The sentence a word is read out in, with the word itself taken out.
+ *
+ * A watching grown-up needs something to follow — "word 4 of 12" alone is not
+ * enough to talk about — but the sentence contains the answer, and handing that
+ * over before the learner has tried breaks the rule the rest of the app works
+ * under. So the word is blanked until they answer, and the answer travels with
+ * the outcome.
+ */
+function maskWord(sentence: string, word: string): string {
+  if (!sentence || !word) return sentence
+  return sentence.replace(new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '____')
+}
+
 export function useSpellingSession() {
   const { snapshot, skill, commit } = useProgress()
+  // Anybody working through this list from another screen. Silent and free when
+  // nobody is: see useLiveRound.
+  const live = useLiveRound()
+  const roundIdRef = useRef<string | null>(null)
 
   const [plan, setPlan] = useState<PlannedWord[]>([])
   const [index, setIndex] = useState(0)
@@ -128,9 +147,19 @@ export function useSpellingSession() {
       setSummary(null)
       startedAtRef.current = Date.now()
       itemStartedAtRef.current = Date.now()
+
+      const roundId = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      roundIdRef.current = roundId
+      live.begin({
+        roundId,
+        activity: opts.activity,
+        subject: 'spelling',
+        title: words[0]?.listTitle ?? 'Spelling',
+        cards: words.length,
+      })
       return words
     },
-    [snapshot, state],
+    [live, snapshot, state],
   )
 
   /** Call as the learner is shown each word, so response time is honest. */
@@ -150,9 +179,24 @@ export function useSpellingSession() {
         hintsUsed,
       }
       setResults((prev) => [...prev, result])
+      if (roundIdRef.current) {
+        live.card({
+          roundId: roundIdRef.current,
+          at: index + 1,
+          cards: plan.length,
+          prompt: maskWord(word.s, word.w),
+          outcome: correct ? 'right' : 'wrong',
+          // Now that they have answered, the word itself.
+          answer: word.w,
+          // Spelling has no self-graded mode: every answer here was typed and
+          // checked against the word.
+          selfGraded: false,
+          responseMs: result.responseMs,
+        })
+      }
       return result
     },
-    [index, plan],
+    [index, live, plan],
   )
 
   const advance = useCallback(() => {
@@ -163,6 +207,37 @@ export function useSpellingSession() {
   const current = plan[index] ?? null
   const isLast = index >= plan.length - 1
   const isComplete = index >= plan.length && plan.length > 0
+
+  /**
+   * The word they are on, sent as they arrive at it.
+   *
+   * `watched` is a dependency on purpose: somebody joining part-way through
+   * gets the current word straight away rather than a blank screen until the
+   * learner moves on.
+   */
+  const showCard = live.card
+  const watched = live.watched
+  useEffect(() => {
+    if (!roundIdRef.current || !current) return
+    showCard({
+      roundId: roundIdRef.current,
+      at: index + 1,
+      cards: plan.length,
+      prompt: maskWord(current.s, current.w),
+      outcome: null,
+      answer: null,
+      selfGraded: false,
+      responseMs: null,
+    })
+  }, [current, index, plan.length, showCard, watched])
+
+  /** What is in the answer box, held until typing pauses. */
+  const draft = useCallback(
+    (text: string) => {
+      if (roundIdRef.current) live.draft(roundIdRef.current, index + 1, text)
+    },
+    [index, live],
+  )
 
   /**
    * Turn the round into progress. Everything downstream — ability, mastery,
@@ -355,6 +430,15 @@ export function useSpellingSession() {
 
       await commit(change)
 
+      if (roundIdRef.current) {
+        live.end({
+          roundId: roundIdRef.current,
+          cards: rows.length,
+          correct: rows.filter((r) => r.correct).length,
+        })
+        roundIdRef.current = null
+      }
+
       const built: SessionSummary = {
         activity: options.activity,
         mode: options.mode,
@@ -377,7 +461,7 @@ export function useSpellingSession() {
       setSummary(built)
       return built
     },
-    [commit, options, plan, results, snapshot, state],
+    [commit, live, options, plan, results, snapshot, state],
   )
 
   const reset = useCallback(() => {
@@ -405,6 +489,10 @@ export function useSpellingSession() {
       advance,
       finish,
       reset,
+      draft,
+      /** True while somebody else is following this round from another screen. */
+      watched: live.watched,
+      watcherNames: live.watcherNames,
     }),
     [
       plan,
@@ -422,6 +510,9 @@ export function useSpellingSession() {
       advance,
       finish,
       reset,
+      draft,
+      live.watched,
+      live.watcherNames,
     ],
   )
 }

@@ -4,6 +4,8 @@ import Wordmark from '../../components/Wordmark'
 import AccountChip from '../../components/suite/AccountChip'
 import LearnerChip from '../../components/suite/LearnerChip'
 import TodayStrip from '../../components/planner/TodayStrip'
+import PracticingNow from '../../components/live/PracticingNow'
+import { useRoundsNow } from '../../hooks/useRoundsNow'
 import { Button, Card, Pill } from '../../components/ui'
 import { TOTAL_LESSONS } from '../../data/lessons'
 import { useAssignments } from '../../hooks/useAssignments'
@@ -56,6 +58,8 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
   // older one just does not want a mascot the size of its head.
   const grade = active?.gradeHint ?? profile?.gradeHint ?? level.grade
   const older = grade >= 6
+
+  const roundsNow = useRoundsNow()
 
   return (
     <div className="mx-auto w-full max-w-4xl py-4">
@@ -138,6 +142,12 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
           🔄 Moving your saved progress into your account…
         </Pill>
       )}
+
+      {/* A learner working right now, if one is. On the home screen rather than
+          only on Family, because that is where a grown-up already is when a
+          child opens a deck — and a way in that has to be gone looking for is
+          not really a way in. Renders nothing when nobody is practicing. */}
+      <PracticingNow rounds={roundsNow} navigate={navigate} />
 
       {/* The plan for today, when there is one. The planner is the learner's;
           this is its front door on the home screen. */}

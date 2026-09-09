@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Mascot, { type Mood } from '../../components/Mascot'
+import HereNow from '../../components/live/HereNow'
 import Confetti from '../../components/Confetti'
 import { Button, Card, Pill } from '../../components/ui'
 import type { CurriculumWord } from '../../data/spelling'
@@ -53,6 +54,21 @@ export default function SpellingPlay({ activity, mode, listId, customListId, siz
 
   const [phase, setPhase] = useState<Phase>('prompt')
   const [answer, setAnswer] = useState('')
+
+  /**
+   * Typing, with anybody following along told about it once it pauses.
+   *
+   * Wrapped here rather than inside the answer box so the resets elsewhere in
+   * this file stay silent — clearing the field between words is not something
+   * to broadcast.
+   */
+  const type = useCallback(
+    (value: string) => {
+      setAnswer(value)
+      session.draft(value)
+    },
+    [session],
+  )
   const [last, setLast] = useState<ItemResult | null>(null)
   const [hints, setHints] = useState(0)
   const [speechReady, setSpeechReady] = useState(isSpeechAvailable())
@@ -207,6 +223,17 @@ export default function SpellingPlay({ activity, mode, listId, customListId, siz
 
   return (
     <div className="mx-auto w-full max-w-2xl py-4">
+      {/* Nobody follows a round without the learner seeing it, and the line is
+          specific about what leaves this screen — see docs/realtime-spec.md §9. */}
+      {session.watched && (
+        <div className="mb-2 flex flex-col items-center gap-1">
+          <HereNow names={session.watcherNames} doing="following along" />
+          <p className="text-[12px] font-bold text-muted">
+            They can see the word you are on and what you type.
+          </p>
+        </div>
+      )}
+
       {/* One segment per word: filled behind you, tinted where you are, inert
           ahead. A strip rather than a bar, because a round is countable. */}
       <div className="mb-4 flex items-center gap-3">
@@ -277,7 +304,7 @@ export default function SpellingPlay({ activity, mode, listId, customListId, siz
             sentence={current.s}
             difficulty={current.difficulty}
             answer={answer}
-            setAnswer={setAnswer}
+            setAnswer={type}
             inputRef={inputRef}
             onSubmit={submitTyped}
             onChoose={(choice) => grade(choice, isCorrect(choice, current.w))}

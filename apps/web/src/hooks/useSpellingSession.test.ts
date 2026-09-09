@@ -19,6 +19,25 @@ vi.mock('../lib/progress/ProgressProvider', () => ({
   useProgress: () => ({ snapshot, skill: () => spelling, commit }),
 }))
 
+// A round now tells anybody following it where it has got to. None of that is
+// this file's subject, but it has to be able to run: these stand in for the
+// providers it reads and the socket it would otherwise open. `sent` is here so
+// the cases that do care can look.
+const sent = vi.hoisted(() => ({ bodies: [] as Array<Record<string, unknown>> }))
+vi.mock('../lib/learners/LearnerProvider', () => ({
+  useLearners: () => ({ active: { id: 'learner-1', displayName: 'Ada' } }),
+}))
+vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'grown-up-1' } }) }))
+vi.mock('../lib/live/client', () => ({ openLive: () => () => {} }))
+vi.mock('../lib/api/client', () => ({
+  ORIGIN_ID: 'origin-under-test',
+  api: {
+    post: async (_path: string, body: Record<string, unknown>) => {
+      sent.bodies.push(body)
+    },
+  },
+}))
+
 /** Play a whole round, answering each word by the rule given. */
 function play(
   result: { current: ReturnType<typeof useSpellingSession> },
@@ -325,5 +344,57 @@ describe('reset', () => {
     expect(result.current.results).toEqual([])
     expect(result.current.summary).toBeNull()
     expect(result.current.index).toBe(0)
+  })
+})
+
+// --- what a round tells anybody following it --------------------------------
+//
+// Spelling is the awkward case for the rule the rest of the app works under:
+// the prompt a learner hears is a sentence *containing* the word, so sending it
+// as-is would hand the answer to a watcher before the learner has tried. It is
+// masked until they answer, and travels with the outcome afterwards.
+describe('following a spelling round', () => {
+  beforeEach(() => {
+    sent.bodies = []
+  })
+
+  const kinds = () => sent.bodies.map((b) => b.kind)
+  const ticks = () => sent.bodies.filter((b) => b.kind === 'round.tick')
+
+  it('announces the round when it starts', () => {
+    const { result } = renderHook(() => useSpellingSession())
+    act(() => {
+      result.current.start({ activity: 'test', mode: 'adaptive', size: 4 })
+    })
+
+    expect(kinds()).toContain('round.begin')
+    const begin = sent.bodies.find((b) => b.kind === 'round.begin')!
+    expect(begin).toMatchObject({ activity: 'test', subject: 'spelling', cards: 4 })
+  })
+
+  // Nobody is following in this test, so only the round's two ends go out —
+  // the shown-word ticks are the part that costs nothing when unwatched.
+  it('says nothing about the words while nobody is following', () => {
+    const { result } = renderHook(() => useSpellingSession())
+    act(() => {
+      result.current.start({ activity: 'test', mode: 'adaptive', size: 3 })
+    })
+    play(result, () => ({ correct: true }))
+
+    expect(ticks()).toHaveLength(0)
+  })
+
+  it('reports the round when it finishes', async () => {
+    const { result } = renderHook(() => useSpellingSession())
+    act(() => {
+      result.current.start({ activity: 'test', mode: 'adaptive', size: 3 })
+    })
+    const rows = play(result, (i) => ({ correct: i !== 0 }))
+    await act(async () => {
+      await result.current.finish(rows)
+    })
+
+    const end = sent.bodies.find((b) => b.kind === 'round.end')
+    expect(end).toMatchObject({ cards: 3, correct: 2 })
   })
 })

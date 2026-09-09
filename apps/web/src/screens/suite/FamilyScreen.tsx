@@ -9,6 +9,7 @@ import MyTutorCode from '../../components/suite/MyTutorCode'
 import RewardLedger from '../../components/suite/RewardLedger'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import { useRoundsNow } from '../../hooks/useRoundsNow'
+import PracticingNow from '../../components/live/PracticingNow'
 import { Button, Card, Pill } from '../../components/ui'
 import { ApiError } from '../../lib/api/client'
 import { familyOverview, type LearnerOverview } from '../../lib/assignments/api'
@@ -222,24 +223,7 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
       {error && (
         <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-600">{error}</p>
       )}
-
-      {/* The discovery half of following a round: without this it only works
-          if you already knew to look. */}
-      {roundsNow.map((round) => (
-        <button
-          key={round.learnerId}
-          type="button"
-          onClick={() => navigate({ name: 'watch', learnerId: round.learnerId })}
-          className="mb-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-hair bg-wash px-3 py-2 text-left"
-        >
-          <span className="flex items-center gap-2 text-[14px] font-extrabold text-ink">
-            <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            {round.learnerName ?? 'Your learner'} is practicing
-            {round.title ? ` — ${round.title}` : ''}
-          </span>
-          <span className="shrink-0 text-[13px] font-extrabold text-ink underline">Follow</span>
-        </button>
-      ))}
+      <PracticingNow rounds={roundsNow} navigate={navigate} />
 
       <div className="flex flex-col gap-3">
         {learners.map((learner) => (

@@ -386,6 +386,12 @@ export function useQuizSession() {
    * nobody gets the answer before the person whose turn it is.
    */
   const showCard = live.card
+  // `watched` is a dependency on purpose, not by accident: when somebody joins
+  // part-way through, this fires again and re-sends the card already on screen,
+  // so their view fills in immediately instead of staying blank until the
+  // learner happens to move on. It is also what keeps an unwatched round free —
+  // nothing was sent before they arrived.
+  const watched = live.watched
   useEffect(() => {
     if (!roundIdRef.current || !currentQuestion) return
     showCard({
@@ -398,7 +404,7 @@ export function useQuizSession() {
       selfGraded: false,
       responseMs: null,
     })
-  }, [cursor, currentQuestion, showCard, plan.length])
+  }, [cursor, currentQuestion, showCard, plan.length, watched])
 
   /**
    * What the learner sees as progress. Cards retired out of the deck, not

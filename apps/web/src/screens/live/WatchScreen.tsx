@@ -10,7 +10,7 @@
 // multiple choice, and this comes along. Re-joining to keep up would rather
 // defeat the object.
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type {
   LiveEvent,
   RoundBeginPayload,
@@ -18,6 +18,7 @@ import type {
   RoundEndPayload,
   RoundTickPayload,
 } from '@whizzo/shared'
+import { api } from '../../lib/api/client'
 import { useLiveLearner } from '../../hooks/useLiveChannel'
 import { useLearners } from '../../lib/learners/LearnerProvider'
 import ScreenHeader from '../../components/suite/ScreenHeader'
@@ -33,11 +34,20 @@ interface Watching {
   round: RoundBeginPayload | null
   card: RoundTickPayload | null
   draft: string
-  answered: RoundTickPayload[]
+  /**
+   * The tally, as counts rather than a list of cards.
+   *
+   * Counts because they have to be seeded: somebody joining half way through
+   * should see "6 right of 8", not "0 of 0" until the next answer. The server
+   * keeps the running total for exactly this, and every answered card produces
+   * one tick, so adding to it as they arrive stays in step.
+   */
+  answered: number
+  correct: number
   ended: RoundEndPayload | null
 }
 
-const NOTHING: Watching = { round: null, card: null, draft: '', answered: [], ended: null }
+const NOTHING: Watching = { round: null, card: null, draft: '', answered: 0, correct: 0, ended: null }
 
 export default function WatchScreen({ learnerId, navigate }: Props) {
   const { learners } = useLearners()
@@ -57,9 +67,8 @@ export default function WatchScreen({ learnerId, navigate }: Props) {
           // A new card, or this one resolved: either way what they had typed is
           // no longer what they are typing.
           draft: '',
-          answered: card.outcome
-            ? [...prev.answered.filter((a) => a.at !== card.at), card]
-            : prev.answered,
+          answered: card.outcome ? prev.answered + 1 : prev.answered,
+          correct: card.outcome && card.outcome !== 'wrong' ? prev.correct + 1 : prev.correct,
         }))
         break
       }
@@ -84,6 +93,47 @@ export default function WatchScreen({ learnerId, navigate }: Props) {
   // Announcing, always: this screen exists to be seen from the other end.
   const live = useLiveLearner(learnerId, { onEvent, announce: true })
 
+  /**
+   * The round as it already stands, read on arrival.
+   *
+   * Without this, following somebody shows an empty screen until they happen to
+   * move to the next card — which, on a deck they are thinking hard about, can
+   * be a long time to look at nothing. The learner's client also re-sends the
+   * current card as soon as this screen announces itself, so the two arrive
+   * about together and whichever is newer wins.
+   */
+  useEffect(() => {
+    const controller = new AbortController()
+    void (async () => {
+      try {
+        const { round } = await api.get<{ round: (RoundBeginPayload & {
+          card?: RoundTickPayload
+          draft?: string
+          answered?: number
+          correct?: number
+        }) | null }>(`/live/learners/${learnerId}/now`, controller.signal)
+        if (controller.signal.aborted || !round) return
+        setSeen((prev) =>
+          // Anything that arrived on the channel while this was in flight is
+          // newer than this snapshot by definition.
+          prev.round
+            ? prev
+            : {
+                round,
+                card: round.card ?? null,
+                draft: round.draft ?? '',
+                answered: round.answered ?? 0,
+                correct: round.correct ?? 0,
+                ended: null,
+              },
+        )
+      } catch {
+        // Nothing running, or nothing readable. The channel will fill it in.
+      }
+    })()
+    return () => controller.abort()
+  }, [learnerId])
+
   const name = learner?.displayName ?? 'Your learner'
   const right =
     live.status === 'open' ? null : (
@@ -107,6 +157,23 @@ export default function WatchScreen({ learnerId, navigate }: Props) {
         </Card>
       )}
 
+      {/* A round that reports no cards: a typing lesson is keystrokes, and match
+          and free recall are judged as a whole rather than card by card. There
+          is nothing to mirror, so say what is happening and leave it at that
+          rather than showing an empty frame that looks broken. */}
+      {seen.round && !seen.ended && !seen.card && (
+        <Card>
+          <p className="text-[18px] font-extrabold text-ink">
+            {name} is working on {seen.round.title || seen.round.activity}.
+          </p>
+          <p className="mt-1 font-bold text-muted">
+            {seen.round.cards > 0
+              ? 'Waiting for the first card…'
+              : 'This one is judged as a whole, so there are no cards to follow — you will see how it went when they finish.'}
+          </p>
+        </Card>
+      )}
+
       {seen.round && !seen.ended && seen.card && (
         <Card>
           <div className="mb-2 flex items-center justify-between text-[12px] font-extrabold uppercase tracking-wide text-stone">
@@ -114,7 +181,7 @@ export default function WatchScreen({ learnerId, navigate }: Props) {
               Card {seen.card.at} of {seen.card.cards}
             </span>
             <span>
-              {seen.answered.filter((a) => a.outcome !== 'wrong').length} right of {seen.answered.length}
+              {seen.correct} right of {seen.answered}
             </span>
           </div>
 
