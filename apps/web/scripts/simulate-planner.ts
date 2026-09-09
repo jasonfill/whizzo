@@ -110,7 +110,7 @@ for (let i = 0; i < RUNS; i++) {
 
   // Purposes end on review whenever there is more than one session.
   if (r.sessions.length >= 2 && r.sessions.at(-1)!.purpose !== 'review') fail('last session is not the review', ctx)
-  if (r.sessions.length >= 3 && r.sessions[0]!.purpose !== 'organise') fail('first session is not organise', ctx)
+  if (r.sessions.length >= 3 && r.sessions[0]!.purpose !== 'organize') fail('first session is not organize', ctx)
 }
 
 console.log(

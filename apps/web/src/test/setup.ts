@@ -1,6 +1,6 @@
 // Browser APIs the app touches that jsdom does not implement.
 //
-// Kept to genuine gaps only: anything stubbed here is behaviour a test can no
+// Kept to genuine gaps only: anything stubbed here is behavior a test can no
 // longer see, so the list is deliberately short.
 
 import '@testing-library/jest-dom/vitest'

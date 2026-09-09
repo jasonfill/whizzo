@@ -1,22 +1,25 @@
 // One live subscription per learner, shared by every feature that wants one.
 //
-// The connection is deliberately not per-feature: the planner, presence and
-// (next) watching a round all ride the same stream and filter by `kind`. A
-// screen that wants events asks for a handler, not a socket.
+// The connection itself lives in lib/live/pool.ts; this is the React face of
+// it. A screen asks for a handler, not a socket, and several screens asking at
+// once still means one stream — which is what lets the planner, the home
+// screen's Today strip and a running round all listen without three sockets
+// and three copies of every event.
 //
 // Handlers are held in a ref so that a caller passing an inline arrow function
-// — which everybody does — does not tear the connection down and build it up
-// again on every render.
+// — which everybody does — does not tear the subscription down and rebuild it
+// on every render.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { type LiveEvent, type LiveWatcher, type WatchPayload } from '@whizzo/shared'
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { type LiveEvent, type LiveWatcher } from '@whizzo/shared'
 import { useAuth } from '../auth/AuthProvider'
 import { ORIGIN_ID } from '../lib/api/client'
-import { openLive, type LiveStatus } from '../lib/live/client'
+import { acquire, snapshotOf, subscribeToSnapshot } from '../lib/live/pool'
+import type { LiveStatus } from '../lib/live/client'
 
 export interface LiveChannel {
   status: LiveStatus
-  /** Everyone on this channel right now, this tab included. */
+  /** Everyone announced on this channel right now, this tab included. */
   watchers: LiveWatcher[]
   /** Everyone else — what you show as "Mom is here". */
   others: LiveWatcher[]
@@ -40,24 +43,30 @@ export interface LiveHandlers {
 }
 
 export function useLiveLearner(learnerId: string | null, handlers: LiveHandlers = {}): LiveChannel {
+  return useChannel(learnerId ? `/live/learners/${learnerId}` : null, handlers)
+}
+
+/**
+ * The caller's own channel: things addressed to one grown-up rather than to a
+ * learner — a child starting a round, a job finishing, an invite accepted.
+ */
+export function useLiveMe(handlers: LiveHandlers = {}): LiveChannel {
+  const { user } = useAuth()
+  return useChannel(user ? '/live/me' : null, handlers)
+}
+
+function useChannel(path: string | null, handlers: LiveHandlers): LiveChannel {
   const { user } = useAuth()
   const me = user?.id ?? null
-  const [status, setStatus] = useState<LiveStatus>('connecting')
-  const [watchers, setWatchers] = useState<LiveWatcher[]>([])
 
   const ref = useRef(handlers)
   ref.current = handlers
 
-  // Not read through the ref: changing it changes the connection, so it has to
-  // be a dependency rather than a detail the open stream cannot act on.
+  // Not read through the ref: it decides how the connection is opened, so it
+  // has to be a dependency rather than a detail an open stream cannot act on.
   const announce = handlers.announce ?? false
 
   const onEvent = useCallback((event: LiveEvent) => {
-    // Presence is bookkeeping every consumer wants and none should have to do,
-    // so it is handled here and still passed on for anyone who cares who moved.
-    if (event.kind === 'watch.begin' || event.kind === 'watch.end') {
-      setWatchers((event.payload as WatchPayload).watchers ?? [])
-    }
     // The echo of this tab's own optimistic write. Applying it would be
     // harmless in most cases and a flicker in the rest; either way there is
     // nothing to learn from being told what you just did.
@@ -65,25 +74,27 @@ export function useLiveLearner(learnerId: string | null, handlers: LiveHandlers 
     ref.current.onEvent?.(event)
   }, [])
 
-  useEffect(() => {
-    if (!learnerId) {
-      setStatus('offline')
-      setWatchers([])
-      return
-    }
-    setWatchers([])
-    const close = openLive(`/live/learners/${learnerId}${announce ? '?announce=1' : ''}`, {
-      onEvent,
-      onStatus: setStatus,
-      onResync: () => ref.current.onResync?.(),
-    })
-    return () => {
-      close()
-      setWatchers([])
-    }
-  }, [learnerId, onEvent, announce])
+  const onResync = useCallback(() => ref.current.onResync?.(), [])
 
-  // One entry per person, so "who else is here" means people, not tabs.
-  const others = watchers.filter((w) => w.userId !== me)
-  return { status, watchers, others }
+  useEffect(() => {
+    if (!path) return
+    return acquire(path, { onEvent, onResync, announce })
+  }, [path, onEvent, onResync, announce])
+
+  const subscribe = useCallback(
+    (listener: () => void) => subscribeToSnapshot(path, listener),
+    [path],
+  )
+  const snapshot = useSyncExternalStore(
+    subscribe,
+    () => snapshotOf(path),
+    () => snapshotOf(path),
+  )
+
+  const others = useMemo(
+    () => snapshot.watchers.filter((w) => w.userId !== me),
+    [snapshot.watchers, me],
+  )
+
+  return { status: snapshot.status, watchers: snapshot.watchers, others }
 }

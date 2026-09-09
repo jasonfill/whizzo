@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLearners } from '../../lib/learners/LearnerProvider'
 
 /**
- * Who is practising right now.
+ * Who is practicing right now.
  *
  * Distinct from AccountChip on purpose: since the learner inversion the adult
  * holding the session and the learner whose progress is on screen are two

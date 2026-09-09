@@ -165,7 +165,7 @@ export default function DeckScreen({ deckId, navigate }: { deckId: string; navig
             {packetCopied ? 'Copied ✓' : '🗣️ Copy for a voice assistant'}
           </Button>
           <span className="text-sm font-bold text-stone">
-            Paste into any assistant to practise out loud. Not recorded here — connect the app to
+            Paste into any assistant to practice out loud. Not recorded here — connect the app to
             count it.
           </span>
         </div>

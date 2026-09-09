@@ -109,7 +109,7 @@ describe('a new deck', () => {
     expect(screen.getByText('2 cards found')).toBeTruthy()
   })
 
-  it('can be closed in favour of typing rows by hand', () => {
+  it('can be closed in favor of typing rows by hand', () => {
     render(<DeckEditor navigate={navigate} />)
     fireEvent.click(screen.getAllByText('Cancel')[0]!)
     expect(screen.getByText('📥 Paste a list instead')).toBeTruthy()
@@ -202,7 +202,7 @@ describe('editing an existing deck', () => {
       true,
     )
     fireEvent.click(screen.getAllByLabelText('Move down')[0]!)
-    // Card sides are textareas, not inputs: maths and figures need the room.
+    // Card sides are textareas, not inputs: math and figures need the room.
     const fields = [...document.querySelectorAll('textarea')].map((t) => t.value)
     expect(fields.indexOf('Rome')).toBeLessThan(fields.indexOf('Paris'))
   })
@@ -227,7 +227,7 @@ describe('a deck’s own screen', () => {
     expect(screen.getByText(/may have been deleted on another device/)).toBeTruthy()
   })
 
-  it('summarises what has been learned so far', () => {
+  it('summarizes what has been learned so far', () => {
     render(<DeckScreen deckId="d1" navigate={navigate} />)
     expect(screen.getAllByText('Cards').length).toBeGreaterThan(0)
     expect(screen.getByText('Mastered')).toBeTruthy()
@@ -287,7 +287,7 @@ describe('a deck’s own screen', () => {
 
   it('offers a copy of a starter deck rather than letting it be edited', async () => {
     // The starters ship with the app; editing one in place would change it for
-    // everybody who has practised against it.
+    // everybody who has practiced against it.
     const starter = STARTER_DECKS[0]!
     render(<DeckScreen deckId={starter.id} navigate={navigate} />)
     expect(screen.getByText('📋 Make my own copy')).toBeTruthy()

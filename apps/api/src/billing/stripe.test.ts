@@ -124,16 +124,16 @@ describe('Stripe status, mapped to ours', () => {
   })
 
   it('does not cover a subscription nobody has paid for yet', () => {
-    expect(statusFrom('incomplete')).toBe('cancelled')
-    expect(statusFrom('incomplete_expired')).toBe('cancelled')
+    expect(statusFrom('incomplete')).toBe('canceled')
+    expect(statusFrom('incomplete_expired')).toBe('canceled')
   })
 
-  it('ends coverage when it is actually cancelled', () => {
-    expect(statusFrom('canceled')).toBe('cancelled')
+  it('ends coverage when it is actually canceled', () => {
+    expect(statusFrom('canceled')).toBe('canceled')
   })
 
   it('takes nothing away for a status it has never heard of', () => {
-    // Stripe adds statuses. Treating an unknown as cancelled would silently
+    // Stripe adds statuses. Treating an unknown as canceled would silently
     // strip a paying family.
     expect(statusFrom('something_new' as never)).toBe('past_due')
   })

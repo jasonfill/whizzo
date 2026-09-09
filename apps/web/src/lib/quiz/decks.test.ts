@@ -163,7 +163,7 @@ describe('parseImport', () => {
     expect(cards).toHaveLength(2)
   })
 
-  it('honours an explicit separator over the detected one', () => {
+  it('honors an explicit separator over the detected one', () => {
     const { cards } = parseImport('a,b\tc', { between: 'comma' })
     expect(cards[0]).toMatchObject({ term: 'a' })
   })
@@ -180,13 +180,13 @@ describe('serializeCards', () => {
   })
 })
 
-describe('importing cards that carry maths and figures', () => {
+describe('importing cards that carry math and figures', () => {
   // A figure is JSON inside the card text, and JSON is built out of exactly the
   // characters the importer splits on. Getting this wrong does not mangle one
   // row — it picks the wrong separator for the whole paste and every row,
   // figure or not, comes back unparseable.
   const rows = [
-    'Find the area [[figure {"kind":"rect","width":"8 m","height":"5 m"}]], 40 square metres',
+    'Find the area [[figure {"kind":"rect","width":"8 m","height":"5 m"}]], 40 square meters',
     'Biggest? [[figure {"kind":"bar","data":[{"label":"a","value":1},{"label":"b","value":2}]}]], b',
     'Area of a 3 by 4 rectangle, 12',
   ].join('\n')
@@ -198,7 +198,7 @@ describe('importing cards that carry maths and figures', () => {
   it('imports every row, with the figures still whole', () => {
     const result = parseImport(rows)
     expect(result.skipped).toEqual([])
-    expect(result.cards.map((c) => c.definition)).toEqual(['40 square metres', 'b', '12'])
+    expect(result.cards.map((c) => c.definition)).toEqual(['40 square meters', 'b', '12'])
     expect(result.cards[0].term.endsWith(']]')).toBe(true)
     const figure = findFigure(result.cards[0].term)
     expect(JSON.parse(figure!.json).width).toBe('8 m')
@@ -220,10 +220,10 @@ describe('importing cards that carry maths and figures', () => {
   })
 })
 
-// The fields that let one pasted list be practised many ways. A normalise
+// The fields that let one pasted list be practiced many ways. A normalize
 // must not quietly lose them — editing a deck would otherwise cost the
 // learner every activity the enrichment had unlocked.
-describe('enrichment survives a normalise', () => {
+describe('enrichment survives a normalize', () => {
   function deckWith(card: Partial<QuizDeck['cards'][number]>): QuizDeck {
     return {
       ...emptyDeck(),

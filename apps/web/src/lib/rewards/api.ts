@@ -25,8 +25,8 @@ export function offerReward(reward: NewReward): Promise<{ reward: Reward }> {
 }
 
 /** Say it has been handed over. An assertion, recorded with a name on it. */
-export function fulfilReward(id: string, note?: string): Promise<{ reward: Reward }> {
-  return api.post(`/rewards/${id}/fulfil`, { note: note ?? null })
+export function fulfillReward(id: string, note?: string): Promise<{ reward: Reward }> {
+  return api.post(`/rewards/${id}/fulfill`, { note: note ?? null })
 }
 
 export function cancelReward(id: string): Promise<{ reward: Reward }> {

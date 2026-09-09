@@ -132,7 +132,7 @@ export default function MyTutorCode() {
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value.slice(0, 80))}
-          placeholder="What is it for? e.g. Tuesday maths"
+          placeholder="What is it for? e.g. Tuesday math"
           className="flex-1 rounded-xl border-2 border-edge px-3 py-2 font-bold text-ink outline-none focus:border-ink"
         />
         <Button disabled={busy} onClick={mint}>

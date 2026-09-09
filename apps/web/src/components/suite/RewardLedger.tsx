@@ -7,14 +7,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   canCancel,
-  canFulfil,
+  canFulfill,
   CRITERION_LABEL,
   ledger,
   needsChasing,
   type Reward,
 } from '@whizzo/shared'
 import { Button, Card, Pill } from '../ui'
-import { cancelReward, fulfilReward, rewardsFor } from '../../lib/rewards/api'
+import { cancelReward, fulfillReward, rewardsFor } from '../../lib/rewards/api'
 import OfferReward from './OfferReward'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { allDecks } from '../../lib/quiz/decks'
@@ -56,7 +56,7 @@ export default function RewardLedger({
     setBusy(reward.id)
     setError(null)
     try {
-      await fulfilReward(reward.id)
+      await fulfillReward(reward.id)
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'That did not save.')
@@ -140,7 +140,7 @@ export default function RewardLedger({
                     {needsChasing(reward) && ' · waiting on you'}
                   </p>
                 </div>
-                {canFulfil(reward, userId) ? (
+                {canFulfill(reward, userId) ? (
                   <Button onClick={() => settle(reward)} disabled={busy === reward.id}>
                     ✅ Given
                   </Button>

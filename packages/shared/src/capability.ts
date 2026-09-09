@@ -1,6 +1,6 @@
-// What a set can actually be practised with.
+// What a set can actually be practiced with.
 //
-// This is the single mechanism behind "load content once, practise it many
+// This is the single mechanism behind "load content once, practice it many
 // ways": rather than every screen keeping its own list of activities and
 // hoping the content supports them, one function reads what the cards carry
 // and says what can run.
@@ -54,7 +54,7 @@ export function hasPlainAnswer(card: Pick<QuizCard, 'definition'>): boolean {
  * Whether both sides of a card can be said out loud.
  *
  * The tutor (docs/mcp-tutor-spec.md) asks the prompt and listens for the
- * answer, so a figure on either side is out, as is a photograph. Maths passes
+ * answer, so a figure on either side is out, as is a photograph. Math passes
  * when its plain-text projection is something a person would say — `3/4`
  * speaks, `\\frac{dy}{dx}` does not, and the projection is where that is
  * decided: anything still carrying a backslash after projection is not

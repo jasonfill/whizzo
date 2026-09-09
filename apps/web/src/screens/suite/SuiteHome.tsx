@@ -192,7 +192,7 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
             { label: 'Words mastered', value: `${overall.mastered}/${totalCurriculumWords()}` },
             ...(due > 0 ? [{ label: 'Due for review', value: String(due) }] : []),
           ]}
-          cta={spelling.placed ? 'Keep practising' : 'Find my level'}
+          cta={spelling.placed ? 'Keep practicing' : 'Find my level'}
           onClick={() => navigate({ name: 'spelling' })}
         />
         <SubjectCard
@@ -347,7 +347,7 @@ interface SubjectCardProps {
 
 // A neutral card with a hair border. The per-subject gradients this replaces
 // were the cat era's paint, and they fought nine of the ten themes; the only
-// colour left here is the accent on the CTA.
+// color left here is the accent on the CTA.
 function SubjectCard({ emoji, title, tagline, stats, cta, onClick }: SubjectCardProps) {
   return (
     <button

@@ -413,13 +413,13 @@ describe('assignments', () => {
     expect(res.statusCode).toBe(400)
   })
 
-  it('accepts cancelling one', async () => {
+  it('accepts canceling one', async () => {
     const app = await buildApp()
     const res = await app.inject({
       method: 'PATCH',
       url: `/api/learners/${LEARNER}/assignments/${SESSION}`,
       headers: await auth(),
-      payload: { status: 'cancelled' },
+      payload: { status: 'canceled' },
     })
     expect(res.statusCode).toBeLessThan(400)
   })

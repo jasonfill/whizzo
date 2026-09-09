@@ -136,7 +136,7 @@ describe('running one', () => {
 
   it('lands it as a draft, not as something assignable', async () => {
     // `accepted_at` stays null until a grown-up looks at it. A draft can be
-    // practised; it cannot be assigned or earn a reward.
+    // practiced; it cannot be assigned or earn a reward.
     const db = fakeDb([SOURCE, CREDITS])
     await runJob({ db, client: client([MAP, SET]), makeCard }, job())
     const insert = db.calls.find((c) => /insert into public.decks/.test(c))!

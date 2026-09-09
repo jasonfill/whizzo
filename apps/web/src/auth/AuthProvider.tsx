@@ -123,30 +123,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return
 
-    let cancelled = false
+    let canceled = false
 
     // If the auth service is unreachable the app must still open — a kid on a
     // flaky connection gets guest mode, not an infinite spinner.
     const fallback = window.setTimeout(() => {
-      if (!cancelled) setStatus((s) => (s === 'loading' ? 'guest' : s))
+      if (!canceled) setStatus((s) => (s === 'loading' ? 'guest' : s))
     }, 6000)
 
     supabase.auth
       .getSession()
       .then(async ({ data }) => {
-        if (cancelled) return
+        if (canceled) return
         setSession(data.session)
         if (data.session?.user) await loadProfile(data.session.user.id)
         setStatus(data.session ? 'signed-in' : 'guest')
       })
       .catch((err) => {
         console.warn('[cat-academy] could not reach auth, continuing as guest', err)
-        if (!cancelled) setStatus('guest')
+        if (!canceled) setStatus('guest')
       })
       .finally(() => window.clearTimeout(fallback))
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, next) => {
-      if (cancelled) return
+      if (canceled) return
       const prev = sessionRef.current
 
       // Supabase re-checks the session every time the tab regains focus and
@@ -175,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     return () => {
-      cancelled = true
+      canceled = true
       window.clearTimeout(fallback)
       listener.subscription.unsubscribe()
     }

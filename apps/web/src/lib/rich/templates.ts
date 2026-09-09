@@ -129,7 +129,7 @@ export const FIGURE_TEMPLATES: FigureTemplate[] = [
     emoji: '🥧',
     spec: {
       kind: 'pie',
-      title: 'Favourite fruit',
+      title: 'Favorite fruit',
       showPercent: true,
       data: [
         { label: 'Apple', value: 8 },
@@ -144,7 +144,7 @@ export function templateSource(template: FigureTemplate): string {
   return figureSource(template.spec)
 }
 
-/** Maths snippets, with where the cursor should land once one is inserted. */
+/** Math snippets, with where the cursor should land once one is inserted. */
 export interface MathSnippet {
   label: string
   text: string
@@ -160,7 +160,7 @@ export const MATH_SNIPPETS: MathSnippet[] = [
   { label: '∠', text: '$m\\angle ABC = $', hint: 'Angle measure' },
 ]
 
-/** Single characters that need no maths markup at all. */
+/** Single characters that need no math markup at all. */
 export const SYMBOLS = [
   '×',
   '÷',

@@ -111,7 +111,7 @@ export function row(children: MathNode[]): MathNode {
 
 // Word, MathType and Google Docs all export named entities, and a missed one
 // shows up as literal "&times;" in the middle of a question. The list is the
-// ones that actually turn up in school maths rather than all 2000 of them.
+// ones that actually turn up in school math rather than all 2000 of them.
 const NAMED_ENTITIES: Record<string, string> = {
   amp: '&',
   lt: '<',

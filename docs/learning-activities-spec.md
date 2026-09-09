@@ -95,7 +95,7 @@ satisfy these does not ship.
 2. **Only unaided production moves ability.** Recognition updates the item, not
    the learner's level. Multiple choice never made anyone cleverer.
 3. **Nothing is ticked off.** Completion is derived from a round that landed.
-4. **Generated content is labelled as generated** and is reviewable. A machine
+4. **Generated content is labeled as generated** and is reviewable. A machine
    filling in an example sentence is a convenience, not an authority.
 5. **Every activity produces a parent-legible number.** If a grown-up cannot
    read the result and know what the child can do, the activity is a game.
@@ -165,7 +165,7 @@ the Checkpoint measures.
   promotions, which is the most likely way this ladder gets silently wrong.
 - **One miss spends the banked evidence; two misses running cost a rung.**
   Originally this demoted on every miss, and the ladder simulation showed why
-  that is wrong: an item practised at the learner's frontier is *meant* to be
+  that is wrong: an item practiced at the learner's frontier is *meant* to be
   missed sometimes, and if one miss both wipes the progress and drops the rung,
   the item ping-pongs — a learner answering 90% correctly never reaches free
   recall at all. So a miss always costs the banked corrects, and the rung only
@@ -200,7 +200,7 @@ before anyone wrote this down.
 | **Retrieval practice** (testing effect) — retrieving beats re-studying, by a lot | the entire ladder; every activity is a retrieval attempt | Roediger & Karpicke 2006; rated **high utility** in Dunlosky et al. 2013 |
 | **Distributed practice** — spacing beats massing | `lib/adaptive.ts` interval ladder | Cepeda et al. 2006 meta-analysis; also **high utility** in Dunlosky |
 | **Free recall beats elaborative study** | `brain-dump` | Karpicke & Blunt 2011 — retrieval practice outperformed concept mapping |
-| **Generation effect** — producing beats recognising | levels 2→3, and the rule that nothing skips level 3 | Slamecka & Graf 1978 |
+| **Generation effect** — producing beats recognizing | levels 2→3, and the rule that nothing skips level 3 | Slamecka & Graf 1978 |
 | **Desirable difficulties** — harder-feeling practice retains better | escalation, and scoring against prediction rather than a flat 90% | Bjork |
 | **Interleaving** | Today's Mix, and the capped review proportions | Rohrer & Taylor 2007; strongest for confusable categories |
 | **Immediate corrective feedback on factual material** | requeue-on-miss, the `close` grade | well supported for facts; the picture is murkier for complex tasks |
@@ -246,7 +246,7 @@ and wrong for anything left uncorrected. Three mitigations, all cheap:
   round ends, or on the next one;
 - misconception-shaped distractors belong in `find-the-error`, where the
   learner's job is to reject them explicitly, not in a stem where they sit
-  unlabelled as one of four.
+  unlabeled as one of four.
 
 **4. Mastery is claimed before it has been tested at delay.** "Two correct on
 two different days" can mean forty-eight hours. Retention at three weeks is the
@@ -258,8 +258,8 @@ just stops the word being spent early. It costs nothing but a rename and it is
 the difference between a defensible report and an optimistic one.
 
 **5. Timed activities carry a real cost, and it is not evenly distributed.**
-Speed pressure raises anxiety, and the maths literature specifically implicates
-timed drill in the development of maths anxiety (Boaler; Ramirez et al.), with
+Speed pressure raises anxiety, and the math literature specifically implicates
+timed drill in the development of math anxiety (Boaler; Ramirez et al.), with
 the largest effect on the learners who are already struggling — the exact
 population this product exists for. Fluency is still worth measuring.
 **Recommendation:** `speed-recall` reports fluency but **never gates mastery,
@@ -285,7 +285,7 @@ across genuinely different surface contexts, and near-miss cases compared
 side by side. **Recommendation:** `apply` should draw from a *rotating* pool of
 contexts rather than one stored second example, and a `compare` activity —
 two items side by side, "what is the difference?" — is worth more for
-conceptual sets than anything currently in the catalogue. Add it to §9.
+conceptual sets than anything currently in the catalog. Add it to §9.
 
 **8. Feedback is corrective, not explanatory.** Showing the right answer is the
 weakest useful feedback there is. Explanatory feedback — *why* that answer, why
@@ -342,7 +342,7 @@ them improves learning.
 
 Two reasons not to build it anyway, beyond it not working:
 
-- **It would make the product worse.** A learner labelled "visual" who is
+- **It would make the product worse.** A learner labeled "visual" who is
   steered away from writing answers from memory has been steered away from the
   single most effective thing in this app. The label becomes a reason to avoid
   the practice that works.
@@ -361,7 +361,7 @@ Mayer's multimedia work). A diagram is visual because the content is spatial. A
 pronunciation is auditory because the content is sound. Phonics is auditory
 because that is the skill. None of that depends on who is looking.
 
-So the catalogue should cover modalities **because content needs them**:
+So the catalog should cover modalities **because content needs them**:
 
 | Modality | Serves | Activities |
 | --- | --- | --- |
@@ -418,7 +418,7 @@ has a concrete handle in this spec:
 | **Reading level** | a vocabulary quiz a child cannot read is a reading test with a vocabulary score | audio-first below `growing`, plain-language definitions, reading level as a field on sets |
 | **Working memory** | prompt and answer competing for the same limited space | batches of 5–7, prompt stays on screen while answering, no multi-step instructions |
 | **Language background** | an EAL learner may know the concept and not the English word | `close` grading already forgives form over substance; term/definition direction can be reversed |
-| **Dyslexia** | typing and timed reading both tax the deficit, not the target | tiles input, audio prompts, no timers, never penalise spelling on a non-spelling subject |
+| **Dyslexia** | typing and timed reading both tax the deficit, not the target | tiles input, audio prompts, no timers, never penalize spelling on a non-spelling subject |
 | **Dysgraphia** | producing text is the barrier, not knowing the answer | tap and tiles input on every activity that would otherwise require typing |
 | **ADHD** | sustained attention, not capability | short rounds with visible ends, immediate feedback, no infinite queues — mostly already true |
 | **Attitude to failure** | the child who most needs this app has the most experience of failing at it | prediction-relative scoring, capped review, no round that can be failed below `growing` |
@@ -508,12 +508,12 @@ as well as the optional fields above.
 broken question to a child:
 
 > An activity that manipulates the *characters* of the answer is **locked**
-> when the answer side contains maths or a figure.
+> when the answer side contains math or a figure.
 
 That is `scramble`, `first-letter`, `missing-letters` and letter tiles.
 `$\frac{3}{4}$` scrambled is not a puzzle, it is nonsense, and `M______` on a
 figure answer means nothing. Those activities degrade to `choose` or `write`,
-which are both fine on a maths card.
+which are both fine on a math card.
 
 The converse unlocks something: a card carrying a `[[figure]]` can play
 `label`, which is the only activity that *requires* one.
@@ -587,7 +587,7 @@ endpoint, same review screen, same provenance marking.
 
 ### Tier 0 — generated banks, no content at all
 
-Some of the most-practised K–12 content should never be pasted by anyone
+Some of the most-practiced K–12 content should never be pasted by anyone
 because it is a rule, not a list. Ship these as **generators** that emit items
 on demand with difficulty computed from their parameters:
 
@@ -623,9 +623,9 @@ of a single item never does. It is also the first activity a five-year-old can
 do without reading much.
 
 **`sort` — Sort It**
-Drag or tap items into 2–4 labelled buckets. Six to twelve items a round.
+Drag or tap items into 2–4 labeled buckets. Six to twelve items a round.
 *Needs:* `category`. *Graded:* no. *Checked:* yes. *Falls back to:* `odd-one-out`.
-*Why:* categorisation is how a learner builds structure rather than a list of
+*Why:* categorization is how a learner builds structure rather than a list of
 facts, and it is the natural home for parts of speech, classification, sorting
 by operation, era, or region. Also the most engaging activity on a touch screen.
 
@@ -674,10 +674,10 @@ A figure with its labels stripped off; drop them back on.
 *Why:* this was specced as an image with hand-placed hotspots — the one
 activity that genuinely required new authoring. The figure work removed that:
 `triangle`, `polygon`, `circle`, `angle` and `numberline` already carry their
-labelled vertices, sides, angles and points, and the renderer already knows
+labeled vertices, sides, angles and points, and the renderer already knows
 where each one lands. Hiding them and asking for them back is nearly free, and
 it works on any card with a figure, including every generated one. Geometry,
-number lines, and charts with labelled axes all come along at once.
+number lines, and charts with labeled axes all come along at once.
 
 ### Stage 3 — Free recall
 
@@ -718,7 +718,7 @@ demonstrates.
 *Falls back to:* `cloze` on the first example.
 *Draws from a rotating pool of contexts*, not one stored second example — one
 extra exemplar is not transfer (§5, finding 7).
-*Why:* it is the first activity that distinguishes memorising from
+*Why:* it is the first activity that distinguishes memorizing from
 understanding, which is the thing a parent paying for this actually wants.
 
 **`compare` — What's the Difference?**
@@ -726,8 +726,8 @@ Two items side by side; say what separates them.
 *Needs:* two items sharing a `category`. *Graded:* yes. *Checked:* yes.
 *Falls back to:* `odd-one-out`.
 *Why:* contrasting cases are one of the few reliable routes to transfer, and
-nothing else in the catalogue produces them (§5, finding 7). It is also the
-activity that catches the learner who has memorised two definitions without
+nothing else in the catalog produces them (§5, finding 7). It is also the
+activity that catches the learner who has memorized two definitions without
 noticing they describe different things — which is most of what goes wrong on
 a science set.
 
@@ -836,7 +836,7 @@ hard questions years before this spec:
   a collectible noun, level names — and nothing else;
 - **earn rate is fixed across all ten**, so switching theme is never a way to
   farm easy wins;
-- progress colour is never the accent, so a mastery bar means the same thing in
+- progress color is never the accent, so a mastery bar means the same thing in
   every world;
 - grown-up surfaces are theme-free;
 - ten reward screens collapse into three `RewardShape` archetypes.
@@ -847,7 +847,7 @@ Every mechanic below has to survive those five rules or it does not ship.
 
 1. **The reward economy is round-shaped; the ladder is item-shaped.**
    `earnedFor()` counts sessions that beat their predicted accuracy, plus level
-   promotions. The behaviours this spec makes valuable — an item climbing a
+   promotions. The behaviors this spec makes valuable — an item climbing a
    rung, a batch clearing, an item surviving a Checkpoint three weeks later —
    are all invisible to it. As written, a learner could move forty items up two
    rungs each and earn nothing at all.
@@ -905,7 +905,7 @@ single most age-inappropriate string in the app.
 want cute things, which is most of the upper band.
 
 Add **`record`**: no collectibles at all. Personal bests, terms known, recall
-time trending down, retention rate, days practised. It is a stat line, and for
+time trending down, retention rate, days practiced. It is a stat line, and for
 a fifteen-year-old it is a better reward than a fossil because it is *evidence
 about them*.
 
@@ -924,7 +924,7 @@ every shell works in all eleven themes on day one.
 
 | Shell | What it is | Activities it suits | Bands |
 | --- | --- | --- | --- |
-| `falling` | Items descend, answer to clear. **Generalised Word Rain** — the game we already built and locked to typing. | speed-recall, math facts, listen-write, cloze | early → middle |
+| `falling` | Items descend, answer to clear. **Generalized Word Rain** — the game we already built and locked to typing. | speed-recall, math facts, listen-write, cloze | early → middle |
 | `board` | A grid of slots that fills as items are retired. | **brain-dump** (it *is* a slot-filling activity), sort, match, label | all |
 | `track` | Advance along a path, with something waiting at the end. | mastery-check, sequence, a batch's progress | early → middle |
 | `plain` | No shell. Question, answer, next. | anything | middle → upper, and the accessibility default |
@@ -935,7 +935,7 @@ Fire round is falling asteroids for a seven-year-old and a timer with a
 personal best for a sixteen-year-old, and `attempts` cannot tell the
 difference, which is exactly the property we want.
 
-Generalising Word Rain is the single best-value item here: it is a finished,
+Generalizing Word Rain is the single best-value item here: it is a finished,
 tested arcade loop currently reachable by one subject out of three, and
 `rainWords()` is the only thing tying it down.
 
@@ -986,7 +986,7 @@ Engagement is not a stage at the end; it interleaves. Stages are from
   cheapest age fix in the app — and the rung-climb micro-moment.
 - **Stage 4**, with the Mastery Path: batch-cleared as an earn event, and the
   `track` shell for the Mastery Check.
-- **Stage 6**, with fluency: `falling` generalised off typing, the `record`
+- **Stage 6**, with fluency: `falling` generalized off typing, the `record`
   shape, and the Focus theme. The same stage as `speed-recall` because for an
   older learner they are the same feature.
 - **Stage 7**: the retention reward, once Checkpoints have run long enough for
@@ -1025,7 +1025,7 @@ There are two parties and each one can only be trusted about their own side.
 - **The child's side is verified.** Whether the work was done is derived from
   attempts the app checked. Nobody taps "earned".
 - **The grown-up's side is asserted.** Whether the ice cream was actually
-  bought is not something software can check, ever. So fulfilment is a claim —
+  bought is not something software can check, ever. So fulfillment is a claim —
   and it is recorded, attributed and dated *as a claim*, exactly the way a
   flashcard self-grade is.
 
@@ -1039,7 +1039,7 @@ tapping "I got it", and the record should say so with the same honesty.
 ```
   offered ──▶ earned ──▶ [claimed] ──▶ fulfilled
      │           │                          
-     ├──▶ cancelled                    └──▶ (never returns to earned)
+     ├──▶ canceled                    └──▶ (never returns to earned)
      └──▶ expired
 ```
 
@@ -1049,7 +1049,7 @@ tapping "I got it", and the record should say so with the same honesty.
 | `earned` | **derived, in the round's transaction** | the criterion was met on checked work |
 | `claimed` | the learner, optional | "I'd like to cash this in" — store-style rewards only |
 | `fulfilled` | **the author, by hand** | "I gave it to them" — an assertion, recorded as one |
-| `cancelled` | the author, or the learner's owner | withdrawn before it was earned |
+| `canceled` | the author, or the learner's owner | withdrawn before it was earned |
 | `expired` | time | an offer with an end date that was not met |
 
 ### Earning latches. This is the rule that must not bend.
@@ -1089,11 +1089,11 @@ them can be satisfied by self-graded work.
 | `streak` | N consecutive days with a checked round | the habit reward |
 | `verified_items` | N system-checked correct answers | the blunt one; use sparingly |
 | `level_up` | a promotion in a skill subject | spelling, typing, math facts |
-| `minutes` | N minutes practised | allowed, and worth a warning in the UI: time is an input, not an outcome |
+| `minutes` | N minutes practiced | allowed, and worth a warning in the UI: time is an input, not an outcome |
 
 **`checkpoint` is the criterion worth featuring.** A reward for *still knowing
 it three weeks later* is the only one that cannot be farmed in an afternoon,
-and it is the exact behaviour a parent is paying for. Every other app rewards
+and it is the exact behavior a parent is paying for. Every other app rewards
 activity; this rewards retention. Make it the suggested default and say why in
 one line of UI copy.
 
@@ -1191,7 +1191,7 @@ The parent-facing surface is a ledger, not a feed:
 | **Earned · unpaid** | the action list. This is what "check off paid" acts on |
 | **Paid** | date, who marked it, and the evidence behind the earn |
 
-Three behaviours make it worth having:
+Three behaviors make it worth having:
 
 - **Marking paid is one tap** from the earned row, with an optional note. That
   is the whole interaction the feature exists for; everything else is
@@ -1260,7 +1260,7 @@ create table public.rewards (
 
   status         text not null default 'offered',
   constraint rewards_status_check
-    check (status in ('offered','earned','claimed','fulfilled','cancelled','expired')),
+    check (status in ('offered','earned','claimed','fulfilled','canceled','expired')),
 
   earned_at      timestamptz,
   -- Snapshot, not a pointer. Survives the session it came from.
@@ -1274,7 +1274,7 @@ create table public.rewards (
   -- Earned means evidence exists. Fulfilled means somebody said so, and we
   -- record who: the adult's assertion is attributed exactly like a learner's.
   constraint rewards_earned_has_evidence
-    check (status = 'offered' or status = 'cancelled' or status = 'expired'
+    check (status = 'offered' or status = 'canceled' or status = 'expired'
            or (earned_at is not null and evidence is not null)),
   constraint rewards_fulfilled_is_attributed
     check (status <> 'fulfilled' or (fulfilled_at is not null and fulfilled_by is not null))
@@ -1324,7 +1324,7 @@ Rewards slot in after the evidence they depend on exists. Stages are from
 ## 12. The Mastery Path — the part that removes the setup
 
 This is the answer to "load content, select different activities for mastery"
-and it is the feature, not the catalogue. Everything in §9 is machinery for it.
+and it is the feature, not the catalog. Everything in §9 is machinery for it.
 
 Today a grown-up assigns **an activity on a target**. Instead they should assign
 **a goal on a set**:
@@ -1336,7 +1336,7 @@ The Mastery Path then runs the whole thing:
 **1. Placement.** First round is a short mixed check across the set, at stages
 1 and 3, to find out what the learner already knows. Items answered correctly
 and unaided start at stage 3, not stage 0. The engine already does this for
-spelling (`planPlacement`); this generalises it to any set.
+spelling (`planPlacement`); this generalizes it to any set.
 
 **2. Batching.** Items are introduced in batches of five to seven, not forty.
 A batch is worked up the ladder together until most of it reaches stage 3;
@@ -1348,7 +1348,7 @@ small change to `planStudy` with a large effect.
 ladder stage picks the activity, the capability matrix (§7) picks the best
 available variant, and the round is shuffled so it does not open with six
 review items. This is exactly what `kindFor` does today, with a longer ladder
-and a wider catalogue.
+and a wider catalog.
 
 **4. Round shape.** A round is 8–12 items and 5–10 minutes, mixing:
 
@@ -1379,7 +1379,7 @@ is closed by a *state*. So:
   evidence. **Nobody ticks anything off; that rule does not bend.**
 
 **7. What the adult sees.** One line: *Ava · Chapter 7 · 23 of 40 mastered ·
-on track for Friday · last practised yesterday.* Not a list of rounds.
+on track for Friday · last practiced yesterday.* Not a list of rounds.
 
 The learner sees one button: **Continue**. Not a mode picker.
 
@@ -1475,7 +1475,7 @@ The ask is K–12; spelling covers 2–8. What is actually missing:
   applicability, `stage`, `isTest`, `verified`, required fields, fallback.
 - `capability.ts` — `availableActivities()` (§7).
 - `ladder.ts` — stage promotion/demotion from an `ItemMastery`.
-- `path.ts` — the Mastery Path planner (§12), which absorbs and generalises
+- `path.ts` — the Mastery Path planner (§12), which absorbs and generalizes
   `planStudy` and `planSession`.
 
 **`apps/web/src/lib/quiz/session.ts`**
@@ -1572,6 +1572,6 @@ sequence.
 - **Retention:** Checkpoint pass rate at 14+ days on items marked mastered.
   This is the headline number and the one to put in front of parents.
 - **Verified share:** proportion of all attempts that are system-checked.
-  It should go *up* as the catalogue grows; if it goes down we have shipped
+  It should go *up* as the catalog grows; if it goes down we have shipped
   entertainment.
 - **Return rate:** learners completing a Daily Mix on 4+ days a week.

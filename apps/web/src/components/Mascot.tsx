@@ -40,9 +40,9 @@ interface Props {
 export const MASCOT_MUTED = '#8A8375'
 
 // ---------------------------------------------------------------------------
-// Colour
+// Color
 //
-// Everything a mascot needs is derived from one input colour, so an overridden
+// Everything a mascot needs is derived from one input color, so an overridden
 // `color` produces a coherent character rather than a themed body with themed
 // trim stuck to it.
 // ---------------------------------------------------------------------------

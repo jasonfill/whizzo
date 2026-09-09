@@ -53,7 +53,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Fixtures: a parent who owns the profile, the teenager who practises on it
+-- Fixtures: a parent who owns the profile, the teenager who practices on it
 -- and signs in themselves, and an unrelated stranger.
 -- ---------------------------------------------------------------------------
 reset role;

@@ -246,7 +246,7 @@ describe('GamePlay', () => {
 })
 
 describe('the small grown-up components', () => {
-  it('LearnerChip names who is practising', () => {
+  it('LearnerChip names who is practicing', () => {
     render(<LearnerChip onManage={() => {}} />)
     expect(screen.getByText('Ada')).toBeInTheDocument()
   })

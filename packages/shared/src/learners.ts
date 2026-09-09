@@ -26,7 +26,7 @@ export type InvitePurpose = 'guardian' | 'self_login'
  */
 export interface ConnectionCode {
   code: string
-  /** What a family sees before accepting — "Mrs Patel, Tuesday maths". */
+  /** What a family sees before accepting — "Mrs Patel, Tuesday math". */
   label: string | null
   role: GuardianRole
   canManageContent: boolean
@@ -125,7 +125,7 @@ export function ageOf(learner: Pick<Learner, 'birthYear'>, now: Date = new Date(
  * unverified identity.
  *
  * Duplicated deliberately — the database is the enforcement point, this is so
- * the UI can grey out a button without a round trip.
+ * the UI can gray out a button without a round trip.
  */
 export function canUseSelfSignIn(learner: Pick<Learner, 'birthYear'>): boolean {
   const age = ageOf(learner)

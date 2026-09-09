@@ -5,7 +5,7 @@ import { useTheme } from '../lib/theme/ThemeProvider'
  * accent, followed by `whizzo` in Outfit 900.
  *
  * Always lowercase. The glyph is the one piece of brand chrome that takes the
- * theme colour — the mark belongs to the learner, the rest of the chrome does
+ * theme color — the mark belongs to the learner, the rest of the chrome does
  * not — so `accent={false}` is there for the grown-up surfaces, where it
  * renders in spark instead.
  */

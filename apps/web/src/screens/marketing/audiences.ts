@@ -142,7 +142,7 @@ const TEACHERS: Audience = {
     'Tasks that close on graded evidence, with the answers readable',
     'The full curriculum, every activity, and spaced review — free',
     'A document turned into practice sets, if you want to hand one over',
-    'No licence, no seats, no invoice, no procurement',
+    'No license, no seats, no invoice, no procurement',
   ],
   money: {
     title: 'You never pay. Not for a class, not for a seat, not ever',
@@ -203,7 +203,7 @@ const TUTORS: Audience = {
     },
     {
       title: 'Set work, then read what came back',
-      body: 'The same assignment goes to one student or to all of them. Tasks close on graded rounds, and each student’s row tells you what is outstanding, what is overdue, and when they last practised.',
+      body: 'The same assignment goes to one student or to all of them. Tasks close on graded rounds, and each student’s row tells you what is outstanding, what is overdue, and when they last practiced.',
     },
   ],
   gets: [
@@ -269,7 +269,7 @@ const HOMESCHOOL: Audience = {
     },
     {
       title: 'Use the curriculum, or bring your own',
-      body: '420 words across 42 rule-based lists, or paste your own list — one word per line, with a sentence after a tab or a dash. Decks handle everything that is not spelling, maths notation included.',
+      body: '420 words across 42 rule-based lists, or paste your own list — one word per line, with a sentence after a tab or a dash. Decks handle everything that is not spelling, math notation included.',
     },
     {
       title: 'Set the week and read the evidence',

@@ -36,7 +36,7 @@ the document element and exposes the theme's copy strings. Persist per learner
 (localStorage in guest mode, learner profile when signed in). Theme is display
 state — it must never enter `attempts`.
 
-**3. Colour sweep.** `grep -rn "cream\|grape\|bubble\|violet-\|fuchsia-\|purple-" apps/web/src`
+**3. Color sweep.** `grep -rn "cream\|grape\|bubble\|violet-\|fuchsia-\|purple-" apps/web/src`
 and reclassify each usage as brand chrome (`spark`/`ink`), data (`pine` — never
 themed), or play surface (`accent`). README §5 lists the hotspots. Two rules that
 must hold afterwards: **a progress bar is `pine` in every theme**, and **no
@@ -78,8 +78,8 @@ retire `apps/web/public/cat.svg`.
 ## Where to push back
 
 Tell me rather than guessing if: a token has no sensible home in the existing
-component structure; a screen in the design conflicts with behaviour already
+component structure; a screen in the design conflicts with behavior already
 shipped (particularly Family vs Progress, assignments, or plan gating); or the
 theme indirection would force a change to stored data. The design was made
 without reading every screen in this repo, so the repo is the authority on
-behaviour and the design is the authority on appearance.
+behavior and the design is the authority on appearance.

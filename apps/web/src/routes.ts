@@ -58,6 +58,8 @@ export type Route =
   // The planner: the learner's week, and the two guided flows around it.
   /** The week grid, or Today. No weekStart means this week. */
   | { name: 'planner'; weekStart?: string; view?: 'today' | 'week' }
+  /** Following one learner's round from another screen. */
+  | { name: 'watch'; learnerId: string }
   | { name: 'planner-plan' }
   | { name: 'planner-wrap' }
   | { name: 'planner-courses' }

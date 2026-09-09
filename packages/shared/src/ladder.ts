@@ -148,7 +148,7 @@ export const PROMOTION_EVIDENCE = 2
 
 /**
  * Consecutive misses before an item drops a rung. Two rather than one, because
- * one is what practising at the frontier looks like when it is working.
+ * one is what practicing at the frontier looks like when it is working.
  */
 export const DEMOTION_SLIPS = 2
 
@@ -191,7 +191,7 @@ function dayOf(at: number): DayString {
  *    scale — the whole claim being made is that the item survived a gap.
  * 4. **One miss costs the banked evidence; two in a row cost a rung.** A lapse
  *    is a lapse, not amnesia — and demoting on every single miss turns out to
- *    be worse than harsh, it is unstable. An item practised at the learner's
+ *    be worse than harsh, it is unstable. An item practiced at the learner's
  *    frontier is *meant* to be missed sometimes; if one miss both wipes the
  *    progress and drops the rung, the item ping-pongs and a learner who is
  *    genuinely getting 90% of them right never reaches free recall at all.

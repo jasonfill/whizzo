@@ -1,6 +1,6 @@
 // Free recall of a whole set, and fluency.
 //
-// **Brain dump is the highest-value activity in the catalogue per line of
+// **Brain dump is the highest-value activity in the catalog per line of
 // code**, and the reason is a property most flashcard apps do not have:
 // unprompted free recall of a closed set is *fully machine-checkable*, because
 // we hold the answer key. "List every state capital you can" is graded by

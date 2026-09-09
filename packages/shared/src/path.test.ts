@@ -1,6 +1,6 @@
 // The Mastery Path.
 //
-// The behaviours worth defending are all about not overwhelming somebody: a
+// The behaviors worth defending are all about not overwhelming somebody: a
 // learner meets a handful of new things at a time, a round is never mostly
 // things they have already failed, and the check is offered rather than sprung.
 

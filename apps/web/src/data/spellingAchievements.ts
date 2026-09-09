@@ -89,14 +89,14 @@ export const SPELLING_ACHIEVEMENTS: SpellingAchievement[] = [
     id: 'spell-streak-3',
     name: 'Three in a Row',
     emoji: '🔥',
-    description: 'Practise three days in a row.',
+    description: 'Practice three days in a row.',
     test: (_s, skill) => skill.streakDays >= 3,
   },
   {
     id: 'spell-streak-7',
     name: 'Week Warrior',
     emoji: '🗓️',
-    description: 'Practise seven days in a row.',
+    description: 'Practice seven days in a row.',
     test: (_s, skill) => skill.streakDays >= 7,
   },
   {

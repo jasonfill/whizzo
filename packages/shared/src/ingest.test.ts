@@ -60,7 +60,7 @@ describe('what gets through', () => {
     expect(card.generated).toEqual(expect.arrayContaining(['term', 'definition', 'category']))
   })
 
-  it('accepts maths and figures written in the grammar', () => {
+  it('accepts math and figures written in the grammar', () => {
     const { cards, dropped } = landed([
       { term: 'What is $\\frac{3}{4}$ as a decimal?', definition: '0.75' },
       {
@@ -173,8 +173,8 @@ describe('what gets corrected rather than refused', () => {
   })
 })
 
-describe('recognising a number', () => {
-  it('accepts the shapes a maths answer actually takes', () => {
+describe('recognizing a number', () => {
+  it('accepts the shapes a math answer actually takes', () => {
     for (const value of ['42', '-7', '0.75', '3/4', '45°', '50%', '12 cm', '$\\frac{3}{4}$']) {
       expect(isNumericAnswer(value), value).toBe(true)
     }

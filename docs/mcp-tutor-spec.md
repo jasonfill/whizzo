@@ -32,7 +32,7 @@ Two things carry the design:
 
 ## 1. What is true about the clients today
 
-This spec rests on the two assistants' actual behaviour, checked on the date
+This spec rests on the two assistants' actual behavior, checked on the date
 above. It will drift, and the first thing to re-check before building is the
 last row of this table.
 
@@ -44,7 +44,7 @@ last row of this table.
 | Registration | OAuth with Dynamic Client Registration, Client ID Metadata Documents, or Anthropic-held credentials; callback `https://claude.ai/api/mcp/auth_callback` | OAuth 2.1 with DCR; no-auth also allowed |
 | Tool approval | Per-tool confirmation; a user can allow a tool to run unsupervised | Confirmation on write tools; configurable |
 | Extra requirements | Directory listing wants `readOnlyHint` / `destructiveHint` on every tool, separate read and write tools, names ≤ 64 chars, a published privacy page | Outside Developer mode the server is rejected unless it exposes `search` and `fetch`; those also make it usable in deep research |
-| **Voice mode** | **Voice mode calls connected tools, custom connectors included** — confirmed in use, 2026-09-06. The help centre says the same; an old issue about web and Android is stale | The help centre says apps and custom MCP servers are **not available in voice** |
+| **Voice mode** | **Voice mode calls connected tools, custom connectors included** — confirmed in use, 2026-09-06. The help center says the same; an old issue about web and Android is stale | The help center says apps and custom MCP servers are **not available in voice** |
 
 So the position is: **Claude voice is the product, and it is the thing to
 build for.** ChatGPT gets the same tools and the same text-chat tutor, and
@@ -52,7 +52,7 @@ picks up voice whenever OpenAI ships it — voice is a property of the client,
 not of our tools, so nothing in this document is Claude-specific except the
 callback URL and the setup instructions. But the design choices that only
 matter in voice — one call per turn, `say` on every result, the two write
-tools allowed to run unsupervised, a hint being a tool rather than a favour —
+tools allowed to run unsupervised, a hint being a tool rather than a favor —
 are not optional polish. They are the difference between a tutor and a
 chatbot with a database.
 
@@ -156,7 +156,7 @@ the app returns to the consent screen once the session exists.
 > **Parent:** Tutor Maya on her cells deck for ten minutes.
 >
 > *(the assistant calls `list_materials`, finds "Cell Biology — Chapter 4",
-> then `start_round` with `mode: 'practise'`)*
+> then `start_round` with `mode: 'practice'`)*
 >
 > **Assistant:** Hi Maya. Ten cards from Cell Biology. First one: what is
 > the powerhouse of the cell?
@@ -200,7 +200,7 @@ reward, or put a line on the daily strip. The engine treats a rung-0
 attempt as an encounter: it touches the card's visit count and last-seen
 time and nothing else, so studying a mastered deck again does not reset a
 single streak or bring a single review forward. When the child is ready, a
-practise round starts and the answers are withheld again.
+practice round starts and the answers are withheld again.
 
 The model now knows six answers from the study round, and could in
 principle tell the child. So could the deck screen in a second browser tab
@@ -412,7 +412,7 @@ figures reports zero and the `say` line says why.
 ```ts
 {
   materialId: string,
-  mode?: 'practise' | 'study' | 'test' | 'review',   // default practise
+  mode?: 'practice' | 'study' | 'test' | 'review',   // default practice
   size?: number,                                     // default BAND_STYLE[band].roundSize
   direction?: 'term-first' | 'definition-first'      // default from the deck
 }  →
@@ -420,13 +420,13 @@ figures reports zero and the `say` line says why.
   roundId: string,
   mode, total: number,
   instructions: string,                 // the tutoring rules, §6 below
-  question?: TutorQuestion,             // practise / test / review
+  question?: TutorQuestion,             // practice / test / review
   cards?: TutorStudyCard[],             // study: answers included, one batch
   say: string
 }
 ```
 
-**`practise`** is Learn from outside: `planPath()` picks the cards — the
+**`practice`** is Learn from outside: `planPath()` picks the cards — the
 current batch, review that is due, a little maintenance, capped at the
 same shares — and each card is asked at the rung `supportLevelFromMastery()`
 gives it. Rung 1 arrives with four choices (built by `buildChoices`, the
@@ -458,12 +458,12 @@ no state that exists only in the model's context.
 ```
 
 Grading is `gradeWritten` — moved to `packages/shared` so the server can
-call it (§9) — after a **spoken-answer normalisation** that the app does not
+call it (§9) — after a **spoken-answer normalization** that the app does not
 need: number words to digits (*"three quarters"* → `3/4`), leading articles
 and *"it's"* / *"the answer is"* dropped, trailing punctuation gone, common
 transcription variants folded (*"Golgi body"* is already in the card's
 acceptable answers; *"golgi-body"* was not). Numeric cards use the numeric
-grader. `close` is a pass in practise and review, a miss in test — `isPass`
+grader. `close` is a pass in practice and review, a miss in test — `isPass`
 with the same `strict` the app uses.
 
 `skip: true` records a miss with `given: null`. A learner who cannot answer
@@ -492,7 +492,7 @@ number would be a lie; fluency is reported from app rounds only.
 
 ### `hint`
 
-Help, in two steps, for the open question in practise or review mode.
+Help, in two steps, for the open question in practice or review mode.
 The first call returns a **clue**: something true about the answer, built
 from what the card carries — its authored hint, else its example sentence,
 else its category, else its explanation — with the answer masked out, every
@@ -590,12 +590,12 @@ Cards that fail are skipped by the round planner and counted in
 tells the parent to use the app for that one. Nothing is refused; the deck
 plays in the app as it always did.
 
-`tutor` joins the activity catalogue:
+`tutor` joins the activity catalog:
 
 ```ts
 def({
   id: 'tutor', name: 'Tutor round', emoji: '🗣️',
-  blurb: 'Practise out loud with the assistant you already use.',
+  blurb: 'Practice out loud with the assistant you already use.',
   subjects: ['quiz'], stage: 3, isTest: true, verified: true,
   requires: ['speakable'], fallback: 'learn',
   assignable: false,          // see §11 — it satisfies a `learn` task instead
@@ -675,7 +675,7 @@ create table public.mcp_rounds (
   grant_id        uuid not null references public.mcp_grants (id) on delete cascade,
   learner_id      uuid not null references public.learners (id) on delete cascade,
   deck_id         uuid,
-  mode            text not null check (mode in ('practise', 'study', 'test', 'review')),
+  mode            text not null check (mode in ('practice', 'study', 'test', 'review')),
   plan            jsonb not null,               -- the planned cards, rungs and scaffolds
   cursor          int  not null default 0,
   attempts        jsonb not null default '[]',  -- accumulated until close; written as rows then
@@ -733,7 +733,7 @@ own rounds whenever we choose.
 - `TutorQuestion { cardId, rung: SupportLevel, say, prompt, choices?, scaffold?, index, total }`
 - `TutorStudyCard`, `RoundSummary`
 - `planTutorRound(input: PathInput, mode, size, band): PlannedCard[]` —
-  `planPath()` for practise, due-across-decks for review, every card at
+  `planPath()` for practice, due-across-decks for review, every card at
   rung 3 for test; filtered by `speakable()`; **pure and deterministic
   given an rng**, so it is simulable.
 - `questionFor(card, rung, pool, direction, rng): TutorQuestion` —
@@ -810,7 +810,7 @@ get it for any deck; free-tier learners for their three.
 
 ## 11. What this changes elsewhere
 
-- **Activities catalogue** gains `tutor` and the `speakable` requirement;
+- **Activities catalog** gains `tutor` and the `speakable` requirement;
   the capability matrix evaluates it from `parseRich` exactly as it does
   `plain-answer`.
 - **Grading** moves to `packages/shared` (§9). Old path re-exports.
@@ -829,7 +829,7 @@ get it for any deck; free-tier learners for their three.
   is closed by a test in the app.
 - **Sessions / history.** `activity: 'tutor'`, `meta.channel`,
   `meta.client`; the history row reads *Tutor round · with Claude*.
-- **Family.** One line per learner when it applies: *Practised with ChatGPT
+- **Family.** One line per learner when it applies: *Practiced with ChatGPT
   yesterday, 8/10.* And on Account, **Connected apps** (§5).
 - **Rewards.** No new criterion, and no exclusion — §12.
 - **Retention.** Reads attempts; sees tutor evidence as evidence. It
@@ -852,7 +852,7 @@ The worry is the model. It has answers from earlier in the conversation — a
 study batch, the reveal after a miss — and a child can ask it. But the app
 already has this hole in exactly the same shape: the deck list is one tab
 away from a Learn round, and the answer to the card on screen is on it. The
-app's defence has never been *the answer is unobtainable*; it is *the answer
+app's defense has never been *the answer is unobtainable*; it is *the answer
 is not shown with the question before the attempt*, plus the ladder's
 requirement of two corrects on two days with a delay before anything
 promotes, plus rewards resting on the strict three-word definitions rather
@@ -882,7 +882,7 @@ cost:
 **Free, always.** Connecting, every round mode, `create_deck`, the tutor
 packet. There is no marginal cost to us: the model, the speech and the
 minutes are the family's own subscription, and the server does one database
-transaction per round. A child practising out loud with the assistant their
+transaction per round. A child practicing out loud with the assistant their
 parent already pays for is learning, and it is also the best sentence the
 marketing page will have — *works with the ChatGPT or Claude you already
 have* — which is not something to put behind our own paywall.
@@ -927,7 +927,7 @@ script would. If a grant hits it, it is not a family.
   and the consent screen should link to it anyway.
 
 **v2 —** spelling aloud with a letter-name-tolerant grader; word lists;
-spoken maths projection (`\frac{3}{4}` → *"three quarters"*) so equation
+spoken math projection (`\frac{3}{4}` → *"three quarters"*) so equation
 cards become speakable; `checkpoint` rounds through the tutor once
 Checkpoints exist; learner switching inside a conversation via the
 multi-round-trip pattern rather than reconnecting; directory submission on
@@ -948,7 +948,7 @@ assistant can teach from the source, not only the cards; a teacher's
 | What is the tool round trip inside a Claude voice turn, and does *allow always* hold mid-conversation? | the default round length; whether `answer` stays one call | the spike measures both in a day |
 | When does ChatGPT voice get tools? | nothing — the same server serves it the day it does | outside our control; dictation and the packet cover the gap |
 | Should a tutor or teacher's grant be allowed to *write* (rounds) or only read? | nothing in v1 | linked grown-ups can already record rounds for a learner from the app; a tutor running a voice session is the same act. Revisit if a family objects |
-| Does `close` count as a pass in practise when the answer was spoken? | nothing | the app's rule, kept; transcription makes near-misses *more* common, which argues for keeping it lenient, not less |
+| Does `close` count as a pass in practice when the answer was spoken? | nothing | the app's rule, kept; transcription makes near-misses *more* common, which argues for keeping it lenient, not less |
 | Should `create_deck` be able to target a learner directly when the connecting account owns them? | nothing | the library is the right home for reviewable content; a parent assigning it is one tap in the app |
 | Where does `responseMs` come from, if ever? | fluency reporting for tutor rounds only | null is honest; fluency is reportable, never payable, so nothing rests on it |
 | Do we want to be in the two directories at all? | discoverability | a family that types our URL is a family that already knows us; the directory is acquisition, and acquisition can wait for a stable server |

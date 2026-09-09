@@ -225,7 +225,7 @@ describe('assignments', () => {
 
   it('edits one learner’s copy under their own path', async () => {
     nextResponse = { assignment: { id: 'a1' } }
-    await assignments.updateAssignment(LEARNER, 'a1', { status: 'cancelled' })
+    await assignments.updateAssignment(LEARNER, 'a1', { status: 'canceled' })
     expect(last()).toMatchObject({
       method: 'PATCH',
       url: `/learners/${LEARNER}/assignments/a1`,

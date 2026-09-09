@@ -8,7 +8,7 @@
 // Two consequences worth stating rather than discovering:
 //
 //   * A job is claimed and heartbeated, so a run interrupted by a deploy is
-//     recognisable as abandoned rather than hanging in `reading` forever.
+//     recognizable as abandoned rather than hanging in `reading` forever.
 //   * `attempts` is on the row. A job that has failed twice is not retried a
 //     third time — the third run costs the same money and fails the same way.
 

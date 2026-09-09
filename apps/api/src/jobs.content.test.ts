@@ -48,7 +48,7 @@ describe('what the client is told', () => {
     expect(stageLabel('building', { topics: 1 })).toBe('Writing cards for 1 topic')
   })
 
-  it('copes with a detail it does not recognise', () => {
+  it('copes with a detail it does not recognize', () => {
     expect(stageLabel('building', { topics: 'lots' })).toBe('Writing cards')
     expect(stageLabel('building', {})).toBe('Writing cards')
   })

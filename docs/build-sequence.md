@@ -48,11 +48,11 @@ file move, and it is the first thing stage 0 does.
 | 3 | collision | Migration numbers: activities claims 0013 and 0014, ingestion assumes 0015, structure is unnumbered. | Assigned in §3 below. This document is the registry. | 0 |
 | 4 | collision | Three independent "Phase 1/2/3" schemes. "Phase 2" is ambiguous across a four-document set. | Global stage names. The specs keep scope and lose ordering. | 0 |
 | 5 | drift | Ingestion cites activities §5, §6, §14, §16, §17 — all moved by two when the pedagogy review and choice sections landed. Only §3 still resolves. | Rewrite the nine references. | 0 |
-| 6 | **conflict** | Activities §7 does not know rich content exists. `scramble`, `first-letter`, `missing-letters` and tiles all chop the answer into characters — `$\frac{3}{4}$` scrambled is nonsense. | The capability matrix consults `parseRich()` and marks character-manipulating activities `locked` when the answer side carries maths or a figure. **This is the one that would show a broken question to a child.** | 2 |
-| 7 | **conflict** | Ingestion says *a draft can be practised*; structure says content with attempts against it is copy-on-write. Together, a parent fixing a typo after their kid tried the deck forks a version of an unshared draft. | Fork-on-edit applies to **shared or assigned** content only. An unshared draft is freely editable however many attempts it has. | 1 |
+| 6 | **conflict** | Activities §7 does not know rich content exists. `scramble`, `first-letter`, `missing-letters` and tiles all chop the answer into characters — `$\frac{3}{4}$` scrambled is nonsense. | The capability matrix consults `parseRich()` and marks character-manipulating activities `locked` when the answer side carries math or a figure. **This is the one that would show a broken question to a child.** | 2 |
+| 7 | **conflict** | Ingestion says *a draft can be practiced*; structure says content with attempts against it is copy-on-write. Together, a parent fixing a typo after their kid tried the deck forks a version of an unshared draft. | Fork-on-edit applies to **shared or assigned** content only. An unshared draft is freely editable however many attempts it has. | 1 |
 | 8 | **conflict** | Ingestion's acceptance test is *"a generated set makes every activity in the capability matrix read `ready`"*. The capability matrix does not exist until the ladder ships. | Ladder before ingestion. Without it there is no way to tell whether generation worked. | 2 → 3 |
 | 9 | **conflict** | Activities §7 has `media?: {kind:'image'\|'audio'}`; card-formatting puts figures **in the text** as `[[figure {…}]]`. Unbounded overlap. | Figures for anything data-driven and generable; `media` **only** for photographs and recorded audio. | 0 |
-| 10 | gap | `label` is specced as an image with hotspots — *"the only activity that requires new authoring"*. Figures already carry labelled vertices, points and parts. | Re-spec on figure specs: render with labels hidden, learner drops them in. Moves it from nearly-last to nearly-free. | 6 |
+| 10 | gap | `label` is specced as an image with hotspots — *"the only activity that requires new authoring"*. Figures already carry labeled vertices, points and parts. | Re-spec on figure specs: render with labels hidden, learner drops them in. Moves it from nearly-last to nearly-free. | 6 |
 | 11 | gap | `explanation` (activities §5, finding 8) is absent from ingestion's `GeneratedCard`, which is the best place to produce it — the document is already in a cached context block. | Add to the Zod schema. | 3 |
 | 12 | gap | Structure says ingestion should propose `track` and `objective`; ingestion's schema has neither. | Add, once tracks exist. | 3 |
 | 13 | gap | `solve`'s numeric grading is partly built — `gradeWritten` already projects `$\frac{3}{4}$` to `3/4` and protects fraction slashes. What is missing is decimal tolerance and equivalent forms (0.75 = 3/4 = 75%). | Restate the activity as "what is left", or someone rebuilds the projection. | 5 |
@@ -70,9 +70,9 @@ others' tables; the `verified` / `isTest` model is consistent across all three.
 
 Two rules decided the order below.
 
-**Schema-shaped work lands before behaviour-shaped work.** Adding `track` to
+**Schema-shaped work lands before behavior-shaped work.** Adding `track` to
 `attempts` costs one migration today and one migration plus a backfill decision
-every month it waits. Behaviour can be rewritten cheaply; accumulated rows
+every month it waits. Behavior can be rewritten cheaply; accumulated rows
 cannot.
 
 **The falsifiable bet goes early, and cheaply.** The ladder is the assumption
@@ -174,7 +174,7 @@ simulated learner answering 90% correctly stalled two rungs short of free
 recall, ping-ponging between levels. No unit test would have caught that — each
 rule was individually right. Demotion now needs two misses running.
 
-Resolves finding 6 — the capability matrix is where maths and figures lock out
+Resolves finding 6 — the capability matrix is where math and figures lock out
 the activities that chop answers into characters, and it must be right the
 first time because the failure is visible to a child.
 
@@ -238,7 +238,7 @@ billing model that is still open.
 *Built 2026-09-06, on its own worktree. Depends on nothing unbuilt: tracks
 (1), the Mastery Path (4) and retention were all in place.*
 
-Courses as per-learner enrolments citing a track; the week grid with tasks,
+Courses as per-learner enrollments citing a track; the week grid with tasks,
 assessments and the app's own due work pulled in; `proposeStudyPlan()` with
 `simulate:planner` in the same pull request; linked study sessions closed in
 the round's transaction by the same mechanism as assignments; grown-up view,
@@ -259,7 +259,7 @@ already pays for can run a practice round out loud and the answers land in
 [mcp-tutor-spec.md](mcp-tutor-spec.md).
 
 **Claude voice mode calls custom connectors** (confirmed 2026-09-06), and
-that is the whole point: a child practising out loud with the assistant the
+that is the whole point: a child practicing out loud with the assistant the
 family already pays for. ChatGPT gets the same server and the text-chat
 tutor until its voice mode grows tools.
 
@@ -271,7 +271,7 @@ and decide whether grading and the next question can stay one call.
 
 Then, in order: grading moved from `apps/web` to `packages/shared` (the
 `rich` move again — file move, old path re-exports); the OAuth server and
-consent screen; `/mcp` and the tool catalogue with `simulate:tutor` in the
+consent screen; `/mcp` and the tool catalog with `simulate:tutor` in the
 same pull request; migration 0020; the `tutor` activity and `speakable`
 requirement; Learn tasks closed by tutor sessions; the tutor packet.
 
@@ -281,7 +281,7 @@ which is why it is free at every tier.
 ## 3b. Deliberately not built
 
 Stage 8's second half — **groups, slots, offer-into-a-slot, pinning, and the
-supplied Financial Literacy catalogue** — is not built, and that is the plan
+supplied Financial Literacy catalog** — is not built, and that is the plan
 rather than a shortfall.
 
 It needs a real class asking for it. Every design decision in the publishing
@@ -312,7 +312,7 @@ cannot be done from a repository. In Stripe:
 2. A **webhook endpoint** at `/api/billing/webhook`, subscribed to
    `checkout.session.completed`, `customer.subscription.updated`,
    `customer.subscription.deleted` and `invoice.payment_failed`.
-3. The **customer portal** enabled, since cancelling and card changes are
+3. The **customer portal** enabled, since canceling and card changes are
    handed off to it rather than rebuilt.
 
 Then four variables: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
@@ -377,7 +377,7 @@ win.
    "phase 2" is out of date.
 4. **A cross-reference between specs cites a section *title*, not a number.**
    Numbers moved once and will move again.
-5. **New shared behaviour gets a simulation or a validator**, following
+5. **New shared behavior gets a simulation or a validator**, following
    `simulate:adaptive` and `validate:words`. It is the house style and it is
    what has caught the real bugs.
 6. **`attempts` is never rewritten.** Every design that would require it is

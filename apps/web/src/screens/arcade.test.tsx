@@ -26,7 +26,7 @@ import GamePlay from '../components/GamePlay'
 const navigate = spies.navigate
 
 /**
- * Word spawning picks a word, an x position, a speed and a colour at random.
+ * Word spawning picks a word, an x position, a speed and a color at random.
  * Left alone that makes "three lives are lost within N frames" a coin toss —
  * a slow spawn sequence passes, a fast one fails, and the suite goes red on
  * somebody else's machine. Raising the frame cap only makes the flake rarer,

@@ -8,12 +8,12 @@
 // only be trusted about their own side.** The child's side is verified — earning
 // is derived from attempts the app checked, and nobody taps "earned". The
 // grown-up's side is asserted — whether the ice cream was bought is not
-// something software can check, ever, so fulfilment is a claim, recorded and
+// something software can check, ever, so fulfillment is a claim, recorded and
 // attributed as one. That symmetry is the design, and it is the same
 // distinction the app already draws between a checked answer and a self-grade,
 // applied to the adult.
 
-export type RewardStatus = 'offered' | 'earned' | 'claimed' | 'fulfilled' | 'cancelled' | 'expired'
+export type RewardStatus = 'offered' | 'earned' | 'claimed' | 'fulfilled' | 'canceled' | 'expired'
 
 export type RewardCriterionType =
   | 'assignment'
@@ -58,16 +58,16 @@ export const CRITERION_LABEL: Record<RewardCriterionType, string> = {
   assignment: 'Finishes a piece of work',
   set_mastered: 'Masters a set',
   mastery_count: 'Masters this many cards',
-  streak: 'Practises this many days running',
+  streak: 'Practices this many days running',
   verified_items: 'Gets this many checked answers right',
-  minutes: 'Practises this many minutes',
+  minutes: 'Practices this many minutes',
 }
 
 /**
  * The criterion worth featuring.
  *
  * A reward for *still knowing it three weeks later* is the only one that cannot
- * be farmed in an afternoon, and it is the exact behaviour a parent is paying
+ * be farmed in an afternoon, and it is the exact behavior a parent is paying
  * for. Every other app rewards activity; this rewards retention.
  */
 export const SUGGESTED_CRITERION: RewardCriterionType = 'checkpoint'
@@ -161,7 +161,7 @@ export function needsChasing(reward: Reward, now = Date.now()): boolean {
  * and a parent cannot settle a tutor's promise — the payer settles their own
  * debt.
  */
-export function canFulfil(reward: Reward, userId: string): boolean {
+export function canFulfill(reward: Reward, userId: string): boolean {
   return isUnpaid(reward) && reward.createdBy === userId
 }
 

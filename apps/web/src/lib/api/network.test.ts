@@ -64,7 +64,7 @@ describe('apiRequest', () => {
     expect(lastCall().init.headers).not.toHaveProperty('authorization')
   })
 
-  it('serialises a body and says it is JSON', async () => {
+  it('serializes a body and says it is JSON', async () => {
     respond({ ok: true })
     await apiRequest('/thing', { method: 'POST', body: { a: 1 } })
     const { init } = lastCall()
@@ -128,7 +128,7 @@ describe('apiRequest', () => {
 })
 
 describe('ApiError', () => {
-  it('recognises the two cases callers branch on', () => {
+  it('recognizes the two cases callers branch on', () => {
     expect(new ApiError(404, 'gone').isMissing).toBe(true)
     expect(new ApiError(401, 'nope').isAuth).toBe(true)
     expect(new ApiError(500, 'boom').isMissing).toBe(false)

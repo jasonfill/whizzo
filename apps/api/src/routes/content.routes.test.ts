@@ -591,7 +591,7 @@ describe('handing over files', () => {
     expect(storeFile).not.toHaveBeenCalled()
   })
 
-  it('recognises a file it already has rather than billing for it twice', async () => {
+  it('recognizes a file it already has rather than billing for it twice', async () => {
     // The schema says so in a comment; this is that comment being true.
     query.mockResolvedValue({ rows: [{ id: SOURCE, pages: 9 }] })
     const res = await send([

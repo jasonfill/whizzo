@@ -40,7 +40,7 @@ const SAMPLE: Record<FigureKind, FigureSpec> = {
   angle: { kind: 'angle', degrees: 55 },
 }
 
-/** Every tag in the tree, for asserting on structure without matching serialised XML. */
+/** Every tag in the tree, for asserting on structure without matching serialized XML. */
 function tags(node: MathNode): string[] {
   return [node.tag, ...(node.children ?? []).flatMap(tags)]
 }
@@ -109,7 +109,7 @@ describe('pasted MathML', () => {
     expect(mathToText(node!)).toBe('1/2')
   })
 
-  it('throws away the TeX annotation an exporter leaves beside the maths', () => {
+  it('throws away the TeX annotation an exporter leaves beside the math', () => {
     const node = parseMathML(
       '<math><semantics><mn>7</mn><annotation encoding="application/x-tex">7</annotation></semantics></math>',
     )
@@ -150,18 +150,18 @@ describe('limits on pasted MathML', () => {
 })
 
 describe('card text', () => {
-  it('leaves text with no maths in it completely alone', () => {
+  it('leaves text with no math in it completely alone', () => {
     expect(hasRich('the powerhouse of the cell')).toBe(false)
     expect(parseRich('plain')).toEqual([{ type: 'text', value: 'plain' }])
   })
 
-  it('splits text from the maths inside it', () => {
+  it('splits text from the math inside it', () => {
     const nodes = parseRich('Simplify $\\frac{6}{8}$ please')
     expect(nodes.map((n) => n.type)).toEqual(['text', 'math', 'text'])
     expect(richToPlain('Simplify $\\frac{6}{8}$ please')).toBe('Simplify 6/8 please')
   })
 
-  it('treats a lone dollar sign as money, not as broken maths', () => {
+  it('treats a lone dollar sign as money, not as broken math', () => {
     expect(parseRich('It costs $5 to get in').every((n) => n.type === 'text')).toBe(true)
     expect(richToPlain('\\$5 each')).toBe('$5 each')
   })
@@ -169,13 +169,13 @@ describe('card text', () => {
   it('leaves two prices in one sentence alone', () => {
     // The likeliest card with two dollar signs on it is a word problem about
     // money, not an equation — and pairing them would set the words between
-    // them as maths and strip the spaces out of the sentence.
+    // them as math and strip the spaces out of the sentence.
     const money = 'A shirt costs $12 and pants cost $20. How much altogether?'
     expect(parseRich(money).every((n) => n.type === 'text')).toBe(true)
     expect(richToPlain(money)).toBe(money)
   })
 
-  it('will not open maths on a space, or close on one', () => {
+  it('will not open math on a space, or close on one', () => {
     expect(parseRich('$ x + 1$').every((n) => n.type === 'text')).toBe(true)
     expect(parseRich('$x + 1 $').every((n) => n.type === 'text')).toBe(true)
     // The rule that rejects those still accepts everything real.
@@ -183,7 +183,7 @@ describe('card text', () => {
     expect(parseRich('$$\\frac{1}{2}$$').some((n) => n.type === 'math')).toBe(true)
   })
 
-  it('recognises the display form', () => {
+  it('recognizes the display form', () => {
     const [node] = parseRich('$$x^2$$')
     expect(node.type === 'math' && node.display).toBe(true)
   })
@@ -203,14 +203,14 @@ describe('card text', () => {
   })
 })
 
-describe('splitting text that has maths in it', () => {
-  it('knows which stretches are maths and which are prose', () => {
+describe('splitting text that has math in it', () => {
+  it('knows which stretches are math and which are prose', () => {
     const source = 'a $x$ b'
     expect(richSpans(source)).toEqual([[2, 5]])
     expect(richSpans('nothing here')).toEqual([])
   })
 
-  it('splits on separators outside the maths and leaves the ones inside it', () => {
+  it('splits on separators outside the math and leaves the ones inside it', () => {
     expect(splitOutsideRich('a, $f(x, y)$, b', /\s*,\s*/)).toEqual(['a', '$f(x, y)$', 'b'])
   })
 

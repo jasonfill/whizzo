@@ -235,7 +235,7 @@ describe('the session log', () => {
 })
 
 describe('the other two subjects', () => {
-  it('summarises typing and offers a way into it', () => {
+  it('summarizes typing and offers a way into it', () => {
     const game = aGame({
       state: { lessons: { l1: { plays: 2, stars: 3, bestWpm: 26, bestAccuracy: 95 } }, totalStars: 3 },
     })
@@ -245,7 +245,7 @@ describe('the other two subjects', () => {
     expect(navigate).toHaveBeenCalledWith({ name: 'typing' })
   })
 
-  it('summarises quiz and offers a way into it', () => {
+  it('summarizes quiz and offers a way into it', () => {
     render(<ProgressScreen game={aGame()} navigate={navigate} />)
     fireEvent.click(screen.getByText('Open quiz →'))
     expect(navigate).toHaveBeenCalledWith({ name: 'quiz' })

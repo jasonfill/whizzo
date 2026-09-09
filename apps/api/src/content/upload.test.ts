@@ -79,7 +79,7 @@ describe('counting what it will be charged as', () => {
   })
 })
 
-describe('recognising the same file twice', () => {
+describe('recognizing the same file twice', () => {
   it('gives identical bytes the same fingerprint, and different bytes a different one', () => {
     expect(digestOf(Buffer.from('abc'))).toBe(digestOf(Buffer.from('abc')))
     expect(digestOf(Buffer.from('abc'))).not.toBe(digestOf(Buffer.from('abd')))

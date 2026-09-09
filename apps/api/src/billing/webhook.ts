@@ -123,7 +123,7 @@ async function onCheckoutCompleted(
 }
 
 /**
- * The subscription itself changed — renewed, cancelled, quantity moved.
+ * The subscription itself changed — renewed, canceled, quantity moved.
  *
  * Status is mirrored, and cancellation drops coverage. Nothing a learner made
  * is touched: a lapsed family keeps every deck and every answer, and loses the
@@ -146,9 +146,9 @@ async function onSubscriptionChanged(
   const id = rows[0]?.id
   if (!id) return { outcome: `no local row for ${subscription.id}`, changed: false }
 
-  if (status === 'cancelled') {
+  if (status === 'canceled') {
     await db.query('select public.revoke_coverage($1)', [id])
-    return { outcome: `cancelled ${subscription.id}, coverage removed`, changed: true }
+    return { outcome: `canceled ${subscription.id}, coverage removed`, changed: true }
   }
 
   return { outcome: `${subscription.id} is now ${status}`, changed: true }
@@ -167,7 +167,7 @@ async function onPaymentFailed(db: Queryable, invoice: Stripe.Invoice): Promise<
   const { rowCount } = await db.query(
     `update public.subscriptions
         set status = 'past_due', updated_at = now()
-      where provider_sub_id = $1 and status <> 'cancelled'`,
+      where provider_sub_id = $1 and status <> 'canceled'`,
     [subscriptionId],
   )
   return {

@@ -113,7 +113,7 @@ describe('difficulty, as children actually meet it', () => {
 })
 
 describe('the banks offered out of the box', () => {
-  it('files them all under maths facts, which is a skill track', () => {
+  it('files them all under math facts, which is a skill track', () => {
     for (const deck of generatedDecks()) {
       expect(deck.track, deck.title).toBe('math.facts')
     }

@@ -23,17 +23,17 @@ export default function SessionDetail({ session }: { session: SessionRecord }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
+    let canceled = false
     setError(null)
     attemptsForSession(session.id)
       .then((rows) => {
-        if (!cancelled) setAttempts(rows)
+        if (!canceled) setAttempts(rows)
       })
       .catch(() => {
-        if (!cancelled) setError('Could not load the answers for this round.')
+        if (!canceled) setError('Could not load the answers for this round.')
       })
     return () => {
-      cancelled = true
+      canceled = true
     }
   }, [attemptsForSession, session.id])
 

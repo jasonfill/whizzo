@@ -46,7 +46,7 @@ export const DUE_SOON_DAYS = 7
  *
  * Two, because one lapse is ordinary forgetting and the schedule is built to
  * absorb it. The share test alongside it stops a well-known item that has been
- * practised eighty times from being called fragile for two old slips.
+ * practiced eighty times from being called fragile for two old slips.
  */
 export const FRAGILE_LAPSES = 2
 export const FRAGILE_LAPSE_SHARE = 0.3

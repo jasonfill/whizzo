@@ -59,7 +59,7 @@ describe('drawing arithmetic', () => {
     expect(wide[wide.length - 1]).toBe(50)
   })
 
-  it('honours a step that does fit', () => {
+  it('honors a step that does fit', () => {
     expect(ticksBetween(-5, 5, 1)).toEqual([-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5])
     expect(ticksBetween(0, 3, 0.5)).toHaveLength(7)
     expect(ticksBetween(4, 4, 1)).toEqual([4])

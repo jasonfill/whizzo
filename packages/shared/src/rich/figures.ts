@@ -1,4 +1,4 @@
-// Figures: the pictures a maths question needs and plain text cannot carry.
+// Figures: the pictures a math question needs and plain text cannot carry.
 //
 // Two families, one mechanism. The charts (bar, line, pie) are for the
 // "read the graph" questions that start in third grade and never stop; the
@@ -37,7 +37,7 @@ export interface BarFigure extends FigureBase {
    * an axis nobody asked for.
    */
   max?: number
-  /** Bars are labelled with their value by default — these are charts to read off. */
+  /** Bars are labeled with their value by default — these are charts to read off. */
   showValues?: boolean
   horizontal?: boolean
 }
@@ -255,7 +255,7 @@ function base(raw: Raw): FigureBase {
  * Every field is checked rather than cast: the input is card text that may have
  * been typed, pasted or generated, and a renderer that trusts `data` to be an
  * array of numbers is one malformed deck away from a blank screen. Anything
- * unrecognised is dropped; anything missing that the drawing genuinely needs
+ * unrecognized is dropped; anything missing that the drawing genuinely needs
  * comes back as an error the author can read.
  */
 export function validateFigure(input: unknown): FigureParse {

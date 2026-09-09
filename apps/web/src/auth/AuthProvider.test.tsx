@@ -131,7 +131,7 @@ describe('starting up', () => {
   })
 
   it('runs as a guest-only build when there are no credentials', async () => {
-    // A build without Supabase should still let a child practise, rather than
+    // A build without Supabase should still let a child practice, rather than
     // showing a sign-in screen that cannot work.
     supabaseMock.configured = false
     renderAuth()
@@ -197,7 +197,7 @@ describe('code and PIN — the child’s way in', () => {
     }))
   })
 
-  it('normalises the code, so case and stray spaces do not fail a child', async () => {
+  it('normalizes the code, so case and stray spaces do not fail a child', async () => {
     apiRequest.mockResolvedValue({ session: { accessToken: 'a', refreshToken: 'r' } })
     renderAuth()
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('guest'))
@@ -284,7 +284,7 @@ describe('creating an account', () => {
     }
   })
 
-  it('passes an unrecognised message through as it came', async () => {
+  it('passes an unrecognized message through as it came', async () => {
     authApi.signUp.mockResolvedValue({
       data: { session: null },
       error: new Error('Something odd happened'),
@@ -387,7 +387,7 @@ describe('the profile behind a session', () => {
 
 describe('when the auth service cannot be reached', () => {
   it('opens as a guest rather than spinning forever', async () => {
-    // A child on a flaky connection gets to practise, not a spinner.
+    // A child on a flaky connection gets to practice, not a spinner.
     vi.useFakeTimers()
     let settle: (v: unknown) => void = () => {}
     authApi.getSession.mockReturnValue(new Promise((r) => { settle = r }) as never)

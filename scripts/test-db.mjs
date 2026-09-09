@@ -63,6 +63,7 @@ const testFiles = [
   'supabase/tests/0011_library_test.sql',
   'supabase/tests/0019_planner_test.sql',
   'supabase/tests/0021_one_code_box_test.sql',
+  'supabase/tests/0023_us_spelling_test.sql',
 ]
 
 let total = 0

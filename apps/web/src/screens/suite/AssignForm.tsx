@@ -204,7 +204,7 @@ export default function AssignForm({
             <span>
               Master it
               <span className="block text-xs font-bold text-stone">
-                They keep going until they know it. The app picks what to practise each time.
+                They keep going until they know it. The app picks what to practice each time.
               </span>
             </span>
           </label>
@@ -239,7 +239,7 @@ export default function AssignForm({
             if (next) {
               setChoice(next)
               // A form opened from the library stays on that piece of material;
-              // only the way it is practised is up for choosing.
+              // only the way it is practiced is up for choosing.
               if (!fixedTarget) setTargetId('')
             }
           }}

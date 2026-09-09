@@ -52,6 +52,7 @@ import { clearPendingConnect, keepPendingConnect, readPendingConnect } from './l
 import FamilyScreen from './screens/suite/FamilyScreen'
 import ContentScreen from './screens/content/ContentScreen'
 import PlannerScreen from './screens/planner/PlannerScreen'
+import WatchScreen from './screens/live/WatchScreen'
 import PlanWeekScreen from './screens/planner/PlanWeekScreen'
 import WrapWeekScreen from './screens/planner/WrapWeekScreen'
 import CoursesScreen from './screens/planner/CoursesScreen'
@@ -80,7 +81,7 @@ export default function App() {
         <LearnerProvider>
           {/* Above progress, below learners: the theme is chosen per learner, so
               it has to see who is active, and everything below it paints in the
-              colour it publishes. */}
+              color it publishes. */}
           <ThemeProvider>
             <ProgressProvider>
               <Background />
@@ -263,6 +264,7 @@ function Router() {
       <Route path="/library/add" element={<ContentScreen navigate={navigate} />} />
       <Route path="/planner" element={<Planner navigate={navigate} />} />
       <Route path="/planner/week/:weekStart" element={<Planner navigate={navigate} />} />
+      <Route path="/watch/:learnerId" element={<Watch navigate={navigate} />} />
       <Route path="/planner/plan" element={<PlanWeekScreen navigate={navigate} />} />
       <Route path="/planner/wrap" element={<WrapWeekScreen navigate={navigate} />} />
       <Route path="/planner/courses" element={<CoursesScreen navigate={navigate} />} />
@@ -400,6 +402,12 @@ function Loading() {
 const MONDAY = /^\d{4}-\d{2}-\d{2}$/
 
 /** The week from the address, if it names one that looks like a day. */
+function Watch({ navigate }: { navigate: Navigate }) {
+  const { learnerId } = useParams()
+  if (!learnerId) return null
+  return <WatchScreen navigate={navigate} learnerId={learnerId} />
+}
+
 function Planner({ navigate }: { navigate: Navigate }) {
   const { weekStart } = useParams()
   const [params] = useSearchParams()

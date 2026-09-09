@@ -1,6 +1,6 @@
 import type { Course } from '@whizzo/shared'
 
-/** The coloured chip a course shows as, everywhere a course appears. */
+/** The colored chip a course shows as, everywhere a course appears. */
 export function CourseChip({
   course,
   small = false,

@@ -98,7 +98,7 @@ function simulate(trueLevel: number, rounds: number, seed: number, growth: numbe
 
     for (const word of plan) {
       // The hidden truth: chance of spelling this word right. Learners also
-      // improve on words they have already practised, which is what lets the
+      // improve on words they have already practiced, which is what lets the
       // engine promote them over time.
       const seen = snapshot.mastery[masteryKey('spelling', word.w)]
       const familiarity = Math.min(growth, (seen?.totalAttempts ?? 0) * growth * 0.35)
@@ -248,9 +248,9 @@ for (const trueLevel of [2, 3, 4, 5, 6, 7, 8]) {
 
 // ---------------------------------------------------------------------------
 // Suite 2 — progression. The learner genuinely improves on words they have
-// practised, so the engine should notice and move them up the curriculum.
+// practiced, so the engine should notice and move them up the curriculum.
 // ---------------------------------------------------------------------------
-console.log('\nProgression: learners who improve as they practise\n')
+console.log('\nProgression: learners who improve as they practice\n')
 console.log(
   '  hidden level | placed at | ends at grade | ability | overall | first look | third look | mastered',
 )

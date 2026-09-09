@@ -111,8 +111,8 @@ describe('isPass', () => {
   })
 })
 
-describe('answers written as maths', () => {
-  it('grades against what the maths says, not how it was written', () => {
+describe('answers written as math', () => {
+  it('grades against what the math says, not how it was written', () => {
     expect(gradeWritten('3/4', '$\\frac{3}{4}$')).toBe('correct')
     expect(gradeWritten('45°', '$45^\\circ$')).toBe('correct')
     expect(gradeWritten('1/2', '$\\frac{3}{4}$')).toBe('wrong')
@@ -126,7 +126,7 @@ describe('answers written as maths', () => {
     expect(gradeWritten('3', '3/4 cup')).toBe('wrong')
   })
 
-  it('still offers alternatives on a card that has maths on it', () => {
+  it('still offers alternatives on a card that has math on it', () => {
     // The slash inside the fraction is not a separator; the one after it is.
     expect(acceptableAnswers('$\\frac{1}{2}$ / a half')).toEqual(['$\\frac{1}{2}$', 'a half'])
     expect(gradeWritten('1/2', '$\\frac{1}{2}$ / a half')).toBe('correct')
@@ -175,8 +175,8 @@ describe('scaffolded questions', () => {
 
   it('falls back to a word bank when the answer has no letters to hint at', () => {
     // `$\frac{3}{4}$` masked character by character is nonsense, not a hint.
-    const maths: QuizCard[] = pool.map((c, i) => ({ ...c, definition: `$\\frac{${i}}{4}$` }))
-    const q = buildQuestion(maths[0], maths, 'letter-hint', 'term-first')
+    const math: QuizCard[] = pool.map((c, i) => ({ ...c, definition: `$\\frac{${i}}{4}$` }))
+    const q = buildQuestion(math[0], math, 'letter-hint', 'term-first')
     expect(q.kind).toBe('word-bank')
   })
 

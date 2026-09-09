@@ -54,7 +54,7 @@ const codes = vi.hoisted(() => ({
     valid: true,
     reason: null,
     ownerName: 'Mrs Patel',
-    label: 'Tuesday maths',
+    label: 'Tuesday math',
     role: 'teacher',
     canManageContent: false,
   })),
@@ -256,11 +256,11 @@ describe('the code a tutor hands out', () => {
     await waitFor(() => expect(codes.listConnectionCodes).toHaveBeenCalled())
     fireEvent.click(screen.getByText('Get a code'))
     fireEvent.change(screen.getByPlaceholderText(/What is it for/), {
-      target: { value: 'Tuesday maths' },
+      target: { value: 'Tuesday math' },
     })
     fireEvent.click(screen.getByText('Create a code'))
     await waitFor(() =>
-      expect(codes.mintConnectionCode).toHaveBeenCalledWith({ label: 'Tuesday maths' }),
+      expect(codes.mintConnectionCode).toHaveBeenCalledWith({ label: 'Tuesday math' }),
     )
   })
 
@@ -274,7 +274,7 @@ describe('the code a tutor hands out', () => {
 
   it('shows an existing code, who has joined, and how to withdraw it', async () => {
     codes.listConnectionCodes.mockResolvedValue([
-      { code: 'TUT12345', label: 'Tuesday maths', uses: 2, role: 'teacher', canManageContent: false },
+      { code: 'TUT12345', label: 'Tuesday math', uses: 2, role: 'teacher', canManageContent: false },
     ])
     render(<MyTutorCode />)
     expect(await screen.findByText('TUT12345')).toBeTruthy()
@@ -345,7 +345,7 @@ describe('letting a tutor in', () => {
     render(<HaveACode ownedLearners={[ada, ben]} onChanged={onConnected} />)
     fireEvent.change(screen.getByLabelText('Pairing code'), { target: { value: 'TUT12345' } })
     fireEvent.click(screen.getByText('Check code'))
-    expect(await screen.findByText(/Mrs Patel — Tuesday maths/)).toBeTruthy()
+    expect(await screen.findByText(/Mrs Patel — Tuesday math/)).toBeTruthy()
     expect(codes.redeemConnectionCode).not.toHaveBeenCalled()
   })
 

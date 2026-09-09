@@ -162,7 +162,7 @@ describe('the subscription itself changed', () => {
     expect(update?.values).toContain('past_due')
   })
 
-  it('drops coverage when it is cancelled', async () => {
+  it('drops coverage when it is canceled', async () => {
     const { db, seen } = fakeDb([
       FRESH,
       { match: /update public\.subscriptions/, rows: [{ id: 'local-sub-1' }] },
@@ -242,11 +242,11 @@ describe('a payment failed', () => {
     )
   })
 
-  it('never revives a cancelled subscription', async () => {
+  it('never revives a canceled subscription', async () => {
     const { db, seen } = fakeDb([FRESH, { match: /update public\.subscriptions/, rowCount: 0 }])
     await handleEvent(db, event('invoice.payment_failed', { id: 'in_1', subscription: 'sub_1' }))
     expect(seen.find((s) => /update public\.subscriptions/.test(s.sql))?.sql).toMatch(
-      /status <> 'cancelled'/,
+      /status <> 'canceled'/,
     )
   })
 

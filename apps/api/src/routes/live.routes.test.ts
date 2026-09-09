@@ -19,7 +19,11 @@ const withUser = vi.hoisted(() =>
 
 vi.mock('../db.js', () => ({
   withUser: (...a: Parameters<typeof withUser>) => withUser(...a),
-  withAdmin: (...a: Parameters<typeof withUser>) => withUser(...a),
+  // One argument, not two: withAdmin takes the callback alone. Standing it in
+  // with withUser's shape passes the callback as the user id and `undefined`
+  // as the callback, which fails inside a try/catch and looks like the feature
+  // silently not working.
+  withAdmin: (fn: (db: unknown) => Promise<unknown>) => fn({ query }),
   pool: { connect: vi.fn(), query: vi.fn(), on: vi.fn() },
 }))
 
@@ -280,6 +284,139 @@ describe('presence is opt-in', () => {
     await new Promise((r) => setTimeout(r, 80))
 
     expect(watching.frames.filter((f) => f.includes('watch.'))).toHaveLength(1)
+    watching.close()
+  })
+})
+
+describe('POST /api/live/learners/:id', () => {
+  const begin = {
+    kind: 'round.begin',
+    roundId: 'r1',
+    activity: 'flashcards',
+    subject: 'quiz',
+    title: 'Capital cities',
+    cards: 10,
+  }
+  const tick = {
+    kind: 'round.tick',
+    roundId: 'r1',
+    at: 3,
+    cards: 10,
+    prompt: 'Capital of Peru?',
+    outcome: 'right',
+    answer: 'Lima',
+    selfGraded: true,
+    responseMs: 2400,
+  }
+
+  async function post(body: unknown, sub?: string) {
+    return fetch(`${base}/api/live/learners/${LEARNER}`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${await token(sub)}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+  }
+
+  it('is a 404 when the caller cannot see the learner', async () => {
+    query.mockResolvedValueOnce({ rows: [] })
+    expect((await post(begin)).status).toBe(404)
+  })
+
+  // Nothing here is stored, which is not a reason to accept an unbounded blob
+  // that lands on somebody else's screen.
+  it('refuses a body that is not a round event', async () => {
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+    expect((await post({ kind: 'round.tick', roundId: 'r1' })).status).toBe(400)
+    expect((await post({ kind: 'nonsense' })).status).toBe(400)
+    expect((await post({ ...tick, prompt: 'x'.repeat(500) })).status).toBe(400)
+  })
+
+  // The one message that goes out whether or not anybody is already looking:
+  // it is how a grown-up finds out there is something to join.
+  it('tells the learner’s grown-ups that a round started', async () => {
+    const { bus } = await import('../live/bus.js')
+    const { learnerChannel, userChannel } = await import('@whizzo/shared')
+    query
+      .mockResolvedValueOnce({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+      .mockResolvedValueOnce({ rows: [{ id: CALLER }, { id: OTHER }] })
+
+    const onLearner: string[] = []
+    const toCaller: Array<Record<string, unknown>> = []
+    const offA = bus.subscribe(learnerChannel(LEARNER), (e) => onLearner.push(e.kind))
+    const offB = bus.subscribe(userChannel(CALLER), (e) => toCaller.push(e.payload as Record<string, unknown>))
+
+    expect((await post(begin)).status).toBe(204)
+    offA()
+    offB()
+
+    expect(onLearner).toEqual(['round.begin'])
+    expect(toCaller[0]).toMatchObject({ learnerId: LEARNER, learnerName: 'Ada', title: 'Capital cities' })
+  })
+
+  // An unwatched round is free. The client already knows not to send, and this
+  // covers the gap between the last watcher leaving and it finding out.
+  it('drops a tick when nobody is watching', async () => {
+    const { bus } = await import('../live/bus.js')
+    const { learnerChannel } = await import('@whizzo/shared')
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+
+    const seen: string[] = []
+    // Subscribing here is not the same as being present: presence is what
+    // decides, and this listener never announced.
+    const off = bus.subscribe(learnerChannel(LEARNER), (e) => seen.push(e.kind))
+    expect((await post(tick)).status).toBe(204)
+    off()
+
+    expect(seen).toEqual([])
+  })
+
+  // Watching a round and staging one are different rights. Everything posted
+  // here is rendered as the learner's own work.
+  it('refuses a guardian who is neither the learner nor the owner', async () => {
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+    const response = await post(begin, OTHER)
+    expect(response.status).toBe(403)
+    expect(((await response.json()) as { error: { code: string } }).error.code).toBe('forbidden')
+  })
+
+  it('lets the learner speak for their own round', async () => {
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: OTHER, owner_id: CALLER }] })
+    expect((await post(begin, OTHER)).status).toBe(204)
+  })
+
+  // Without this the "practicing now" chip outlives the round it advertises.
+  it('tells the grown-ups when the round finishes too', async () => {
+    const { bus } = await import('../live/bus.js')
+    const { userChannel } = await import('@whizzo/shared')
+    query
+      .mockResolvedValueOnce({ rows: [{ display_name: 'Ada', auth_user_id: null, owner_id: CALLER }] })
+      .mockResolvedValueOnce({ rows: [{ id: CALLER }] })
+
+    const toCaller: string[] = []
+    const off = bus.subscribe(userChannel(CALLER), (e) => toCaller.push(e.kind))
+    expect((await post({ kind: 'round.end', roundId: 'r1', cards: 10, correct: 8 })).status).toBe(204)
+    off()
+
+    expect(toCaller).toEqual(['round.end'])
+  })
+
+  it('delivers a tick to somebody who is', async () => {
+    query.mockResolvedValue({ rows: [{ auth_user_id: null, display_name: 'Mom' }] })
+    const watching = listen(`/api/live/learners/${LEARNER}?announce=1`, await token())
+    await watching.response
+    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+
+    query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: OTHER, owner_id: CALLER }] })
+    expect((await post(tick, OTHER)).status).toBe(204)
+
+    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    const event = dataOf(watching.frames[1]!)
+    expect(event.kind).toBe('round.tick')
+    expect(event.payload).toMatchObject({ prompt: 'Capital of Peru?', outcome: 'right', selfGraded: true })
+
     watching.close()
   })
 })

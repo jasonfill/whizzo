@@ -29,7 +29,7 @@ export interface LiveOptions {
   onResync?: () => void
 }
 
-/** Backoff: quick at first, capped, jittered so tabs do not resynchronise. */
+/** Backoff: quick at first, capped, jittered so tabs do not resynchronize. */
 const FIRST_RETRY_MS = 500
 const MAX_RETRY_MS = 30_000
 /** A connection that lasted this long counts as healthy; the backoff resets. */

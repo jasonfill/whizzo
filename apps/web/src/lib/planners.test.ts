@@ -100,7 +100,7 @@ describe('what kind of question to ask', () => {
     expect(kindFor(half, 20, () => 0.9)).toBe('word-bank')
   })
 
-  it('still recognises before it asks for production', () => {
+  it('still recognizes before it asks for production', () => {
     // A card met once is picked out from among others, not written from
     // nothing. Recognition is where recall starts.
     expect(kindFor({ mastery: 0.1, reps: 1 } as never, 20)).toBe('multiple-choice')
@@ -387,8 +387,8 @@ describe('tidying a deck up', () => {
   })
 
   it('trims and de-duplicates tags', () => {
-    const tidied = normalizeDeck({ ...deck(2), tags: [' Maths ', 'maths', ''] as never })
-    expect(tidied.tags).toEqual(['maths'])
+    const tidied = normalizeDeck({ ...deck(2), tags: [' Math ', 'math', ''] as never })
+    expect(tidied.tags).toEqual(['math'])
   })
 })
 

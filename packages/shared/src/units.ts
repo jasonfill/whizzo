@@ -29,7 +29,7 @@ export interface CatalogProblem {
 /**
  * Everything wrong with a set of units, in one pass.
  *
- * All of it, not the first thing: somebody fixing a catalogue wants the list,
+ * All of it, not the first thing: somebody fixing a catalog wants the list,
  * not one error at a time.
  */
 export function validateCatalog(units: readonly Unit[]): CatalogProblem[] {
@@ -136,7 +136,7 @@ export function availableUnits(
  * A sensible order to work through a track.
  *
  * Prerequisites first, and ties broken by the order they were written, so a
- * catalogue author's sequencing survives rather than being reshuffled by a sort.
+ * catalog author's sequencing survives rather than being reshuffled by a sort.
  */
 export function suggestedOrder(units: readonly Unit[]): Unit[] {
   const byId = new Map(units.map((u) => [u.id, u]))

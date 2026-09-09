@@ -308,7 +308,7 @@ rows keep the price that was true when they were written.
 create table public.subscriptions (
   id                  uuid primary key default gen_random_uuid(),
   payer_id            uuid not null references auth.users (id) on delete cascade,
-  status              text not null default 'active',   -- active | past_due | cancelled
+  status              text not null default 'active',   -- active | past_due | canceled
   seats               integer not null default 1,       -- learners paid for
   provider            text,                             -- 'stripe' | 'comp' | 'promo'
   provider_customer_id text,
@@ -317,7 +317,7 @@ create table public.subscriptions (
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
   constraint subscriptions_status_check
-    check (status in ('active','past_due','cancelled'))
+    check (status in ('active','past_due','canceled'))
 );
 
 create table public.learner_coverage (
@@ -394,12 +394,12 @@ quantity is updated when coverage rows change.
 3. **Annual pricing?** Probably, at two months free, but not before there is a
    renewal cohort to measure.
 4. **What does a lapsed parent see?** A lock with the number behind it —
-   *"Ava has retained 87% of what she has mastered"* with the detail greyed —
+   *"Ava has retained 87% of what she has mastered"* with the detail grayed —
    is more honest and more effective than hiding that the number exists. Worth
    testing rather than assuming.
 5. **Does a teacher ever want to pay** to cover an uncovered student they care
    about? The schema allows it. Whether to offer it is a product decision that
    can wait for someone to ask.
-6. **The district model's payer** is an organisation, not a user. That is the
+6. **The district model's payer** is an organization, not a user. That is the
    only real schema addition it needs, and it is one nullable column on
    `subscriptions`. Not now.

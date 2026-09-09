@@ -23,7 +23,7 @@ import type { Direction, QuestionKind } from './questions'
 
 export type StudyMode = 'flashcards' | 'learn' | 'choice' | 'test' | 'match' | 'review' | 'recall'
 
-/** 'mixed' alternates, which stops a learner memorising position rather than meaning. */
+/** 'mixed' alternates, which stops a learner memorizing position rather than meaning. */
 export type DirectionSetting = Direction | 'mixed'
 
 export type CardReason = 'new' | 'learning' | 'due' | 'sharp' | 'list'
@@ -175,7 +175,7 @@ function resolveDirection(setting: DirectionSetting, index: number): Direction {
  * rung the item is on and this decides how to ask a question at that rung. One
  * place now knows what a rung means, instead of three.
  *
- * One behaviour did change, and it is an improvement. Reaching free recall now
+ * One behavior did change, and it is an improvement. Reaching free recall now
  * needs a correct streak as well as a high mastery number — the same pair
  * `masteryBand` has always used to decide what "mastered" means. So a card the
  * learner just missed drops back to a scaffolded question instead of handing

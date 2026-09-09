@@ -286,7 +286,7 @@ export async function startRound(
   if (!planned.length) {
     throw new ToolRefused(
       params.mode === 'review'
-        ? `Nothing is due for ${name} right now. Start a practise round on a deck instead.`
+        ? `Nothing is due for ${name} right now. Start a practice round on a deck instead.`
         : `There is nothing to ask in "${deck?.title}" right now.`,
     )
   }
@@ -350,7 +350,7 @@ export async function startRound(
       deck: deck ? { id: deck.id, title: deck.title } : null,
       instructions:
         `${instructions} This is a study round: teach each card below in your own words, one at a time, ` +
-        `checking ${name} is following. When they are ready, start a practise round.`,
+        `checking ${name} is following. When they are ready, start a practice round.`,
       cards,
       say: `${cards.length} cards from "${deck?.title}" to learn first. Here is the first: ${cards[0]?.say ?? ''}`,
     }

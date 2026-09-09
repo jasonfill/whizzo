@@ -129,7 +129,7 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
         <StatCard
           label="Reading level"
           value={`Grade ${GRADES[spelling.levelIndex]?.grade ?? 2}`}
-          note={`${totalMinutes}m practised in total`}
+          note={`${totalMinutes}m practiced in total`}
           invert
         />
       </div>
@@ -340,7 +340,7 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
                       {m.totalCorrect}/{m.totalAttempts}
                     </td>
                     {/* Slipped after knowing it is the number that matters, so
-                        it is the one that gets a colour. */}
+                        it is the one that gets a color. */}
                     <td className="py-2 text-[14px] font-extrabold text-[#C2410C]">{m.lapses}</td>
                     <td className="py-2 text-[14px] text-muted">
                       {errorPattern(m.itemKey) ?? '—'}
@@ -552,7 +552,7 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
           told immediately that it changes nothing in the report — and then
           given the control, because a six-year-old will not go looking for the
           picker themselves. Rendered with no accent at all: this is a grown-up
-          surface, and it stays one even while setting a child's colour. */}
+          surface, and it stays one even while setting a child's color. */}
       <div className="mt-4 rounded-[20px] border border-hair bg-chalk p-6">
         <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-faint">
           Their world
@@ -590,7 +590,7 @@ function activityLabel(activity: string, subject: string): string {
     if (quizMode) return quizMode.name
     if (activity === 'review') return 'Card review'
     // Rounds the app itself cannot start — a tutor round run through an
-    // assistant — are named by the catalogue.
+    // assistant — are named by the catalog.
     const def = activityDef(activity)
     if (def) return def.name
     return activity

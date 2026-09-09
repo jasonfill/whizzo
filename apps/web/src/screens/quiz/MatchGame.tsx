@@ -13,7 +13,7 @@ interface Tile {
 
 /**
  * The timed matching game. It is the least academic mode here and the one that
- * gets played most: it is short, it has a clock, and it rewards recognising a
+ * gets played most: it is short, it has a clock, and it rewards recognizing a
  * pair rather than producing an answer.
  *
  * A card is only recorded as correct if it was matched without a wrong attempt

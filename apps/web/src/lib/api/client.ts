@@ -17,7 +17,7 @@ const BASE = '/api'
  * This tab, for the lifetime of this tab.
  *
  * Every mutating request carries it, and the live channel echoes it back on
- * the event the write produced — which is how a tab recognises the echo of its
+ * the event the write produced — which is how a tab recognizes the echo of its
  * own optimistic change and ignores it. Two tabs of the same person get
  * different ids and therefore *do* see each other, which is what you want.
  */

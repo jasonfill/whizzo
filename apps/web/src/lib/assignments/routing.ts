@@ -33,11 +33,11 @@ const TARGET_OF: Record<Subject, AssignableActivity['target']> = {
 }
 
 /**
- * Generated from the shared catalogue rather than hand-kept.
+ * Generated from the shared catalog rather than hand-kept.
  *
  * This used to be three lists welded together, and every activity added meant
  * remembering to edit it — which is exactly the kind of thing nobody remembers.
- * The catalogue knows what each activity is; this only has to say how a
+ * The catalog knows what each activity is; this only has to say how a
  * grown-up reads it.
  *
  * Only genuinely startable rounds appear. The scaffolded question kinds are

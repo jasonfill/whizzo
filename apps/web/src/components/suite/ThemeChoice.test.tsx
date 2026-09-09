@@ -148,7 +148,7 @@ describe('setting a world', () => {
 describe('it stays a grown-up surface', () => {
   it('uses no theme accent class anywhere, even while choosing one', () => {
     // The rule this exists to defend: a parent screen carries no child's
-    // colour. Asserting on the classes is what catches a well-meaning
+    // color. Asserting on the classes is what catches a well-meaning
     // `bg-accent` being added later.
     const { container } = render(<ThemeChoice learner={learner()} />)
     const classes = [...container.querySelectorAll('*')]
@@ -159,14 +159,14 @@ describe('it stays a grown-up surface', () => {
     }
   })
 
-  it('uses no inline theme colour either', () => {
+  it('uses no inline theme color either', () => {
     const { container } = render(<ThemeChoice learner={learner()} />)
     for (const el of container.querySelectorAll<HTMLElement>('*')) {
       expect(el.getAttribute('style') ?? '').not.toMatch(/#/)
     }
   })
 
-  it('marks the chosen world with ink rather than with its own colour', () => {
+  it('marks the chosen world with ink rather than with its own color', () => {
     render(<ThemeChoice learner={learner({ theme: 'cats' })} />)
     const chosen = screen.getByRole('button', { name: /Cats/ })
     expect(chosen.className).toContain('bg-ink')
@@ -174,7 +174,7 @@ describe('it stays a grown-up surface', () => {
 })
 
 describe('accessibility', () => {
-  it('exposes the choice as pressed state rather than colour alone', () => {
+  it('exposes the choice as pressed state rather than color alone', () => {
     render(<ThemeChoice learner={learner({ theme: 'music' })} />)
     const pressed = screen
       .getAllByRole('button')

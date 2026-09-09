@@ -62,7 +62,7 @@ describe('fromDatabaseError', () => {
     expect(mapped!.message).not.toContain('abc')
   })
 
-  it('declines to guess at an unrecognised database error', () => {
+  it('declines to guess at an unrecognized database error', () => {
     // Returning null lets it become a 500, which is the honest answer for
     // something genuinely unexpected.
     expect(fromDatabaseError(pg('08006'))).toBeNull()

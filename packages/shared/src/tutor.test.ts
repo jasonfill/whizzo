@@ -86,14 +86,14 @@ const noMastery = () => undefined
 
 describe('planning', () => {
   it('never plans a card that cannot be said aloud', () => {
-    for (const mode of ['practise', 'test', 'study'] as const) {
+    for (const mode of ['practice', 'test', 'study'] as const) {
       const plan = planTutorRound({ mode, decks: [CELLS], deckId: 'deck1', band: 'middle', masteryOf: noMastery, today: '2026-09-06', rng: seeded() })
       expect(plan.map((p) => p.card.id)).not.toContain('c8')
     }
   })
 
   it('asks a never-met card as a choice, never at rung 0', () => {
-    const plan = planTutorRound({ mode: 'practise', decks: [CELLS], deckId: 'deck1', band: 'middle', masteryOf: noMastery, today: '2026-09-06', rng: seeded() })
+    const plan = planTutorRound({ mode: 'practice', decks: [CELLS], deckId: 'deck1', band: 'middle', masteryOf: noMastery, today: '2026-09-06', rng: seeded() })
     expect(plan.length).toBeGreaterThan(0)
     expect(plan.every((p) => p.rung === 1)).toBe(true)
   })

@@ -36,7 +36,7 @@ import {
 } from '../themes'
 
 // Deliberately small. Grown-up surfaces stay theme-free by never reading
-// `theme` for colour; the parent screen reads it only to name the child's world
+// `theme` for color; the parent screen reads it only to name the child's world
 // and to set it, which is why `setTheme` lives here rather than on the picker.
 interface ThemeContextValue {
   theme: Theme
@@ -105,9 +105,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // The one global side effect. Everything styled with the accent tokens reads
   // these variables, so writing them here re-paints every play surface at once
-  // without a single component re-rendering on the colour.
+  // without a single component re-rendering on the color.
   //
-  // Four, not one: the pressed/shadow colour and the two tints are as much a
+  // Four, not one: the pressed/shadow color and the two tints are as much a
   // part of "the paint" as the accent itself, and a play surface that had to
   // reach for an inline style to get them would be a play surface the sweep
   // could not check.
@@ -146,7 +146,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         return
       }
       // Optimistic: the world changes on the click, the write follows. A failed
-      // write is warned about rather than thrown — losing a colour is not worth
+      // write is warned about rather than thrown — losing a color is not worth
       // interrupting a child mid-round — and since the next load reads the row,
       // the app does not go on claiming something was saved when it was not.
       setPending({ learnerId: active.id, id })

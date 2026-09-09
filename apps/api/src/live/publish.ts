@@ -79,7 +79,3 @@ export function publishUser(
   })
 }
 
-/** Is anyone watching this learner? What keeps an unwatched round free. */
-export function watcherCount(learnerId: string): number {
-  return bus.listenerCount(learnerChannel(learnerId))
-}

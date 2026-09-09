@@ -92,7 +92,7 @@ on conflict (id) do nothing;
 -- Minting grants nothing
 -- ---------------------------------------------------------------------------
 select pg_temp.become(:tutor);
-select public.mint_connection_code('Tuesday maths') as code \gset
+select public.mint_connection_code('Tuesday math') as code \gset
 
 select pg_temp.check('minting a code creates no access at all',
   (select count(*)::int from public.guardian_links
@@ -113,7 +113,7 @@ select pg_temp.become(:mum);
 select pg_temp.check('a family can see whose code it is before accepting',
   (select owner_name from public.describe_connection_code(:'code')), 'Mrs Patel');
 select pg_temp.check('and what the code is for',
-  (select label from public.describe_connection_code(:'code')), 'Tuesday maths');
+  (select label from public.describe_connection_code(:'code')), 'Tuesday math');
 select pg_temp.check('and that it is usable',
   (select valid from public.describe_connection_code(:'code')), true);
 select pg_temp.check('a code that does not exist is reported, not guessed at',
@@ -215,7 +215,7 @@ select pg_temp.check_denied('a withdrawn code stops working',
   'withdrawn');
 
 -- Withdrawing the code does not evict the families already connected: it stops
--- new ones, which is what a tutor closing enrolment means.
+-- new ones, which is what a tutor closing enrollment means.
 select pg_temp.become(:tutor);
 select pg_temp.check('withdrawing a code leaves existing links alone',
   (select count(*)::int from public.guardian_links

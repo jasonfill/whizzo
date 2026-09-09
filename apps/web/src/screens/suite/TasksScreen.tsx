@@ -132,7 +132,7 @@ export default function TasksScreen({ navigate }: { navigate: Navigate }) {
                   if (route) navigate(route)
                 }}
                 onCancel={() =>
-                  act(() => updateAssignment(learnerId, a.id, { status: 'cancelled' }), a.id)
+                  act(() => updateAssignment(learnerId, a.id, { status: 'canceled' }), a.id)
                 }
                 onDelete={() => act(() => deleteAssignment(learnerId, a.id), a.id)}
               />

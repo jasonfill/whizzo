@@ -108,7 +108,7 @@ describe('as a guest', () => {
   })
 
   it('survives storage being unavailable', () => {
-    // A private window throws on getItem. Losing a colour must not lose the app.
+    // A private window throws on getItem. Losing a color must not lose the app.
     const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('denied')
     })
@@ -139,7 +139,7 @@ describe('signed in', () => {
     expect(screen.getByTestId('name')).toHaveTextContent('Cats')
   })
 
-  it('falls back rather than blanking on an unrecognised stored world', () => {
+  it('falls back rather than blanking on an unrecognized stored world', () => {
     learnerState = { active: learner({ theme: 'unicorns' }), refresh: vi.fn(async () => {}) }
     renderProvider()
     expect(screen.getByTestId('name')).toHaveTextContent('Cats')

@@ -5,11 +5,11 @@ import FigureView from './FigureView'
 import MathView from './MathView'
 
 /**
- * Card text, with its maths and its figures.
+ * Card text, with its math and its figures.
  *
  * This is the one component every screen that shows a card should use. Plain
  * text goes through untouched and costs a single regex test, so putting it
- * everywhere is free for the decks that have no maths in them at all — which
+ * everywhere is free for the decks that have no math in them at all — which
  * is most of them, and which is the point: nothing about spelling or vocabulary
  * gets more complicated because geometry now works.
  */
@@ -31,7 +31,7 @@ export default function RichText({
 
   // A drawn figure is a block element and a span may not contain one, so the
   // wrapper follows the content rather than making every caller decide.
-  // Display maths does not need it — it lays itself out as a block from inside
+  // Display math does not need it — it lays itself out as a block from inside
   // a span, which keeps this usable inside a paragraph.
   const needsBlock = nodes.some((n) => n.type === 'figure' && figures === 'draw')
   const Wrapper = needsBlock ? 'div' : 'span'

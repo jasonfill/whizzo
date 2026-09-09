@@ -110,7 +110,7 @@ describe('the first screen', () => {
 describe('every route reachable from the home screen', () => {
   // A route that throws is a blank screen with no way back, so each door out
   // of the home screen is opened here at least once and the screen behind it
-  // is checked for something recognisable.
+  // is checked for something recognizable.
   const doors: Array<[string, RegExp]> = [
     ['📊 Progress', /Progress|History|nothing/i],
     ['🏆 Trophies', /Troph|collect|achiev/i],

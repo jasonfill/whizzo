@@ -5,7 +5,7 @@
 // record keeps working untouched. What changes is that four things inside that
 // string now mean something:
 //
-//   $x^2 + 1$                     inline maths, written TeX-style
+//   $x^2 + 1$                     inline math, written TeX-style
 //   $$\frac{a}{b}$$               the same, set as a display block
 //   <math>…</math>                MathML pasted straight out of Word or MathType
 //   [[figure {"kind":"bar", …}]]  a chart or a geometry drawing
@@ -64,7 +64,7 @@ export function parseRich(source: string): RichNode[] {
   while (i < source.length) {
     const ch = source[i]
 
-    // An escaped dollar is money, not maths.
+    // An escaped dollar is money, not math.
     if (ch === '\\' && source[i + 1] === '$') {
       text += '$'
       i += 2
@@ -159,13 +159,13 @@ function readFigure(source: string, json: string, start: number, end: number): R
 }
 
 /**
- * Where the closing `$` is. Returns -1 when the maths never closes, which is
+ * Where the closing `$` is. Returns -1 when the math never closes, which is
  * the signal to leave the dollar sign as text.
  *
  * Two dollar signs in a sentence are far more often two prices than they are an
  * equation — "a shirt costs $12 and pants cost $20" would otherwise set the
- * middle of that sentence as maths and drop the spaces out of it. So the span
- * has to look like maths and not like money: it cannot be empty, and it cannot
+ * middle of that sentence as math and drop the spaces out of it. So the span
+ * has to look like math and not like money: it cannot be empty, and it cannot
  * begin or end against a space. `$\frac{3}{4}$` passes; every card about
  * pocket money fails, which is the right way round.
  */
@@ -213,7 +213,7 @@ export function richToPlain(source: string): string {
 }
 
 /**
- * The stretches of `source` that are maths or a figure rather than prose.
+ * The stretches of `source` that are math or a figure rather than prose.
  *
  * Everything that cuts card text apart needs this. A figure is JSON, and JSON
  * is made of the exact characters the paste importer splits on; an equation is
@@ -228,7 +228,7 @@ export function richSpans(source: string): Array<[number, number]> {
 }
 
 /**
- * Split on `pattern`, ignoring any match that falls inside maths or a figure.
+ * Split on `pattern`, ignoring any match that falls inside math or a figure.
  *
  * `skip` gets the last chance to veto a separator — the grader uses it to keep
  * the slash in "3/4" while still splitting "couch / sofa".
@@ -264,7 +264,7 @@ export function splitOutsideRich(
   return parts
 }
 
-/** Card text with the maths and the figures taken out, for detecting a separator. */
+/** Card text with the math and the figures taken out, for detecting a separator. */
 export function withoutRich(source: string): string {
   if (!hasRich(source)) return source
   return parseRich(source)

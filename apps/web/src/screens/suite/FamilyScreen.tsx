@@ -8,6 +8,7 @@ import { themeById } from '../../lib/themes'
 import MyTutorCode from '../../components/suite/MyTutorCode'
 import RewardLedger from '../../components/suite/RewardLedger'
 import ScreenHeader from '../../components/suite/ScreenHeader'
+import { useRoundsNow } from '../../hooks/useRoundsNow'
 import { Button, Card, Pill } from '../../components/ui'
 import { ApiError } from '../../lib/api/client'
 import { familyOverview, type LearnerOverview } from '../../lib/assignments/api'
@@ -70,6 +71,8 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
     return () => controller.abort()
   }, [status, learners.length])
 
+  const roundsNow = useRoundsNow()
+
   if (status === 'unavailable') {
     return (
       <div className="mx-auto w-full max-w-2xl">
@@ -122,7 +125,7 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
               ? 'Set up your learner profile — that is where your progress lives.'
               : tutor
                 ? 'Your students stay on their own families\u2019 accounts. Give a family your code and they choose which of their children you can see.'
-                : 'This account is yours, the grown-up. Add the people who will actually be practising, and their progress stays with them.'}
+                : 'This account is yours, the grown-up. Add the people who will actually be practicing, and their progress stays with them.'}
           </p>
         </div>
 
@@ -172,7 +175,7 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
             <Card className="mt-4">
               <h3 className="mb-1 text-lg font-extrabold text-ink">Actually, it is me</h3>
               <p className="mb-3 text-sm font-bold text-muted">
-                Practising yourself is fine — you just need a learner too, so there is
+                Practicing yourself is fine — you just need a learner too, so there is
                 somewhere for the progress to live.
               </p>
               <Button
@@ -219,6 +222,24 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
       {error && (
         <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-600">{error}</p>
       )}
+
+      {/* The discovery half of following a round: without this it only works
+          if you already knew to look. */}
+      {roundsNow.map((round) => (
+        <button
+          key={round.learnerId}
+          type="button"
+          onClick={() => navigate({ name: 'watch', learnerId: round.learnerId })}
+          className="mb-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-hair bg-wash px-3 py-2 text-left"
+        >
+          <span className="flex items-center gap-2 text-[14px] font-extrabold text-ink">
+            <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+            {round.learnerName ?? 'Your learner'} is practicing
+            {round.title ? ` — ${round.title}` : ''}
+          </span>
+          <span className="shrink-0 text-[13px] font-extrabold text-ink underline">Follow</span>
+        </button>
+      ))}
 
       <div className="flex flex-col gap-3">
         {learners.map((learner) => (
@@ -430,13 +451,13 @@ function LearnerStatus({
 }
 
 function lastSeen(at: number | null): string {
-  if (!at) return 'has not practised yet'
+  if (!at) return 'has not practiced yet'
   const days = Math.floor((Date.now() - at) / 86_400_000)
-  if (days === 0) return 'practised today'
-  if (days === 1) return 'practised yesterday'
-  if (days < 7) return `practised ${days} days ago`
-  if (days < 14) return 'practised last week'
-  return `last practised ${new Date(at).toLocaleDateString()}`
+  if (days === 0) return 'practiced today'
+  if (days === 1) return 'practiced yesterday'
+  if (days < 7) return `practiced ${days} days ago`
+  if (days < 14) return 'practiced last week'
+  return `last practiced ${new Date(at).toLocaleDateString()}`
 }
 
 /** Leads with what needs doing, because that is what a grown-up opens this for. */

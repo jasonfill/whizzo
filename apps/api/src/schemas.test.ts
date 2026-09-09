@@ -72,7 +72,7 @@ describe('subjectSchema', () => {
   })
 
   it('rejects anything else', () => {
-    for (const s of ['maths', '', null, 1, 'SPELLING']) {
+    for (const s of ['math', '', null, 1, 'SPELLING']) {
       expect(subjectSchema.safeParse(s).success).toBe(false)
     }
   })
@@ -305,7 +305,7 @@ describe('assignments — what a grown-up may and may not set', () => {
   it('will not let a patch declare work finished', () => {
     // Finishing work is something you do, not something you say.
     expect(assignmentPatchSchema.safeParse({ status: 'done' }).success).toBe(false)
-    expect(assignmentPatchSchema.safeParse({ status: 'cancelled' }).success).toBe(true)
+    expect(assignmentPatchSchema.safeParse({ status: 'canceled' }).success).toBe(true)
     expect(assignmentPatchSchema.safeParse({ status: 'open' }).success).toBe(true)
   })
 })
@@ -314,7 +314,7 @@ describe('assignments — what a grown-up may and may not set', () => {
 // Card enrichment
 // ---------------------------------------------------------------------------
 //
-// These fields are what let one pasted list be practised many ways. They are
+// These fields are what let one pasted list be practiced many ways. They are
 // all optional on purpose: every deck saved before they existed still has to
 // validate, and a parent pasting two columns is never asked for any of them.
 

@@ -198,7 +198,7 @@ select pg_temp.check('a revoked guardian loses the progress too',
 -- learners_auth_kind_consistent forbids a null auth_user_id while auth_kind
 -- still says 'self'. Deleting any account a learner signed in with therefore
 -- failed — including from the Supabase dashboard, and from the API's own
--- "turn off this child's sign-in" route. 0004 normalises the row on the way
+-- "turn off this child's sign-in" route. 0004 normalizes the row on the way
 -- through. This is the regression guard.
 --
 -- Uses its own throwaway accounts rather than the fixtures above, because the

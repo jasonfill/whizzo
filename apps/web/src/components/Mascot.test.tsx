@@ -2,7 +2,7 @@
 //
 // Mostly drawing, which tests cannot judge — so these cover the parts that are
 // contract rather than art: that `sad` is really gone, that every theme has a
-// character, that an overridden colour is honoured, and that the thing is
+// character, that an overridden color is honored, and that the thing is
 // legible to a screen reader.
 
 import { render, screen } from '@testing-library/react'
@@ -78,13 +78,13 @@ describe('every theme has a character', () => {
   })
 })
 
-describe('colour', () => {
+describe('color', () => {
   it('uses the active theme accent by default', () => {
     const { container } = render(<Mascot />)
     expect(container.innerHTML).toContain(theme.accent)
   })
 
-  it('honours an overridden colour', () => {
+  it('honors an overridden color', () => {
     const { container } = render(<Mascot color="#38bdf8" />)
     expect(container.innerHTML).toContain('#38bdf8')
     expect(container.innerHTML).not.toContain(theme.accent)

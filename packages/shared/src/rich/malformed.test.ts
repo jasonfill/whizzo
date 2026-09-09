@@ -2,7 +2,7 @@
 //
 // These paths matter more here than they did in the web app. Card text used to
 // be typed by a person watching the editor tell them what it did not
-// recognise; now a model writes it on the server, and the server has to be the
+// recognize; now a model writes it on the server, and the server has to be the
 // thing that decides whether a figure is real. Every case below is one a
 // generated card can produce, and the rule throughout is the same: **degrade,
 // name the problem, never throw and never silently drop the question.**
@@ -105,7 +105,7 @@ describe('MathML that is wrong', () => {
 })
 
 describe('figures that are wrong', () => {
-  it('names the kind it did not recognise', () => {
+  it('names the kind it did not recognize', () => {
     const result = validateFigure({ kind: 'sasquatch' })
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.error).toMatch(/sasquatch/)
@@ -181,7 +181,7 @@ describe('card text that is wrong', () => {
   it('leaves a lone dollar sign alone, because prices are commoner than equations', () => {
     const price = 'it costs $5 to get in'
     // `hasRich` is a deliberately cheap fast path — it answers "is it worth
-    // parsing this?", not "is there maths in it". A `$` is enough to say yes.
+    // parsing this?", not "is there math in it". A `$` is enough to say yes.
     // The real decision is the parse, and it yields one text node: the price
     // survives untouched. Do not "fix" hasRich to be strict; the cost of the
     // permissive answer is one parse, and the cost of a strict one is a card
@@ -191,7 +191,7 @@ describe('card text that is wrong', () => {
     expect(richToPlain(price)).toBe(price)
   })
 
-  it('honours an escaped dollar', () => {
+  it('honors an escaped dollar', () => {
     expect(richToPlain('\\$5')).toContain('$5')
   })
 
@@ -208,7 +208,7 @@ describe('card text that is wrong', () => {
     expect(richProblems('just a word')).toEqual([])
   })
 
-  it('strips maths and figures for the plain projection', () => {
+  it('strips math and figures for the plain projection', () => {
     const text = 'Area of $\\frac{1}{2}$ [[figure {"kind":"circle","radius":"2 cm"}]]'
     expect(withoutRich(text)).not.toContain('figure')
     expect(withoutRich(text)).not.toContain('frac')
@@ -251,7 +251,7 @@ describe('pasted MathML inside card text', () => {
   })
 
   it('marks unreadable MathML as a problem rather than dropping the card', () => {
-    // `<math>` opens, so this is claimed to be maths; nothing inside parses.
+    // `<math>` opens, so this is claimed to be math; nothing inside parses.
     const problems = richProblems('<math></math>')
     expect(Array.isArray(problems)).toBe(true)
   })

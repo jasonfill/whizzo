@@ -167,7 +167,7 @@ describe('SpellingResults — what a round is worth', () => {
       durationMs: 60_000,
       abilityBefore: 3,
       abilityAfter: 3.2,
-      level: { levelIndex: 0, direction: 'hold', reason: 'Keep practising.' },
+      level: { levelIndex: 0, direction: 'hold', reason: 'Keep practicing.' },
       gradeBefore: 2,
       gradeAfter: 2,
       newAchievements: [],

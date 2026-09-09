@@ -74,7 +74,7 @@ export default function ConnectedApps() {
       </div>
       <p className="mb-3 font-bold text-muted">
         Let Claude or ChatGPT tutor a learner out loud on their own decks. The assistant asks the
-        questions and Whizzo checks the answers, so what they practise counts here exactly as if
+        questions and Whizzo checks the answers, so what they practice counts here exactly as if
         they had done it in the app.
       </p>
 

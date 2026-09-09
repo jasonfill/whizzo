@@ -55,7 +55,7 @@ rewrites policies against a `user_id` column that `0003` renames, so replaying
 the Supabase SQL editor start with an empty ledger, which would mean exactly
 that replay on first boot.
 
-So a migration may declare how to recognise that it is already present:
+So a migration may declare how to recognize that it is already present:
 
 ```sql
 -- @applied-if: select to_regclass('public.learners') is not null

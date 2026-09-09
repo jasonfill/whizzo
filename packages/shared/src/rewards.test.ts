@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   canCancel,
-  canFulfil,
+  canFulfill,
   checkCriterion,
   CRITERION_LABEL,
   ledger,
@@ -54,7 +54,7 @@ describe('what may be promised', () => {
   })
 
   it('suggests the one that cannot be farmed in an afternoon', () => {
-    // A reward for *still knowing it three weeks later* is the exact behaviour
+    // A reward for *still knowing it three weeks later* is the exact behavior
     // a parent is paying for. Every other app rewards activity.
     expect(SUGGESTED_CRITERION).toBe('checkpoint')
   })
@@ -107,22 +107,22 @@ describe('ways somebody could otherwise collect without doing the work', () => {
 
 describe('who may settle it', () => {
   it('lets the author mark their own promise paid', () => {
-    expect(canFulfil(reward({ status: 'earned', earnedAt: NOW }), PARENT)).toBe(true)
+    expect(canFulfill(reward({ status: 'earned', earnedAt: NOW }), PARENT)).toBe(true)
   })
 
   it('does not let somebody else settle it', () => {
     // A tutor cannot know whether a parent bought the ice cream. The payer
     // settles their own debt.
-    expect(canFulfil(reward({ status: 'earned', earnedAt: NOW }), TUTOR)).toBe(false)
+    expect(canFulfill(reward({ status: 'earned', earnedAt: NOW }), TUTOR)).toBe(false)
   })
 
   it('has nothing to settle before it is earned', () => {
-    expect(canFulfil(reward(), PARENT)).toBe(false)
+    expect(canFulfill(reward(), PARENT)).toBe(false)
   })
 
   it('cannot be settled twice', () => {
     const paid = reward({ status: 'fulfilled', fulfilledAt: NOW, fulfilledBy: PARENT })
-    expect(canFulfil(paid, PARENT)).toBe(false)
+    expect(canFulfill(paid, PARENT)).toBe(false)
   })
 })
 
@@ -204,7 +204,7 @@ describe('the ledger', () => {
   })
 
   it('leaves withdrawn and expired promises out of all three', () => {
-    const books = ledger([reward({ status: 'cancelled' }), reward({ status: 'expired' })])
+    const books = ledger([reward({ status: 'canceled' }), reward({ status: 'expired' })])
     expect(books.promised.concat(books.unpaid, books.paid)).toEqual([])
   })
 

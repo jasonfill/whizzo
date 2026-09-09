@@ -321,7 +321,7 @@ export async function oauthRoutes(app: FastifyInstance): Promise<void> {
   /**
    * A connection is approved by a grown-up, or by a learner old enough to
    * hold their own account. A child signed in with a code and PIN is neither:
-   * that session exists so a child can practise, not so they can hand an
+   * that session exists so a child can practice, not so they can hand an
    * assistant a token in their own name that no parent's screen would show.
    */
   async function refuseChildSession(callerId: string): Promise<void> {

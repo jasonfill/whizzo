@@ -97,7 +97,7 @@ export default function SharedWork({ onChanged }: { onChanged?: () => void | Pro
                     className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${
                       l.status === 'done'
                         ? 'bg-pine/10 text-pine'
-                        : l.status === 'cancelled'
+                        : l.status === 'canceled'
                           ? 'bg-wash text-stone line-through'
                           : 'bg-wash text-ink'
                     }`}

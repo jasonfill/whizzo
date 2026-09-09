@@ -290,7 +290,7 @@ export default function DeckEditor({
  * The one-paragraph version of the format, tucked away until asked for.
  *
  * Most decks never need it, so it does not get to take up room by default —
- * but somebody writing a geometry deck needs to know that `$` starts maths
+ * but somebody writing a geometry deck needs to know that `$` starts math
  * without going and finding documentation, so it is one click away rather than
  * one search away.
  */
@@ -303,18 +303,18 @@ function MathHelp() {
         onClick={() => setOpen((o) => !o)}
         className="text-sm font-bold text-muted underline"
       >
-        {open ? 'Hide' : 'Writing maths and diagrams?'}
+        {open ? 'Hide' : 'Writing math and diagrams?'}
       </button>
       {open && (
         <Card className="mt-2">
           <ul className="space-y-2 text-sm font-bold text-body">
             <li>
-              Put maths between dollar signs: <Code>$\frac{'{3}'}{'{4}'}$</Code> draws three
+              Put math between dollar signs: <Code>$\frac{'{3}'}{'{4}'}$</Code> draws three
               quarters, <Code>$x^2$</Code> draws x squared, <Code>$45^\circ$</Code> draws 45
               degrees.
             </li>
             <li>
-              Two dollar signs — <Code>$$…$$</Code> — put the maths on its own line, bigger.
+              Two dollar signs — <Code>$$…$$</Code> — put the math on its own line, bigger.
             </li>
             <li>
               Equations copied out of Word or Google Docs can be pasted straight in; MathML is
@@ -325,7 +325,7 @@ function MathHelp() {
               preview under the box updates as you type.
             </li>
             <li>
-              Typed answers are checked against what the maths <em>says</em>, so an answer written
+              Typed answers are checked against what the math <em>says</em>, so an answer written
               as <Code>$\frac{'{3}'}{'{4}'}$</Code> is matched by typing <Code>3/4</Code>.
             </li>
           </ul>

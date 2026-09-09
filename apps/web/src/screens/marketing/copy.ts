@@ -49,7 +49,7 @@ export const SUBJECTS: Subject[] = [
     title: 'Study decks',
     body: 'Everything else — vocabulary, state capitals, formulas, French verbs, cell biology. Paste a list and study it five ways.',
     points: [
-      'Maths, fractions and figures on a card',
+      'Math, fractions and figures on a card',
       'Free recall of a whole set, machine-checked',
       'The same spaced review as spelling',
     ],
@@ -80,7 +80,7 @@ export const PROMISE: PromiseBeat[] = [
   {
     word: 'Learn it',
     title: 'Every item climbs its own ladder',
-    body: 'Nothing is drilled forty words at a time. A set is placed first, so what a child already knows starts near the top, and the rest is introduced a handful at a time. Each item is met where it is: recognise it, recall it with a scaffold, then produce it from nothing.',
+    body: 'Nothing is drilled forty words at a time. A set is placed first, so what a child already knows starts near the top, and the rest is introduced a handful at a time. Each item is met where it is: recognize it, recall it with a scaffold, then produce it from nothing.',
     points: [
       'A grown-up sets a goal — master this set by Friday — and the app picks each round',
       'New items arrive in batches of six, worked up together before the next batch opens',
@@ -152,7 +152,7 @@ export const EVIDENCE: Array<{ title: string; body: string }> = [
     body: 'A round arrives as answers plus the app’s summary of them. The server recomputes the counts from the answers and stores its own, so a score can never disagree with the work behind it.',
   },
   {
-    title: 'Self-grading is labelled as such',
+    title: 'Self-grading is labeled as such',
     body: 'Flashcards are self-graded by construction, so those answers are recorded as unchecked whatever the round claims. A history screen that says "0 of 14 checked" is telling you something true.',
   },
   {

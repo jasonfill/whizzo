@@ -24,7 +24,7 @@ Two principles carry the whole design:
 2. **Two kinds of done, never confused.** A study session that runs a real
    round in the app is closed by that round, with the session as evidence —
    the same rule as assignments. A session the learner did with a textbook is
-   ticked by hand and shown as a claim. Both are fine. Both are labelled.
+   ticked by hand and shown as a claim. Both are fine. Both are labeled.
    Nothing here is ever payable through a reward unless it was checked.
 3. **Everything is a card, and one gesture moves it.** Adding a task is one
    line of typing. Moving it is one drag. Finishing it is one swipe or tap.
@@ -40,7 +40,7 @@ Two principles carry the whole design:
 
 ---
 
-## 1. Courses — a learner's enrolments
+## 1. Courses — a learner's enrollments
 
 Everything else hangs off this, so it comes first.
 
@@ -55,7 +55,7 @@ scope:
 
 | | **Track** | **Course** |
 | --- | --- | --- |
-| What it is | an ability pool — *Biology* as a body of knowledge | an enrolment — *Ms Reyes' Biology, this year* |
+| What it is | an ability pool — *Biology* as a body of knowledge | an enrollment — *Ms Reyes' Biology, this year* |
 | Who defines it | us, closed list | the learner or a grown-up, freely |
 | Scope | global, permanent | one learner, one term |
 | Computes anything | yes — ability, mastery, retention | no |
@@ -77,7 +77,7 @@ export interface Course {
   track: TrackId             // 'science.biology' — suggested from the name
   teacherName: string | null // 'Ms Reyes'
   period: string | null      // '3rd', 'Block B'
-  color: string              // one of a fixed palette; the chip colour everywhere
+  color: string              // one of a fixed palette; the chip color everywhere
   emoji: string | null
   /** 'Fall 2026', 'Year 7'. Free text; sorting is by startsOn. */
   termLabel: string | null
@@ -92,7 +92,7 @@ export interface Course {
 ### Where courses appear
 
 - **The course picker**, wherever a task, test or deck is filed: a row of
-  coloured chips, the learner's active courses, plus *Other*. No typing.
+  colored chips, the learner's active courses, plus *Other*. No typing.
 - **Decks and word lists owned by the learner** gain an optional `courseId`.
   Library content owned by a grown-up does *not* — a library deck is reused
   across many learners in many classes, and a course belongs to one learner.
@@ -254,7 +254,7 @@ reason to want it.
 The proposal is a pure function in `packages/shared`, `proposeStudyPlan()`,
 taking the assessment, the learner's planning preferences, the days already
 busy or heavy, and today. It ships with `simulate:planner`, per the house rule
-that new shared behaviour comes with a simulation.
+that new shared behavior comes with a simulation.
 
 **Session count**, by kind and difficulty:
 
@@ -307,12 +307,12 @@ purposes follow the ladder:
 
 | Position | Purpose | What the session says | If content is linked |
 | --- | --- | --- | --- |
-| first | **Get organised** | *Gather your notes. Make or open the deck. Skim once.* | opens the deck; a placement round |
-| middle | **Practise** | *Work through the set. Missed ones come back.* | a Mastery Path round — Continue |
+| first | **Get organized** | *Gather your notes. Make or open the deck. Skim once.* | opens the deck; a placement round |
+| middle | **Practice** | *Work through the set. Missed ones come back.* | a Mastery Path round — Continue |
 | second to last | **Prove it** | *Test yourself without looking. Find what's still shaky.* | the readiness gate offers the Mastery Check |
 | last, the day before | **Quick review, then stop** | *Only the ones you missed. Ten minutes. Then sleep.* | a round restricted to misses — the missed-cards option |
 
-For two sessions it is *practise, review*; for three, *organise, practise,
+For two sessions it is *practice, review*; for three, *organize, practice,
 review*; for four or more the middle repeats. A learner who follows the labels
 has, without being told, done distributed practice, retrieval practice, a
 self-test, and a targeted final review — the four things the research says
@@ -375,19 +375,19 @@ counts all render as the same card, so the learner learns one object:
 
 ```
 ┌▌─────────────────────────────┐
-│▌ Bio worksheet p.42     25m  │   ▌ course colour bar
+│▌ Bio worksheet p.42     25m  │   ▌ course color bar
 │▌ ○                      Mum  │   ○ box (claim) · ✓ verified mark · avatar = who added it
 └──────────────────────────────┘
 ```
 
-- **Colour bar** from the course. No course, no bar.
+- **Color bar** from the course. No course, no bar.
 - **Title**, one line, truncated. The card is not the place to read a note.
 - **Minutes chip**, editable in place by tapping it.
 - **State mark**: an empty box for a claim, the existing verified mark for
   app work, a faint outline for a proposed study session not yet accepted.
 - **Who** — a small avatar when someone other than the learner added it.
 - **Start** appears on any card the app can run, and nowhere else.
-- Study session cards carry their purpose as a single word — *Practise* —
+- Study session cards carry their purpose as a single word — *Practice* —
   and the assessment they belong to as a faint suffix.
 
 Done cards collapse to a struck-through row at the bottom of their day. They
@@ -433,7 +433,7 @@ implied.
   instead*. This is the one exception to "one tap finishes anything", and it
   is the exception the whole product rests on.
 - **A study session can also be skipped**, which is distinct from done: the
-  card greys out with *skipped*, keeps its day, and counts against
+  card grays out with *skipped*, keeps its day, and counts against
   *2 of 5 sessions* honestly. Skip is in the card sheet, not on a swipe, so it
   is a decision rather than a flick.
 - **Events** — tests, due dates, milestones — are never checked. They happen.
@@ -774,7 +774,7 @@ One additive migration — **0019** per the registry in
 `attempts` is untouched.
 
 ```sql
--- Enrolments. The learner's, freely defined, citing a closed track.
+-- Enrollments. The learner's, freely defined, citing a closed track.
 create table public.courses (
   id            uuid primary key default gen_random_uuid(),
   learner_id    uuid not null references public.learners (id) on delete cascade,
@@ -843,7 +843,7 @@ create table public.planner_items (
   assessment_id  uuid references public.assessments (id) on delete cascade,
   minutes        int,
   -- Study sessions: their purpose on the ladder, and whether the app proposed them.
-  purpose        text check (purpose in ('organise','practise','prove','review')),
+  purpose        text check (purpose in ('organize','practice','prove','review')),
   proposed       boolean not null default false,
   -- What the app can run for this item. Null means "not app work".
   target_subject text,
@@ -1094,7 +1094,7 @@ with the learner's name in the header, comments enabled, and the course
 editor reachable. Nothing planner-shaped goes on Account — the planner is not
 the grown-up's own thing.
 
-Course chips use the course colour everywhere a course appears: the planner,
+Course chips use the course color everywhere a course appears: the planner,
 the deck list, the task list, the progress report.
 
 ---
@@ -1190,7 +1190,7 @@ groups when groups exist; Google Classroom.
 2. **Comments behind coverage, or free?** Argued both ways in §12. **As built:
    free.** The Sunday conversation is the thing a parent would pay for, so it
    is the thing they see first; revisit with a renewal cohort.
-3. **Course-scoped tutor access.** A maths tutor seeing the whole planner is
+3. **Course-scoped tutor access.** A math tutor seeing the whole planner is
    the current model and probably fine at family scale. Revisit with groups.
 4. **Difficulty from evidence.** When content is linked, the app could rate
    difficulty from the learner's mastery on the set rather than asking. Ask

@@ -44,12 +44,12 @@ import {
  * Two rules run through all of it. Every value a question could ask about is
  * written on the drawing, because a learner reading a bar chart is being asked
  * to read a number and guessing it off a gridline is a different, worse task.
- * And the colours are fixed rather than themed: the app lets a learner repaint
+ * And the colors are fixed rather than themed: the app lets a learner repaint
  * everything, but a figure means the same thing in every theme, so it does not
  * follow the accent.
  */
 
-// Validated for lightness, chroma, contrast and colour-vision separation
+// Validated for lightness, chroma, contrast and color-vision separation
 // against the app's paper surface. Assigned in order, never cycled by rank.
 const SERIES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#4a3aa7']
 
@@ -219,7 +219,7 @@ function LineChart({ spec }: { spec: LineFigure }) {
   const all = spec.series.flatMap((s) => s.points)
   const xs = all.map((p) => p[0])
   const ys = all.map((p) => p[1])
-  // Whole-number x values get whole-number ticks. An axis of hours labelled
+  // Whole-number x values get whole-number ticks. An axis of hours labeled
   // 0, 0.5, 1, 1.5 is a finer scale than the data has, and reads as though
   // half-hours were measured.
   const xLow = spec.xRange?.[0] ?? Math.min(...xs)
@@ -260,14 +260,14 @@ function LineChart({ spec }: { spec: LineFigure }) {
         strokeWidth={1.5}
       />
       {spec.series.map((s, i) => {
-        const colour = SERIES[i % SERIES.length]
+        const color = SERIES[i % SERIES.length]
         const ordered = [...s.points].sort((a, b) => a[0] - b[0])
         return (
           <g key={s.name ?? i}>
             <polyline
               points={ordered.map(([x, y]) => `${px(x)},${py(y)}`).join(' ')}
               fill="none"
-              stroke={colour}
+              stroke={color}
               strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -278,7 +278,7 @@ function LineChart({ spec }: { spec: LineFigure }) {
                 cx={px(x)}
                 cy={py(y)}
                 r={3}
-                fill={colour}
+                fill={color}
                 stroke={SURFACE}
                 strokeWidth={1.5}
               />
@@ -338,7 +338,7 @@ function PieChart({ spec }: { spec: PieFigure }) {
     const from = angle
     const to = angle - sweep
     angle = to
-    return { ...d, from, to, colour: SERIES[i % SERIES.length], percent: (d.value / total) * 100 }
+    return { ...d, from, to, color: SERIES[i % SERIES.length], percent: (d.value / total) * 100 }
   })
 
   return (
@@ -347,14 +347,14 @@ function PieChart({ spec }: { spec: PieFigure }) {
         <path
           key={i}
           d={sectorPath(cx, cy, r, s.from, s.to)}
-          fill={s.colour}
+          fill={s.color}
           stroke={SURFACE}
           strokeWidth={2}
         />
       ))}
       {slices.map((s, i) => (
         <g key={`k${i}`}>
-          <rect x={184} y={cy - (slices.length * 18) / 2 + i * 18} width={11} height={11} rx={2} fill={s.colour} />
+          <rect x={184} y={cy - (slices.length * 18) / 2 + i * 18} width={11} height={11} rx={2} fill={s.color} />
           <Text
             x={200}
             y={cy - (slices.length * 18) / 2 + i * 18 + 10}
@@ -749,7 +749,7 @@ function Circle({ spec }: { spec: CircleFigure }) {
       {spec.radius && (
         <g>
           {/*
-            Drawn down and to the right, and labelled on the line itself. A
+            Drawn down and to the right, and labeled on the line itself. A
             shaded sector starts at twelve o'clock and eats the top-right of
             the circle, which is where a radius label would otherwise land on
             top of the sector's own label.

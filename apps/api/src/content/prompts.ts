@@ -15,13 +15,13 @@
  */
 export const CARD_GRAMMAR = `Card text is plain text, with four exceptions:
 
-  $x^2 + 1$                     maths, on the line, written TeX-style
-  $$\\frac{a}{b}$$               the same maths, on its own line
+  $x^2 + 1$                     math, on the line, written TeX-style
+  $$\\frac{a}{b}$$               the same math, on its own line
   <math>…</math>                MathML pasted from a word processor
   [[figure {"kind":"bar", …}]]  a drawing: chart, shape, number line, grid
   \\$                            a literal dollar sign
 
-Supported maths: \\frac \\sqrt ^ _ ^\\circ \\overline \\overrightarrow \\vec
+Supported math: \\frac \\sqrt ^ _ ^\\circ \\overline \\overrightarrow \\vec
 \\text \\times \\div \\cdot \\pm \\le \\ge \\ne \\approx \\cong \\sim \\angle
 \\triangle \\parallel \\perp, Greek letters, and \\sin \\cos \\tan \\log \\ln.
 A command outside that list renders as literal text — do not use one.
@@ -48,14 +48,14 @@ they already have into practice material for one child.
 Your job in this step is only to read and describe. Do not write any cards yet.
 
 Report what the document is, who it appears to be for, and what is genuinely
-learnable in it — broken into topics a child could practise one at a time. A
+learnable in it — broken into topics a child could practice one at a time. A
 topic is something with enough substance for a short round of practice, not
 every heading on the page.
 
 Be honest about what is there. A worksheet with six spelling words has one
 topic, not six. If the document is mostly instructions, a permission slip, or a
 timetable, say so in the note and return no topics rather than inventing them —
-a parent would far rather hear "there is nothing to practise here" than be
+a parent would far rather hear "there is nothing to practice here" than be
 handed twenty cards about the school's address.
 
 Cite the pages each topic came from.`
@@ -75,7 +75,7 @@ stricter than it sounds:
     pages is this chapter?" is not a card.
   * Never write a card whose answer is not in the source material.
 
-Write the maths and the figures in the grammar below. A figure earns its place
+Write the math and the figures in the grammar below. A figure earns its place
 when the figure *is* the question — a chart to read, a shape to measure — and
 not as decoration.
 

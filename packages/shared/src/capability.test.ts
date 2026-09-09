@@ -1,4 +1,4 @@
-// What a set can be practised with — and, more importantly, what it cannot.
+// What a set can be practiced with — and, more importantly, what it cannot.
 //
 // The lock-out tests are the ones that matter. Every `locked` assertion below
 // is a broken question that would otherwise reach a child: an equation with
@@ -65,7 +65,7 @@ describe('the catalog', () => {
   })
 
   it('offers a choice of how at the scaffolded rung', () => {
-    // The whole point of choice-within-a-rung: more than one way to practise
+    // The whole point of choice-within-a-rung: more than one way to practice
     // at the level the planner picked.
     expect(activitiesAtLevel('quiz', 2).length).toBeGreaterThan(1)
   })
@@ -87,20 +87,20 @@ describe('answers that cannot be taken apart', () => {
   })
 
   it('locks the letter-by-letter activities on a deck of equations', () => {
-    const maths = deck(
+    const math = deck(
       Array.from({ length: 6 }, (_, i) => card({ definition: `$\\frac{${i + 1}}{2}$` })),
     )
-    const available = availableActivities(maths)
+    const available = availableActivities(math)
     expect(statusOf(available, 'first-letter')?.status).toBe('locked')
     // ...and says why, in words a person could read.
     expect(statusOf(available, 'first-letter')?.reason).toMatch(/equation|figure/i)
   })
 
   it('leaves writing it out available on that same deck', () => {
-    const maths = deck(
+    const math = deck(
       Array.from({ length: 6 }, (_, i) => card({ definition: `$\\frac{${i + 1}}{2}$` })),
     )
-    expect(statusOf(availableActivities(maths), 'learn')?.status).toBe('ready')
+    expect(statusOf(availableActivities(math), 'learn')?.status).toBe('ready')
   })
 
   it('is partial when only some answers are equations', () => {
@@ -181,11 +181,11 @@ describe('degrading rather than refusing', () => {
   it('walks past a fallback that also cannot run', () => {
     // Equations: cloze has no examples *and* first-letter is locked out, so the
     // chain has to keep going rather than offering something equally broken.
-    const maths = deck(Array.from({ length: 6 }, () => card({ definition: '$x^2$' })))
-    const fallback = statusOf(availableActivities(maths), 'cloze')?.fallback
+    const math = deck(Array.from({ length: 6 }, () => card({ definition: '$x^2$' })))
+    const fallback = statusOf(availableActivities(math), 'cloze')?.fallback
     expect(fallback).not.toBe('first-letter')
     if (fallback) {
-      expect(statusOf(availableActivities(maths), fallback)?.status).not.toBe('locked')
+      expect(statusOf(availableActivities(math), fallback)?.status).not.toBe('locked')
     }
   })
 

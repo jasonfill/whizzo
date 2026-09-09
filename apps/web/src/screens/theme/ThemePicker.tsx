@@ -77,7 +77,7 @@ function ThemeCard({
         style={{ background: theme.tintB }}
       >
         {/* Its own theme's mascot, not the active one, so the picker is ten
-            characters rather than one repeated in ten colours. */}
+            characters rather than one repeated in ten colors. */}
         <Mascot mood="idle" themeId={theme.id} color={theme.accent} size={86} />
       </div>
       <div className="font-display text-lg font-extrabold tracking-[-0.02em] text-ink">

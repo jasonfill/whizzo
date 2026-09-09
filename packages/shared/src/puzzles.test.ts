@@ -43,7 +43,7 @@ describe('the letter hint', () => {
     expect(buildLetterHint('   ')).toEqual({ masked: '', hidden: 0 })
   })
 
-  it('hints at what the maths says, not at how it was written', () => {
+  it('hints at what the math says, not at how it was written', () => {
     // The learner types `3/4`, not a backslash, so that is what gets masked.
     const hint = buildLetterHint('$\\frac{3}{4}$')
     expect(hint.masked).not.toContain('frac')
@@ -98,7 +98,7 @@ describe('the word bank', () => {
     expect(positions.size).toBeGreaterThan(1)
   })
 
-  it('reads maths as what a learner would type', () => {
+  it('reads math as what a learner would type', () => {
     const bank = buildWordBank('$\\frac{1}{2}$', ['$\\frac{1}{4}$'], 5, seeded())
     expect(bank.join(' ')).not.toContain('frac')
   })

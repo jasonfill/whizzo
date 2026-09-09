@@ -2,7 +2,7 @@
 //
 // Nobody writes MathML by hand — it takes forty characters to say "one half" —
 // so the thing an author types is `$\frac{1}{2}$`, which is the notation every
-// maths teacher already half-knows and every AI already writes. This covers the
+// math teacher already half-knows and every AI already writes. This covers the
 // subset that shows up in school work through geometry and early algebra:
 // fractions, roots, powers, the Greek letters, the relation symbols, and the
 // overline/arrow accents that segment and ray names need. Anything past that
@@ -401,7 +401,7 @@ class TexParser {
 /**
  * Compile TeX-lite to a `<math>` node.
  *
- * `display` is the block form — bigger, centred, with full-size fraction bars —
+ * `display` is the block form — bigger, centerd, with full-size fraction bars —
  * used for `$$…$$`. Inline math stays on the text's line and at its size.
  */
 export function texToMath(source: string, display = false): TexResult {

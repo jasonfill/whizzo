@@ -43,7 +43,7 @@ export default {
         // whole of "the paint" — a play surface should never need more.
         //
         // No var() fallback on purpose: a comma inside one stops Tailwind's
-        // colour parser dead and the utility is silently never generated. The
+        // color parser dead and the utility is silently never generated. The
         // Cats defaults live in index.css `:root` instead, which covers the
         // moment before the provider mounts just as well.
         accent: 'rgb(var(--wz-accent) / <alpha-value>)',

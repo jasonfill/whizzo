@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ScreenHeader from '../../components/suite/ScreenHeader'
+import HereNow from '../../components/live/HereNow'
 import { Button, Card } from '../../components/ui'
 import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { useQuizSession, type QuizItemResult, type QuizSummary } from '../../hooks/useQuizSession'
@@ -163,7 +164,16 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
         subtitle={def.name}
         onBack={() => navigate(deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' })}
         backLabel="← Quit"
+        right={<HereNow names={session.watcherNames} doing="following along" />}
       />
+      {/* Specific rather than vague, because it is a promise about what leaves
+          this screen: the card and, on typed answers, what is in the box. Not
+          a keystroke feed, and nothing at all once the round ends. */}
+      {session.watched && (
+        <p className="mb-2 text-center text-[12px] font-bold text-muted">
+          They can see the card you are on and what you type.
+        </p>
+      )}
 
       {mode === 'flashcards' && <Flashcards session={session} onFinish={complete} />}
       {/* Free recall does not walk a queue: the learner writes what they can

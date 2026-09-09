@@ -327,7 +327,7 @@ describe('adding and removing children later', () => {
     // Stripe is perfectly happy to keep a subscription alive with no line
     // items, and the family would keep paying for nothing.
     const { res, cancel, update } = await change({ remove: [KID_A] }, 0)
-    expect(res.json()).toMatchObject({ covered: 0, cancelled: true })
+    expect(res.json()).toMatchObject({ covered: 0, canceled: true })
     expect(cancel).toHaveBeenCalledWith('sub_1')
     expect(update).not.toHaveBeenCalled()
   })

@@ -24,7 +24,7 @@ export type {
 
 export async function listAssignments(
   learnerId: string,
-  status: 'open' | 'done' | 'cancelled' | 'all' = 'all',
+  status: 'open' | 'done' | 'canceled' | 'all' = 'all',
   signal?: AbortSignal,
 ) {
   const { assignments } = await api.get<AssignmentsResponse>(
@@ -73,7 +73,7 @@ export async function deleteAssignmentSet(setId: string): Promise<void> {
 export async function updateAssignment(
   learnerId: string,
   assignmentId: string,
-  patch: { sortOrder?: number; status?: 'open' | 'cancelled' },
+  patch: { sortOrder?: number; status?: 'open' | 'canceled' },
 ): Promise<Assignment> {
   const { assignment } = await api.patch<{ assignment: Assignment }>(
     `/learners/${learnerId}/assignments/${assignmentId}`,

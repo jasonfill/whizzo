@@ -142,7 +142,7 @@ export async function billingRoutes(
         ? { customer: existing.provider_customer_id }
         : { customer_email: caller.email ?? undefined }),
       success_url: `${env.APP_URL}/account?checkout=done`,
-      cancel_url: `${env.APP_URL}/upgrade?checkout=cancelled`,
+      cancel_url: `${env.APP_URL}/upgrade?checkout=canceled`,
       // A card that needs 3-D Secure should get it rather than failing.
       payment_method_collection: 'always',
       subscription_data: {
@@ -220,11 +220,11 @@ export async function billingRoutes(
       await stripe.subscriptions.cancel(subscription.provider_sub_id!)
       await withAdmin((db) =>
         db.query(
-          `update public.subscriptions set status = 'cancelled', updated_at = now() where id = $1`,
+          `update public.subscriptions set status = 'canceled', updated_at = now() where id = $1`,
           [subscription.id],
         ),
       )
-      return { covered: 0, cancelled: true }
+      return { covered: 0, canceled: true }
     }
 
     const current = await stripe.subscriptions.retrieve(subscription.provider_sub_id!)
@@ -235,11 +235,11 @@ export async function billingRoutes(
       proration_behavior: 'create_prorations',
     })
 
-    return { covered, cancelled: false }
+    return { covered, canceled: false }
   })
 
   // -------------------------------------------------------------------------
-  // Managing the card, and cancelling
+  // Managing the card, and canceling
   // -------------------------------------------------------------------------
   // Stripe's own portal rather than screens of ours. Card details are the one
   // thing this product should never see, and a cancel flow we wrote is a cancel
@@ -320,7 +320,7 @@ interface SubscriptionRow {
 /**
  * The subscription this payer is running, if any.
  *
- * Cancelled ones are excluded from "active" but their customer id is still
+ * Canceled ones are excluded from "active" but their customer id is still
  * wanted, so a family who comes back is the same Stripe customer rather than a
  * second one with a second card on file.
  */
@@ -329,7 +329,7 @@ async function activeSubscription(db: Queryable, payerId: string): Promise<Subsc
     `select id, provider_sub_id, provider_customer_id, status
        from public.subscriptions
       where payer_id = $1
-      order by (status <> 'cancelled') desc, updated_at desc
+      order by (status <> 'canceled') desc, updated_at desc
       limit 1`,
     [payerId],
   )

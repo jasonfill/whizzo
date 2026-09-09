@@ -103,7 +103,7 @@ on conflict (id) do nothing;
 -- One lookup, either kind
 -- ---------------------------------------------------------------------------
 select pg_temp.become(:tutor);
-select public.mint_connection_code('Tuesday maths') as conn \gset
+select public.mint_connection_code('Tuesday math') as conn \gset
 
 select pg_temp.become(:mum);
 select public.mint_link_invite(:pupil::uuid, 'parent', 'guardian', interval '24 hours') as inv \gset
@@ -117,7 +117,7 @@ select pg_temp.check('and that it is usable',
 select pg_temp.check('and whose it is',
   (select owner_name from public.describe_any_code(:'conn')), 'Mrs Patel');
 select pg_temp.check('and what it is for',
-  (select label from public.describe_any_code(:'conn')), 'Tuesday maths');
+  (select label from public.describe_any_code(:'conn')), 'Tuesday math');
 
 -- The other grown-up holding an invite. This is the case that used to fail:
 -- the same eight characters, resolved by the same call.

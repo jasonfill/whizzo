@@ -5,16 +5,16 @@
 //
 //   1. Ability estimation. Learner ability and item difficulty share one scale.
 //      After every graded attempt we compare what happened to what the model
-//      expected and nudge the estimate — the same maths as an Elo rating, which
+//      expected and nudge the estimate — the same math as an Elo rating, which
 //      is the discrete-response cousin of the item response theory that
-//      standardised reading and spelling assessments are built on.
+//      standardized reading and spelling assessments are built on.
 //
 //   2. Spaced repetition. A word answered correctly comes back later and later;
 //      a word missed comes back tomorrow. Intervals are per-word, so the
 //      schedule is a direct function of that learner's own history.
 //
 // Nothing here reads the clock beyond "today", and nothing is random unless a
-// caller passes a seeded picker, so the behaviour is testable.
+// caller passes a seeded picker, so the behavior is testable.
 //
 // Moved here from apps/web/src/lib/adaptive.ts, unchanged, because a round run
 // server-side (docs/mcp-tutor-spec.md) has to fold its attempts into mastery
@@ -88,7 +88,7 @@ const INTERVALS = [1, 2, 4, 8, 16, 32, 60]
  * A missed word is due again immediately rather than tomorrow, so it comes back
  * in the learner's next round of the same sitting. Waiting a day to revisit a
  * word somebody got wrong five minutes ago wastes the one moment they are most
- * primed to fix it, and a child practising three rounds after school would
+ * primed to fix it, and a child practicing three rounds after school would
  * otherwise never see their own mistakes again that day.
  */
 const RELEARN_INTERVAL_DAYS = 0
@@ -354,7 +354,7 @@ export function evaluateLevel(input: PromotionInput): LevelDecision {
     }
   }
 
-  return { levelIndex: level, direction: 'hold', reason: 'Keep practising this level.' }
+  return { levelIndex: level, direction: 'hold', reason: 'Keep practicing this level.' }
 }
 
 /**

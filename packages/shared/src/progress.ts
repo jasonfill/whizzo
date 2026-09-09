@@ -55,7 +55,7 @@ export interface ItemMastery {
   lastSeenAt: number
 }
 
-/** One graded or practised item. The append-only record everything derives from. */
+/** One graded or practiced item. The append-only record everything derives from. */
 export interface Attempt {
   subject: Subject
   itemKey: string
@@ -84,7 +84,7 @@ export interface Attempt {
   /**
    * Which pool this work counted toward.
    *
-   * Denormalised on purpose. It could be recovered by joining through `decks`,
+   * Denormalized on purpose. It could be recovered by joining through `decks`,
    * and that would be wrong twice: a deleted deck takes its track with it, and
    * — more importantly — it breaks the property the whole schema rests on,
    * that `attempts` alone can rebuild every other table.
@@ -210,7 +210,7 @@ export interface QuizCard {
   //
   // Every field below is optional, and every one of them unlocks an activity
   // that cannot run without it. They are the whole mechanism behind "load
-  // content once, practise it many ways": the capability matrix reads what is
+  // content once, practice it many ways": the capability matrix reads what is
   // present and offers what the content can actually support, and an activity
   // whose field is missing degrades to the nearest one that works rather than
   // disappearing. See docs/learning-activities-spec.md, *The item model*.
@@ -284,7 +284,7 @@ export interface QuizDeck {
   /**
    * What this set teaches, as stable objective ids. Written now and read by
    * nothing: it is the join key that lets two people's independently made
-   * content be recognised as alternatives for the same goal, and backfilling
+   * content be recognized as alternatives for the same goal, and backfilling
    * it later would mean revisiting every set anyone ever made.
    */
   objectives?: string[]
@@ -547,7 +547,7 @@ export function deriveSessionCounts(attempts: Attempt[]): DerivedSessionCounts |
 // `sessionId` on a finished task is the evidence, and the history screen can
 // open it.
 
-export type AssignmentStatus = 'open' | 'done' | 'cancelled'
+export type AssignmentStatus = 'open' | 'done' | 'canceled'
 
 /**
  * One learner's copy of a piece of work.
@@ -555,7 +555,7 @@ export type AssignmentStatus = 'open' | 'done' | 'cancelled'
  * Flattened for the client: the definition lives on the set and the state on
  * the row, but nothing above the API cares — what a task list wants is one
  * object per line it draws. `setId` is what makes two children's copies of the
- * same work recognisable as the same work.
+ * same work recognizable as the same work.
  */
 export interface Assignment {
   id: string
@@ -654,7 +654,7 @@ export interface LearnerOverview {
   overdueAssignments: number
   /** Tasks finished in the last week. */
   doneThisWeek: number
-  /** The most recent round of any kind, for "last seen practising". */
+  /** The most recent round of any kind, for "last seen practicing". */
   lastActiveAt: number | null
   /** Practice in the last seven days. */
   minutesThisWeek: number

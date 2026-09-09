@@ -35,9 +35,9 @@ import { cardKey, type Attempt, type ItemMastery, type QuizCard, type QuizDeck }
 import { buildLetterHint } from './puzzles.js'
 import { richToPlain } from './rich/index.js'
 
-export type TutorMode = 'practise' | 'study' | 'test' | 'review'
+export type TutorMode = 'practice' | 'study' | 'test' | 'review'
 
-export const TUTOR_MODES: readonly TutorMode[] = ['practise', 'study', 'test', 'review']
+export const TUTOR_MODES: readonly TutorMode[] = ['practice', 'study', 'test', 'review']
 
 /** How a question is put, by rung. Rung 0 is study and asks nothing. */
 export type TutorKind = 'multiple-choice' | 'letter-hint' | 'written'
@@ -132,7 +132,7 @@ function speakableCards(deck: QuizDeck): QuizCard[] {
 /**
  * Build one round.
  *
- * Practise is the Mastery Path's own plan — the batch being worked, the review
+ * Practice is the Mastery Path's own plan — the batch being worked, the review
  * that is due, a little maintenance — asked at the rung each card is on. Test
  * is every card at free recall. Review is what is due across every deck. Study
  * is the next batch of unmet cards, with answers. Cards that cannot be said
@@ -157,7 +157,7 @@ export function planTutorRound(input: TutorPlanInput): PlannedTutorCard[] {
   })
 
   switch (input.mode) {
-    case 'practise': {
+    case 'practice': {
       const deck = decks[0]
       for (const item of planPath(pathInput(deck), size)) {
         add(deck, item.card, item.role, askableRung(item.level))
@@ -565,7 +565,7 @@ export interface SpokenGrade {
 /**
  * Grade what the learner said.
  *
- * The typed grader runs first on the raw transcript, then on the normalised
+ * The typed grader runs first on the raw transcript, then on the normalized
  * one, and then both sides are compared as numbers when both are numbers —
  * so "three quarters" matches `$\frac{3}{4}$`, "seventy five percent" matches
  * "0.75", and "mitochondria" is still one typo away from "mitochondrion".

@@ -73,7 +73,7 @@ export default function HowItWorksScreen({ navigate }: { navigate: Navigate }) {
           <p className="mt-3 text-[15px] leading-relaxed text-body">
             After each graded attempt the estimate shifts by the gap between what happened and what
             the model expected — the same update an Elo rating uses, and the discrete-response
-            cousin of the item response theory behind standardised reading assessments. The learning
+            cousin of the item response theory behind standardized reading assessments. The learning
             rate starts high, so placement converges in a handful of words, then decays, so one bad
             round cannot undo a month.
           </p>
@@ -198,7 +198,7 @@ export default function HowItWorksScreen({ navigate }: { navigate: Navigate }) {
       <Section
         eyebrow="Six"
         title="Stars are graded on a curve"
-        lede="A learner practising at their frontier is meant to miss things."
+        lede="A learner practicing at their frontier is meant to miss things."
       >
         <Card>
           <p className="text-[15px] leading-relaxed text-body">
@@ -280,7 +280,7 @@ export default function HowItWorksScreen({ navigate }: { navigate: Navigate }) {
             starter decks ship in the app. So a determined child with developer tools can still post
             a wrong answer marked correct. What they cannot do is grade themselves into mastery,
             edit the record afterwards, or make a summary disagree with the answers behind it: the
-            counts are recomputed from the answers on arrival, self-graded work is labelled as such,
+            counts are recomputed from the answers on arrival, self-graded work is labeled as such,
             and the history is append-only.
           </p>
           <p className="mt-3 text-[15px] leading-relaxed text-body">

@@ -140,7 +140,7 @@ export async function rewardRoutes(app: FastifyInstance): Promise<void> {
    * cannot check. It is recorded exactly like a learner's self-grade: with a
    * time and a name on it, so the record says who claimed what.
    */
-  app.post('/rewards/:id/fulfil', async (request) => {
+  app.post('/rewards/:id/fulfill', async (request) => {
     const caller = callerOf(request)
     const { id } = z.object({ id: uuid }).parse(request.params)
     const { note } = z
@@ -185,7 +185,7 @@ export async function rewardRoutes(app: FastifyInstance): Promise<void> {
 
     return withUser(caller.id, async (db) => {
       const { rows } = await db.query(
-        `update public.rewards set status = 'cancelled', updated_at = now()
+        `update public.rewards set status = 'canceled', updated_at = now()
           where id = $1 and status = 'offered' returning *`,
         [id],
       )

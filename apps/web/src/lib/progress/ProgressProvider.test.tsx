@@ -180,7 +180,7 @@ describe('signed in', () => {
   })
 
   it('falls back to local storage when the cloud will not load', async () => {
-    // A flaky connection must not stop a child practising.
+    // A flaky connection must not stop a child practicing.
     cloudLoad.mockRejectedValue(new Error('offline'))
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     renderProvider()
@@ -259,7 +259,7 @@ describe('a round of practice', () => {
     expect(persist).toHaveBeenCalled()
   })
 
-  it('reads a skill nobody has practised as a fresh one', async () => {
+  it('reads a skill nobody has practiced as a fresh one', async () => {
     renderProvider()
     await waitFor(() => expect(screen.getByTestId('ready')).toHaveTextContent('true'))
     expect(screen.getByTestId('level')).toHaveTextContent('0')

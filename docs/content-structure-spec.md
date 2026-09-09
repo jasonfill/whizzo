@@ -104,7 +104,7 @@ saying nothing.
 
 ## 3. Objectives — the layer that makes sharing work
 
-Area/Track/Unit organises *our* content. It does not answer the question this
+Area/Track/Unit organizes *our* content. It does not answer the question this
 document exists for: **when two people independently make content for the same
 thing, how does the app know it is the same thing?**
 
@@ -130,7 +130,7 @@ export interface Objective {
 Two decisions here matter more than they look.
 
 **Our own objective ids, with external codes as an optional annotation.** Not
-Common Core ids as the primary key. Common Core covers maths and ELA only,
+Common Core ids as the primary key. Common Core covers math and ELA only,
 states have diverged from it, science uses NGSS, and personal finance uses the
 CEE standards — so adopting any one of them as *the* identifier guarantees a
 migration the first time we leave its coverage. Our ids stay stable; `aligns`
@@ -155,7 +155,7 @@ Unit 1."* Underneath that sentence are two different kinds of sameness.
 | Scope | global, permanent | one class, one year |
 | Who defines it | us, once | the teacher, per class |
 | Stable across schools? | yes | no — one district's Unit 1 is another's Unit 3 |
-| Answers | "what else could my child practise for this?" | "what is the class doing?" |
+| Answers | "what else could my child practice for this?" | "what is the class doing?" |
 
 Conflating them is what makes distributed publishing messy. "Unit 1" is not a
 global identity and must never be treated as one; it is a **position in one
@@ -178,7 +178,7 @@ nothing, carefully.
 
 ---
 
-## 5. Standardisation: closed at the top, open at the bottom
+## 5. Standardization: closed at the top, open at the bottom
 
 The rule that keeps the vocabulary usable without making it a bottleneck.
 
@@ -191,7 +191,7 @@ The rule that keeps the vocabulary usable without making it a bottleneck.
 
 So a parent making content does not invent a track. They file into
 `math.facts` and, optionally, cite an objective. That is the whole
-standardisation burden on them: **one picker, one optional picker.**
+standardization burden on them: **one picker, one optional picker.**
 
 Two things make that realistic rather than aspirational:
 
@@ -242,7 +242,7 @@ referenced" and "authors can fix typos" can be true at once.
 **The trigger is sharing, not attempts.** The obvious implementation — fork
 when attempts exist — is wrong, and wrong in a way that would only show up
 after both this and the ingestion spec had shipped: an ingested deck is a
-draft, a draft *can be practised*, and so a parent fixing a typo on their own
+draft, a draft *can be practiced*, and so a parent fixing a typo on their own
 unshared draft after their child tried it would fork a version of something
 nobody else can see. An unshared deck is freely editable however many attempts
 it carries. Nothing forks until somebody else is depending on it.
@@ -262,7 +262,7 @@ of the slot — the teacher whose class it is — can **pin** one option as the
 default. Nobody's contribution is deleted by anyone but its author.
 
 This matters because the failure mode of community content is not spam, it is
-*wrongness*: a maths deck with an incorrect answer is worse than no deck.
+*wrongness*: a math deck with an incorrect answer is worse than no deck.
 Pinning gives a knowledgeable person a lever without giving them a delete
 button over other families' work, and provenance means a wrong card is
 traceable to whoever wrote it.
@@ -275,7 +275,7 @@ learners' evidence about different things. Objective-level relation is enough
 for every question worth asking.
 
 The exception, and it is a real one: **generated banks** (the activities spec's
-*Enrichment*, Tier 0) derive card ids from their parameters, so every learner practising
+*Enrichment*, Tier 0) derive card ids from their parameters, so every learner practicing
 multiplication within 100 is genuinely on the same items with no coordination
 at all. For the content most worth comparing across a class, identity is free —
 which is another argument for building the generators early.
@@ -295,7 +295,7 @@ alter table public.decks        add column derived_from uuid references public.d
 alter table public.word_lists   add column track     text;
 alter table public.word_lists   add column objective text;
 
--- Where work is recorded. Denormalised on purpose — see below.
+-- Where work is recorded. Denormalized on purpose — see below.
 alter table public.attempts     add column track text;
 alter table public.sessions     add column track text;
 
@@ -304,7 +304,7 @@ alter table public.skill_states add column track text not null default '';
 -- primary key (user_id, subject) → (user_id, subject, track)
 ```
 
-**Why `track` is denormalised onto `attempts`.** It could be recovered by
+**Why `track` is denormalized onto `attempts`.** It could be recovered by
 joining through `decks`, and that would be wrong twice: a deleted deck takes
 its track with it, and — more importantly — it breaks the property the whole
 schema rests on, that `attempts` alone can rebuild every other table.
@@ -389,7 +389,7 @@ class asking for it rather than in anticipation of one.
    Nothing here is per-guardian, and it should stay that way — ability belongs
    to the learner. Worth confirming before groups exist.
 3. **How coarse is coarse?** One objective per unit is the working assumption.
-   A maths unit may genuinely span three. Allowing an array costs nothing now
+   A math unit may genuinely span three. Allowing an array costs nothing now
    and is hard to add later, so `objective` is probably `objectives text[]`.
 4. **Does a group's slot need to exist before content can be offered into it?**
    Yes for coherence, no for adoption — the first parent to make something for

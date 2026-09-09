@@ -13,7 +13,7 @@
 //
 // See docs/billing-spec.md.
 
-export type SubscriptionStatus = 'active' | 'past_due' | 'cancelled'
+export type SubscriptionStatus = 'active' | 'past_due' | 'canceled'
 
 export interface Subscription {
   id: string

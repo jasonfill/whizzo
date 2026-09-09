@@ -53,7 +53,7 @@ describe('courses', () => {
     expect(suggestTrack('')).toBe('general')
   })
 
-  it('hands out the least used colour', () => {
+  it('hands out the least used color', () => {
     const first = nextCourseColor([])
     const second = nextCourseColor([{ color: first }])
     expect(second).not.toBe(first)
@@ -64,9 +64,9 @@ describe('sessionPurposes', () => {
   it('follows the ladder by position', () => {
     expect(sessionPurposes(0)).toEqual([])
     expect(sessionPurposes(1)).toEqual(['review'])
-    expect(sessionPurposes(2)).toEqual(['practise', 'review'])
-    expect(sessionPurposes(3)).toEqual(['organise', 'practise', 'review'])
-    expect(sessionPurposes(5)).toEqual(['organise', 'practise', 'practise', 'prove', 'review'])
+    expect(sessionPurposes(2)).toEqual(['practice', 'review'])
+    expect(sessionPurposes(3)).toEqual(['organize', 'practice', 'review'])
+    expect(sessionPurposes(5)).toEqual(['organize', 'practice', 'practice', 'prove', 'review'])
   })
 })
 
@@ -88,7 +88,7 @@ describe('proposeStudyPlan', () => {
     expect(r.shortRunway).toBe(false)
     expect(r.sessions.at(-1)!.onDay).toBe('2026-09-24')
     expect(r.sessions.map((s) => s.purpose)).toEqual([
-      'organise', 'practise', 'practise', 'prove', 'review',
+      'organize', 'practice', 'practice', 'prove', 'review',
     ])
   })
 
@@ -206,7 +206,7 @@ describe('canDrop', () => {
   const ctx = { assessments: [{ id: 'a1', on: '2026-09-10' }], busyDays: ['2026-09-09'], weekStart: MON }
 
   it('refuses a study session past its test', () => {
-    const v = canDrop({ kind: 'study', assessmentId: 'a1', purpose: 'practise' }, '2026-09-11', ctx)
+    const v = canDrop({ kind: 'study', assessmentId: 'a1', purpose: 'practice' }, '2026-09-11', ctx)
     expect(v.ok).toBe(false)
   })
 

@@ -31,9 +31,10 @@ import {
   type WatchPayload,
 } from '@whizzo/shared'
 import { callerOf, requireCaller } from '../auth.js'
-import { withUser } from '../db.js'
-import { badRequest, notFound } from '../errors.js'
+import { withAdmin, withUser } from '../db.js'
+import { badRequest, forbidden, notFound } from '../errors.js'
 import { bus } from '../live/bus.js'
+import { publishLearner, publishUser } from '../live/publish.js'
 
 const uuid = z.string().uuid('That is not a valid id')
 
@@ -280,6 +281,40 @@ function stream(
   expiry.unref?.()
 }
 
+/**
+ * Tell this learner's grown-ups that a round has started.
+ *
+ * Read with admin rights on purpose: a child cannot select their own learner's
+ * guardian links (guardian_links_select is for the guardian or the owner), and
+ * the answer never reaches the caller — it only decides which channels get a
+ * "practicing now" ping. The owner counts as a grown-up alongside the links.
+ */
+async function announceToGrownUps(
+  learnerId: string,
+  learnerName: string | null,
+  kind: 'round.begin' | 'round.end',
+  payload: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const ids = await withAdmin(async (db) => {
+      const { rows } = await db.query(
+        `select owner_id as id from public.learners where id = $1
+         union
+         select guardian_id as id from public.guardian_links where learner_id = $1`,
+        [learnerId],
+      )
+      return rows.map((r) => r.id as string)
+    })
+    for (const id of ids) {
+      publishUser(null, id, kind, { ...payload, learnerId, learnerName })
+    }
+  } catch (err) {
+    // Discovery is a convenience. A round must not fail because we could not
+    // work out whom to tell about it.
+    console.error('[live] could not announce a round', err)
+  }
+}
+
 export async function liveRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', requireCaller)
 
@@ -324,6 +359,85 @@ export async function liveRoutes(app: FastifyInstance): Promise<void> {
     stream(request, reply, learnerChannel(learnerId), who, announces(request.query))
   })
 
+  /**
+   * A running round, saying where it has got to. Stores nothing, ever.
+   *
+   * Two rules hold this together. The first is Rule 1 of the spec: a live event
+   * is never the record. Attempts are still written once, at the end of the
+   * round, and nothing here may be read back as evidence — which is why this
+   * endpoint has no reader and no table behind it.
+   *
+   * The second is that an unwatched round costs nothing. The client only sends
+   * between a `watch.begin` and a `watch.end`, and the ticks it does send are
+   * dropped here if the last watcher left in the meantime.
+   */
+  app.post(
+    '/live/learners/:id',
+    {
+      // Its own bucket, and not the scope's. That ceiling is sized for
+      // *opening connections*, which are rare; this is a handful of messages
+      // per card, and sharing one counter meant a single watched round could
+      // spend a learner's whole allowance and then be unable to reconnect.
+      // The floor under drafts (DRAFT_MIN_GAP_MS) puts the honest worst case
+      // at around 600 in this window, so this bounds abuse without ever
+      // catching a real round.
+      config: { rateLimit: { max: 900, timeWindow: '5 minutes' } },
+    },
+    async (request, reply) => {
+      const caller = callerOf(request)
+      const parsed = z.object({ id: uuid }).safeParse(request.params)
+      if (!parsed.success) throw badRequest('That is not a valid id')
+      const learnerId = parsed.data.id
+
+      const event = roundEventSchema.safeParse(request.body)
+      if (!event.success) {
+        const issue = event.error.issues[0]
+        throw badRequest(issue?.message ?? 'That was not a round event')
+      }
+      const { kind, ...payload } = event.data
+
+      // Reading a learner's channel and speaking as one are different rights.
+      // RLS still decides visibility — no row, no such learner — but emitting is
+      // narrower than that on purpose: everything sent here is rendered on a
+      // grown-up's screen as their child's work, and the surface is worth nothing
+      // if it can be dressed up. So it is the learner's own session, or the
+      // owner's device the learner is borrowing. A tutor or a second guardian can
+      // watch a round; they cannot stage one.
+      const who = await withUser(caller.id, async (db) => {
+        const { rows } = await db.query(
+          'select display_name, auth_user_id, owner_id from public.learners where id = $1',
+          [learnerId],
+        )
+        return rows.length ? rows[0] : null
+      })
+      if (!who) throw notFound('No such learner')
+      if (who.auth_user_id !== caller.id && who.owner_id !== caller.id) {
+        throw forbidden('Only this learner can report their own round')
+      }
+      const learnerName = (who.display_name as string | null) ?? null
+
+      // A round starting is the one thing that goes out whether or not anybody is
+      // already looking: it is how a grown-up finds out there is something to
+      // join. Everything after it is only worth sending to somebody present.
+      if (kind === 'round.begin' || kind === 'round.end') {
+        publishLearner(request, learnerId, kind, payload)
+        // Both ends go to the grown-ups, not just the start: `begin` is how they
+        // find out there is something to join, and `end` is what takes the
+        // invitation away again. Without the second, a chip offers to follow a
+        // round that finished half an hour ago.
+        await announceToGrownUps(learnerId, learnerName, kind, payload)
+        // Presence, not subscribers. Counting listeners would count the learner's
+        // own silent subscription — the one this round is using to find out
+        // whether anybody is here — and every round would look watched.
+      } else if (watchersOn(learnerChannel(learnerId)).length > 0) {
+        publishLearner(request, learnerId, kind, payload)
+      }
+
+      reply.code(204)
+      return null
+    },
+  )
+
   /** Addressed to one grown-up: job progress, an invite accepted, billing. */
   app.get('/live/me', async (request, reply) => {
     const caller = callerOf(request)
@@ -355,6 +469,47 @@ export async function liveRoutes(app: FastifyInstance): Promise<void> {
 export function closeLiveStreams(): void {
   for (const end of [...openStreams]) end()
 }
+
+/**
+ * What a running round may say about itself.
+ *
+ * Deliberately a closed set with bounded strings. Nothing here is stored, but
+ * it is rendered on somebody else's screen, and "not persisted" is not a reason
+ * to accept an unbounded blob from a client.
+ */
+const roundEventSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('round.begin'),
+    roundId: z.string().min(1).max(64),
+    activity: z.string().min(1).max(40),
+    subject: z.string().min(1).max(40),
+    title: z.string().max(120),
+    cards: z.number().int().min(0).max(500),
+  }),
+  z.object({
+    kind: z.literal('round.tick'),
+    roundId: z.string().min(1).max(64),
+    at: z.number().int().min(0).max(2000),
+    cards: z.number().int().min(0).max(500),
+    prompt: z.string().max(400),
+    outcome: z.enum(['right', 'close', 'wrong']).nullable(),
+    answer: z.string().max(400).nullable(),
+    selfGraded: z.boolean(),
+    responseMs: z.number().int().min(0).max(3_600_000).nullable(),
+  }),
+  z.object({
+    kind: z.literal('round.draft'),
+    roundId: z.string().min(1).max(64),
+    at: z.number().int().min(0).max(2000),
+    text: z.string().max(400),
+  }),
+  z.object({
+    kind: z.literal('round.end'),
+    roundId: z.string().min(1).max(64),
+    cards: z.number().int().min(0).max(500),
+    correct: z.number().int().min(0).max(500),
+  }),
+])
 
 /** Test seam: forget every connection's presence between cases. */
 export function resetPresence(): void {

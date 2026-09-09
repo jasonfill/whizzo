@@ -1,6 +1,6 @@
 // The learner's courses: add, edit, archive, roll over to a new term.
 //
-// A course is an enrolment, not a track. It cites one, and the track is
+// A course is an enrollment, not a track. It cites one, and the track is
 // suggested from the name — "Bio" files under Biology without anybody being
 // asked — so filing a task under a class is one chip tap forever after.
 
@@ -291,8 +291,8 @@ function CourseForm({
           <input value={emoji} onChange={(e) => setEmoji(e.target.value)} placeholder="🧬" aria-label="Emoji" maxLength={4} className="w-full rounded-xl border-2 border-edge bg-white px-3 py-2 text-sm font-bold text-ink" />
         </label>
         <div>
-          <Label>Colour</Label>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Colour">
+          <Label>Color</Label>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Color">
             {COURSE_COLORS.map((c) => (
               <button
                 key={c}

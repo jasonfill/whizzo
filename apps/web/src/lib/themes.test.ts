@@ -101,7 +101,7 @@ describe('themeById', () => {
     }
   })
 
-  it('recognises exactly the ten as valid ids', () => {
+  it('recognizes exactly the ten as valid ids', () => {
     for (const t of THEMES) expect(isThemeId(t.id)).toBe(true)
     for (const bad of ['unicorns', 1, null, {}]) expect(isThemeId(bad)).toBe(false)
   })

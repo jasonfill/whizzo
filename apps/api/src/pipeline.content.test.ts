@@ -1,6 +1,6 @@
 // One document, end to end, without spending anything.
 //
-// The behaviours worth pinning are the failure ones, because they are the ones
+// The behaviors worth pinning are the failure ones, because they are the ones
 // that cost money or trust: a run refused before the first call, a topic that
 // fails on its own, and a run that produced nothing being refunded rather than
 // billed.
@@ -196,7 +196,7 @@ describe('when it goes wrong', () => {
   })
 })
 
-describe('a document with nothing to practise', () => {
+describe('a document with nothing to practice', () => {
   it('says so rather than inventing cards', async () => {
     // A permission slip has no topics. Twenty cards about the school's address
     // would be a worse answer than none.

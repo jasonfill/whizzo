@@ -43,7 +43,7 @@ type Phase = 'idle' | 'registering' | 'quoted' | 'running' | 'finished'
 /** One document, from registration through to its cards landing. */
 interface Item {
   sourceId: string
-  /** The filename, or the link. Something the person can recognise. */
+  /** The filename, or the link. Something the person can recognize. */
   label: string
   quote: EstimateView | null
   job: JobView | null

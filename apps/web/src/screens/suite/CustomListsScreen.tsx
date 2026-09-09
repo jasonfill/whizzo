@@ -81,7 +81,7 @@ export default function CustomListsScreen({ navigate }: { navigate: Navigate }) 
     <div className="mx-auto w-full max-w-3xl py-4">
       <ScreenHeader
         title="My word lists ✏️"
-        subtitle="Paste this week's class list and practise it with every activity."
+        subtitle="Paste this week's class list and practice it with every activity."
         onBack={() => navigate({ name: 'home' })}
       />
 
@@ -191,7 +191,7 @@ export default function CustomListsScreen({ navigate }: { navigate: Navigate }) 
                     })
                   }
                 >
-                  🎧 Practise
+                  🎧 Practice
                 </Button>
                 <Button
                   variant="secondary"

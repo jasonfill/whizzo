@@ -1,7 +1,7 @@
-# Maths and figures on a card
+# Math and figures on a card
 
 A quiz card is two strings. That is still true — nothing about the deck format,
-the wire contract or the database changed to make maths work. What changed is
+the wire contract or the database changed to make math work. What changed is
 that four things inside those strings now mean something.
 
 ```
@@ -13,8 +13,8 @@ deck saved before any of this existed all keep working untouched.
 
 | You write | You get |
 | --- | --- |
-| `$…$` | maths, on the line, written TeX-style |
-| `$$…$$` | the same maths, on its own line and larger |
+| `$…$` | math, on the line, written TeX-style |
+| `$$…$$` | the same math, on its own line and larger |
 | `<math>…</math>` | MathML pasted straight out of Word, MathType or Google Docs |
 | `[[figure {…}]]` | a drawing: a chart, a shape, a number line, a grid |
 | `\$` | a literal dollar sign |
@@ -24,15 +24,15 @@ likely card than a broken equation.
 
 ## Why this shape
 
-**Maths is written, not built.** A visual equation editor is a week of work and
+**Math is written, not built.** A visual equation editor is a week of work and
 still slower than typing for anyone who has met a graphing calculator. `\frac`
-is notation that maths teachers already half-know, that every existing worksheet
+is notation that math teachers already half-know, that every existing worksheet
 generator emits, and that a language model writes without being asked twice.
 
 **MathML is what comes out, never what goes in.** Nobody hand-writes forty
 characters to say "one half". TeX-lite compiles to MathML, the browser sets it,
-and the equation lands in the accessibility tree as maths rather than as a
-picture of maths. No layout engine is shipped to the client and no fonts are
+and the equation lands in the accessibility tree as math rather than as a
+picture of math. No layout engine is shipped to the client and no fonts are
 fetched at runtime.
 
 **A figure is data, not drawing instructions.** `{"kind":"triangle","sides":
@@ -46,7 +46,7 @@ elements. There is no `innerHTML` anywhere in the pipeline, no `style`, no
 `href`, no `on*`; `<script>` and `<annotation>` are dropped whole. Decks get
 shared with a tutor and a class, so card text is treated as hostile input.
 
-## Maths
+## Math
 
 The subset covers school work through geometry and early algebra.
 
@@ -66,12 +66,12 @@ The subset covers school work through geometry and early algebra.
 | `\sin \cos \tan \log \ln` | function names, set upright |
 
 A command that is not on the list is not silently dropped: it renders as
-literal text and the editor tells the author what it did not recognise, while
+literal text and the editor tells the author what it did not recognize, while
 they are still looking at the card.
 
 ### Typed answers
 
-An answer is graded against what the maths *says*, not how it was written.
+An answer is graded against what the math *says*, not how it was written.
 `$\frac{3}{4}$` is matched by typing `3/4`, and `$45^\circ$` by typing `45°`.
 Nobody types a backslash into an answer box.
 
@@ -79,7 +79,7 @@ The same projection is what a figure contributes: a card answered with a chart
 is graded, searched and read aloud through the chart's description.
 
 One consequence worth knowing: `couch / sofa` still means "either will do", but
-`1/2` is a fraction, and a card carrying maths keeps its slashes.
+`1/2` is a fraction, and a card carrying math keeps its slashes.
 
 ## Figures
 
@@ -111,7 +111,7 @@ carry their lengths, angles carry their measures.
 
 **Figures are never themed.** The app lets a learner repaint everything, but a
 chart means the same thing in every theme, so it uses a fixed palette — chosen
-for lightness, chroma, contrast and colour-vision separation against the app's
+for lightness, chroma, contrast and color-vision separation against the app's
 paper background, and assigned in a fixed order rather than by rank.
 
 A `step` finer than the range can carry is widened rather than obeyed: a number

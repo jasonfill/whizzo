@@ -169,7 +169,7 @@ export function learnersOnSubscription(
  * is not a trial. `incomplete` does not, because nothing has been paid and the
  * first payment may still fail.
  */
-export function statusFrom(stripeStatus: Stripe.Subscription.Status): 'active' | 'past_due' | 'cancelled' {
+export function statusFrom(stripeStatus: Stripe.Subscription.Status): 'active' | 'past_due' | 'canceled' {
   switch (stripeStatus) {
     case 'active':
     case 'trialing':
@@ -181,11 +181,11 @@ export function statusFrom(stripeStatus: Stripe.Subscription.Status): 'active' |
     case 'incomplete':
     case 'incomplete_expired':
     case 'paused':
-      return 'cancelled'
+      return 'canceled'
     default:
       // A status Stripe added after this was written — their type for it is
       // deliberately open, so this arm is reachable and cannot be a `never`
-      // check. Treating an unknown as cancelled would silently strip a paying
+      // check. Treating an unknown as canceled would silently strip a paying
       // family; treating it as active risks giving away the paid tier.
       // Past-due is the honest middle: they keep what they have, and the state
       // is visible as "something needs looking at".

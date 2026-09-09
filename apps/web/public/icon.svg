@@ -2,7 +2,7 @@
   Variant G - white on spark. The store and installed-app icon.
 
   4px of bottom padding at 96px: `wz` has no ascenders and no descenders, so
-  optically centring it means sitting it slightly above the true centre.
+  optically centring it means sitting it slightly above the true center.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
   <rect width="96" height="96" rx="26" fill="#FF6A2B"/>

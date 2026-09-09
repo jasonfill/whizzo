@@ -13,7 +13,7 @@ import type { Navigate } from '../../routes'
  * The weekly sheet — a progress report on paper.
  *
  * This was on the pricing page for months with nothing behind it. What makes it
- * worth having is not that it is the dashboard in greyscale: a screen is
+ * worth having is not that it is the dashboard in grayscale: a screen is
  * scanned and a sheet is *read*, often by somebody who was not there for any of
  * it — the other parent, a tutor at the start of a session, a teacher at a
  * conference. So it is ordered as an argument rather than as a dashboard: what
@@ -55,7 +55,7 @@ export default function PrintableReport({ navigate }: { navigate: Navigate }) {
         <Card>
           <h1 className="mb-2 text-2xl font-extrabold text-ink">A sheet to take away</h1>
           <p className="mb-4 font-bold text-muted">
-            A one-page summary of the last week — what was practised, what is sticking, and the
+            A one-page summary of the last week — what was practiced, what is sticking, and the
             words worth ten minutes together. Covering {active?.displayName ?? 'this learner'} turns
             it on.
           </p>
@@ -193,7 +193,7 @@ export default function PrintableReport({ navigate }: { navigate: Navigate }) {
   )
 }
 
-/** How a retention band reads on paper, where there is no colour to lean on. */
+/** How a retention band reads on paper, where there is no color to lean on. */
 const STANDING: Record<string, string> = {
   slipping: 'Slipping',
   fragile: 'Keeps slipping',

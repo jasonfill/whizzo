@@ -70,7 +70,7 @@ export function screenUpload(file: {
   bytes: number
 }): { ok: true; kind: UploadKind } | UploadRefusal {
   // Browsers send `application/pdf; charset=…` often enough to be worth not
-  // tripping over, and an empty type for files they do not recognise.
+  // tripping over, and an empty type for files they do not recognize.
   const mime = file.mime.split(';')[0]!.trim().toLowerCase()
   const kind = ACCEPTED[mime]
 
@@ -132,7 +132,7 @@ export async function pagesOf(
   }
 }
 
-/** The fingerprint a second upload of the same file is recognised by. */
+/** The fingerprint a second upload of the same file is recognized by. */
 export function digestOf(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex')
 }

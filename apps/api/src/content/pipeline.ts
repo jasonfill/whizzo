@@ -128,7 +128,7 @@ export async function runIngestion(
     : map.topics
 
   if (!wanted.length) {
-    // Not an error. A permission slip has nothing to practise, and saying so is
+    // Not an error. A permission slip has nothing to practice, and saying so is
     // a better answer than twenty cards about the school's address.
     return {
       ok: true,
@@ -146,7 +146,7 @@ export async function runIngestion(
 
   // The first topic runs alone; the rest fan out behind it.
   //
-  // This looks like a needless serialisation and is the opposite. The cache is
+  // This looks like a needless serialization and is the opposite. The cache is
   // *written* by the first request to reach the server, so firing all six at
   // once means all six start before any cache exists — every one is a miss, and
   // the document is paid for six times. That failure is invisible: the cards

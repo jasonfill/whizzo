@@ -71,7 +71,7 @@ const SPECS: StarterSpec[] = [
   {
     id: 'starter-times-tables',
     title: 'Times Tables 6 to 9',
-    description: 'The facts that actually need memorising.',
+    description: 'The facts that actually need memorizing.',
     tags: ['math'],
     termLabel: 'Problem',
     definitionLabel: 'Answer',
@@ -147,7 +147,7 @@ const SPECS: StarterSpec[] = [
       ['Planet that spins on its side', 'Uranus'],
       ['Farthest planet from the Sun', 'Neptune'],
       ['What a light year measures', 'Distance, not time'],
-      ['The star at the centre of our solar system', 'The Sun'],
+      ['The star at the center of our solar system', 'The Sun'],
       ['What causes the phases of the Moon', 'The changing angle of sunlight hitting it'],
       ['How many planets are in our solar system', 'Eight'],
       ['The galaxy we live in', 'The Milky Way'],

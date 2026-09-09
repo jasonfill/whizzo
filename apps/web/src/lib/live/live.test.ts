@@ -168,7 +168,7 @@ describe('DeferredEdits', () => {
 
   // A card edited and then deleted: without the cancel, the held edit runs on
   // blur and puts the deleted card back on the grid.
-  it('drops a held change when it is cancelled', async () => {
+  it('drops a held change when it is canceled', async () => {
     const input = document.querySelector<HTMLInputElement>('#title')!
     input.focus()
     const apply = vi.fn()

@@ -130,7 +130,7 @@ export async function writeProgressChange(
         ...change.session,
         // A session that arrived without attempts keeps the counts it came
         // with — for typing rounds the summary really is the finest grain —
-        // and is labelled so nothing downstream mistakes it for evidence.
+        // and is labeled so nothing downstream mistakes it for evidence.
         ...(derived ?? { evidence: 'client' as const }),
       }
     : undefined

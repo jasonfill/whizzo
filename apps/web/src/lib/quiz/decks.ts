@@ -96,7 +96,7 @@ export function normalizeDeck(deck: QuizDeck): QuizDeck {
         definition: c.definition.trim().slice(0, MAX_CARD_TEXT),
         hint: c.hint?.trim().slice(0, 1000) || null,
         difficulty: estimateDifficulty(c.term, c.definition),
-        // Enrichment survives a normalise. `...c` already carries it; these
+        // Enrichment survives a normalize. `...c` already carries it; these
         // two are trimmed because an empty string is not a category, and a
         // card claiming a blank one would light up Sort with nothing in it.
         category: c.category?.trim() || null,
@@ -180,7 +180,7 @@ function clean(rows: string[]): string[] {
 
 export interface ImportResult {
   cards: QuizCard[]
-  /** Rows that had no recognisable answer side, surfaced rather than dropped. */
+  /** Rows that had no recognizable answer side, surfaced rather than dropped. */
   skipped: string[]
   separator: Exclude<TermSeparator, 'auto'>
 }

@@ -253,16 +253,16 @@ describe('the family list', () => {
     expect(await screen.findByText('nothing checked yet')).toBeTruthy()
   })
 
-  it('describes when they last practised in words', async () => {
+  it('describes when they last practiced in words', async () => {
     net.familyOverview.mockResolvedValue([overviewFor('l1', { lastActiveAt: Date.now() })])
     render(<FamilyScreen navigate={navigate} />)
-    expect(await screen.findByText('practised today')).toBeTruthy()
+    expect(await screen.findByText('practiced today')).toBeTruthy()
   })
 
-  it('says so when they have never practised', async () => {
+  it('says so when they have never practiced', async () => {
     net.familyOverview.mockResolvedValue([overviewFor('l1')])
     render(<FamilyScreen navigate={navigate} />)
-    expect(await screen.findByText('has not practised yet')).toBeTruthy()
+    expect(await screen.findByText('has not practiced yet')).toBeTruthy()
   })
 
   it('switches to a child before opening their work', async () => {
@@ -579,7 +579,7 @@ describe('joining a learner somebody else shared', () => {
       valid: true,
       reason: null,
       ownerName: 'Mrs Patel',
-      label: 'Tuesday maths',
+      label: 'Tuesday math',
       role: 'tutor',
       canManageContent: true,
     } as never)
@@ -587,7 +587,7 @@ describe('joining a learner somebody else shared', () => {
     const { input, check } = codeBox()
     fireEvent.change(input, { target: { value: 'TUT12345' } })
     fireEvent.click(check)
-    expect(await screen.findByText(/Mrs Patel — Tuesday maths/)).toBeTruthy()
+    expect(await screen.findByText(/Mrs Patel — Tuesday math/)).toBeTruthy()
     expect(net.redeemInvite).not.toHaveBeenCalled()
   })
 })

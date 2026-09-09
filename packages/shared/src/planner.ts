@@ -62,7 +62,7 @@ export interface CourseDraft {
   sortOrder?: number
 }
 
-/** A fixed palette so the chip colour is a choice, not a colour picker. */
+/** A fixed palette so the chip color is a choice, not a color picker. */
 export const COURSE_COLORS = [
   '#E8553D', // clay
   '#F2A33A', // amber
@@ -76,7 +76,7 @@ export const COURSE_COLORS = [
   '#5B6B7A', // slate
 ] as const
 
-/** A colour for a new course that is not already in use, then the least used. */
+/** A color for a new course that is not already in use, then the least used. */
 export function nextCourseColor(existing: readonly Pick<Course, 'color'>[]): string {
   const counts = new Map<string, number>()
   for (const c of COURSE_COLORS) counts.set(c, 0)
@@ -98,7 +98,7 @@ export function nextCourseColor(existing: readonly Pick<Course, 'color'>[]): str
  *
  * A short synonym map, not a classifier. It is a suggestion the learner can
  * change, and General is a real track rather than a failure — so a name this
- * does not recognise files correctly by default.
+ * does not recognize files correctly by default.
  */
 const TRACK_SYNONYMS: Array<[RegExp, TrackId]> = [
   [/\bspell/i, 'language.spelling'],
@@ -110,7 +110,7 @@ const TRACK_SYNONYMS: Array<[RegExp, TrackId]> = [
   [/\bfraction|decimal/i, 'math.fractions'],
   [/\bgeometry|geom\b/i, 'math.geometry'],
   [/\balgebra|alg\b|pre-?calc|calculus|trig/i, 'math.algebra'],
-  [/\b(math|maths|arithmetic)\b/i, 'math.arithmetic'],
+  [/\b(math|math|arithmetic)\b/i, 'math.arithmetic'],
   [/\bbio/i, 'science.biology'],
   [/\bchem/i, 'science.chemistry'],
   [/\bphys/i, 'science.physics'],
@@ -193,7 +193,7 @@ export type PlannerItemStatus = 'open' | 'done' | 'skipped'
  * distributed practice, retrieval practice, a self-test and a targeted final
  * review.
  */
-export type SessionPurpose = 'organise' | 'practise' | 'prove' | 'review'
+export type SessionPurpose = 'organize' | 'practice' | 'prove' | 'review'
 
 export interface PlannerItem {
   id: string
@@ -353,25 +353,25 @@ export function defaultMinutes(kind: PlannerItemKind, band: MaturityBand): numbe
 /**
  * Purposes by position.
  *
- * Two sessions: practise, review. Three: organise, practise, review. Four or
- * more: organise, practise…, prove, review.
+ * Two sessions: practice, review. Three: organize, practice, review. Four or
+ * more: organize, practice…, prove, review.
  */
 export function sessionPurposes(count: number): SessionPurpose[] {
   if (count <= 0) return []
   if (count === 1) return ['review']
-  if (count === 2) return ['practise', 'review']
-  if (count === 3) return ['organise', 'practise', 'review']
-  const middle = Array.from({ length: count - 3 }, () => 'practise' as const)
-  return ['organise', ...middle, 'prove', 'review']
+  if (count === 2) return ['practice', 'review']
+  if (count === 3) return ['organize', 'practice', 'review']
+  const middle = Array.from({ length: count - 3 }, () => 'practice' as const)
+  return ['organize', ...middle, 'prove', 'review']
 }
 
 export const PURPOSE_COPY: Record<SessionPurpose, { name: string; line: string }> = {
-  organise: {
-    name: 'Get organised',
+  organize: {
+    name: 'Get organized',
     line: 'Gather your notes. Make or open the deck. Skim once.',
   },
-  practise: {
-    name: 'Practise',
+  practice: {
+    name: 'Practice',
     line: 'Work through the set. Missed ones come back.',
   },
   prove: {
@@ -388,9 +388,9 @@ export const PURPOSE_COPY: Record<SessionPurpose, { name: string; line: string }
 export function activityForPurpose(purpose: SessionPurpose, subject: Subject): string {
   if (subject === 'quiz') {
     switch (purpose) {
-      case 'organise':
+      case 'organize':
         return 'learn'
-      case 'practise':
+      case 'practice':
         return 'learn'
       case 'prove':
         return 'test'
@@ -541,8 +541,8 @@ function proposeMilestones(input: ProposeInput): ProposeResult {
     }
   }
   const fractions: Array<[number, SessionPurpose, string]> = [
-    [0.6, 'organise', 'Plan'],
-    [0.3, 'practise', 'Draft'],
+    [0.6, 'organize', 'Plan'],
+    [0.3, 'practice', 'Draft'],
     [0.1, 'prove', 'Finish'],
   ]
   const seen = new Set<DayString>()

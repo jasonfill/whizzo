@@ -44,7 +44,7 @@ describe('remembering an intent', () => {
 
   it('rejects a role that is not one of the three', () => {
     // The stored value survives a deploy and can be edited by hand; an
-    // unrecognised role must not put somebody into a flow that does not exist.
+    // unrecognized role must not put somebody into a flow that does not exist.
     localStorage.setItem('cat-academy:signup-intent', JSON.stringify({ role: 'admin' }))
     expect(readSignupIntent()).toBeNull()
   })

@@ -315,7 +315,7 @@ export async function mcpRoutes(app: FastifyInstance): Promise<void> {
 
       // Per-request client identity, from the newer `_meta` or an older
       // `initialize`. Recorded on the round so the Family screen can say
-      // which assistant a child practised with.
+      // which assistant a child practiced with.
       const metaInfo = (message.params?._meta as Record<string, unknown> | undefined)?.['io.modelcontextprotocol/clientInfo']
       const initInfo = message.method === 'initialize' ? message.params?.clientInfo : undefined
       const info = (metaInfo ?? initInfo) as { name?: unknown } | undefined

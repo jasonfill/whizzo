@@ -9,7 +9,7 @@ import type { Queryable } from './db.js'
 import { toDeck, toMastery, toSkill } from './progressMappers.js'
 
 /**
- * The decks a learner can practise: their own, plus any library deck a
+ * The decks a learner can practice: their own, plus any library deck a
  * grown-up has set them as work. RLS allows exactly these rows; the where
  * clause says which of them this learner needs.
  */

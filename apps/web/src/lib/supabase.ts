@@ -29,7 +29,7 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
  * return to. Uses Vite's base so the same build works on localhost and on
  * whizzo.app.
  *
- * Supabase only honours this when it matches the project's **Redirect URLs**
+ * Supabase only honors this when it matches the project's **Redirect URLs**
  * allow-list; anything else lands on the project's Site URL instead. See
  * supabase/README.md §3.
  */

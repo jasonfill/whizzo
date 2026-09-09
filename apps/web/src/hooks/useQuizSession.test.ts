@@ -26,6 +26,25 @@ vi.mock('../lib/progress/ProgressProvider', () => ({
   useProgress: () => ({ snapshot, skill: () => quiz, commit }),
 }))
 
+// A round now tells anybody following it where it has got to. None of that is
+// this file's subject, but it has to be able to run: these stand in for the
+// providers it reads and the socket it would otherwise open. `sent` is here so
+// the one test that does care can look.
+const sent = vi.hoisted(() => ({ bodies: [] as Array<Record<string, unknown>> }))
+vi.mock('../lib/learners/LearnerProvider', () => ({
+  useLearners: () => ({ active: { id: 'learner-1', displayName: 'Ada' } }),
+}))
+vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'grown-up-1' } }) }))
+vi.mock('../lib/live/client', () => ({ openLive: () => () => {} }))
+vi.mock('../lib/api/client', () => ({
+  ORIGIN_ID: 'origin-under-test',
+  api: {
+    post: async (_path: string, body: Record<string, unknown>) => {
+      sent.bodies.push(body)
+    },
+  },
+}))
+
 const deck: QuizDeck = {
   id: 'd1',
   title: 'Capital cities',
@@ -84,7 +103,7 @@ describe('starting a round', () => {
     expect(result.current.currentQuestion).not.toBeNull()
   })
 
-  it('honours the size asked for', () => {
+  it('honors the size asked for', () => {
     const { result } = renderHook(() => useQuizSession())
     act(() => {
       result.current.start({ mode: 'test', decks: [deck], deckId: 'd1', size: 3 })
@@ -115,7 +134,7 @@ describe('a missed card comes back', () => {
   })
 
   it('treats a near miss as recalled rather than wrong', () => {
-    // Penalising a transposed letter on a biology deck tests typing, not
+    // Penalizing a transposed letter on a biology deck tests typing, not
     // biology.
     const { result } = renderHook(() => useQuizSession())
     act(() => {

@@ -37,7 +37,7 @@ export function useAssignments() {
         }
       } catch {
         // A task list that will not load is worth saying so about, but it must
-        // never stop a child getting on with practising.
+        // never stop a child getting on with practicing.
         if (!signal?.aborted) setError('Could not load the task list.')
       } finally {
         if (!signal?.aborted) setLoading(false)

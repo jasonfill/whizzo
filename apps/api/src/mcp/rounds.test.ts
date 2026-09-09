@@ -160,7 +160,7 @@ async function open(roundId: string, g = grant) {
 
 const theo = { ...learner, learner: { ...learner.learner, id: LEARNER2, displayName: 'Theo' }, firstName: 'Theo' }
 
-describe('a practise round', () => {
+describe('a practice round', () => {
   it('asks without telling, records the answer as mcp evidence, and writes once at the end', async () => {
     const { startRound, answerRound } = await import('./rounds.js')
 
@@ -214,11 +214,11 @@ describe('a practise round', () => {
     let o = await open(test.roundId)
     await expect(hintRound(grant, o.who, o.round)).rejects.toThrow(/No hints/)
 
-    const practise = await startRound(grant, learner, null, { mode: 'practise', deckId: DECK, size: 3 })
+    const practice = await startRound(grant, learner, null, { mode: 'practice', deckId: DECK, size: 3 })
     // Fresh cards are asked as a choice; a clue still comes, the letters do not.
-    o = await open(practise.roundId)
+    o = await open(practice.roundId)
     const h = await hintRound(grant, o.who, o.round)
-    const asked = practise.question!
+    const asked = practice.question!
     const card = deckRow.cards.find((c) => c.id === asked.cardId)!
     if (card.example || card.explanation) {
       expect(h.kind).toBe('clue')
@@ -227,11 +227,11 @@ describe('a practise round', () => {
       expect(h.kind).toBe('none')
       expect(h.say).toMatch(/one of the choices/)
     }
-    o = await open(practise.roundId)
+    o = await open(practice.roundId)
     const again = await hintRound(grant, o.who, o.round)
     expect(again.kind).toBe('none')
     expect(again.scaffold).toBeNull()
-    o = await open(practise.roundId)
+    o = await open(practice.roundId)
     const a = await answerRound(grant, o.who, o.round, 'nope', false)
     expect(a.verdict).toBe('wrong')
   })
@@ -241,7 +241,7 @@ describe('a practise round', () => {
     // A card the learner has met enough to be asked at free recall, and due.
     masteryRows = [{ ...masteredRow('c1'), due_on: '2026-01-01' }]
     // Three cards, so the round has a review slot for the due one to fill first.
-    const r = await startRound(grant, learner, null, { mode: 'practise', deckId: DECK, size: 3 })
+    const r = await startRound(grant, learner, null, { mode: 'practice', deckId: DECK, size: 3 })
     expect(r.question?.cardId).toBe('c1')
     expect(r.question?.kind).toBe('written')
 
@@ -274,7 +274,7 @@ describe('a practise round', () => {
 
   it('a skip is a miss, and the card comes back once before the round ends', async () => {
     const { startRound, answerRound } = await import('./rounds.js')
-    const started = await startRound(grant, learner, null, { mode: 'practise', deckId: DECK, size: 2 })
+    const started = await startRound(grant, learner, null, { mode: 'practice', deckId: DECK, size: 2 })
     const firstCard = started.question!.cardId
     let o = await open(started.roundId)
     const skipped = await answerRound(grant, o.who, o.round, null, true)
@@ -401,7 +401,7 @@ describe('a practise round', () => {
 
   it('numbers the questions with the requeues counted in', async () => {
     const { startRound, answerRound } = await import('./rounds.js')
-    const r = await startRound(grant, learner, null, { mode: 'practise', deckId: DECK, size: 2 })
+    const r = await startRound(grant, learner, null, { mode: 'practice', deckId: DECK, size: 2 })
     expect(r.question?.say).toMatch(/^Question 1 of 2\./)
     let o = await open(r.roundId)
     const a1 = await answerRound(grant, o.who, o.round, 'wrong', false)
@@ -428,7 +428,7 @@ describe('a practise round', () => {
       if (sql.includes('from public.decks')) return { rows: [withFigure], rowCount: 1 }
       return (await (wire(), query.getMockImplementation()!)(sql, params))
     })
-    const r = await startRound(grant, learner, null, { mode: 'practise', deckId: DECK, size: 4 })
+    const r = await startRound(grant, learner, null, { mode: 'practice', deckId: DECK, size: 4 })
     const pools = (rounds.get(r.roundId)!.plan as { pools: Record<string, Array<{ id: string }>> }).pools
     expect(pools[DECK]!.map((c) => c.id)).not.toContain('c5')
     expect(JSON.stringify(r).toLowerCase()).not.toContain('figure')

@@ -230,7 +230,12 @@ export default function QuestionRunner({
           <input
             ref={inputRef}
             value={typed}
-            onChange={(e) => setTyped(e.target.value)}
+            onChange={(e) => {
+              setTyped(e.target.value)
+              // Held until typing pauses, and dropped entirely when nobody is
+              // following along — see useLiveRound.
+              session.draft(e.target.value)
+            }}
             disabled={revealed}
             autoComplete="off"
             autoCorrect="off"

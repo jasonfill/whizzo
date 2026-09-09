@@ -52,7 +52,7 @@ export function computeScore(
  * What to say about a round, in the register of the person reading it.
  *
  * This used to be one set of lines for everybody — "You are a typing wizard!
- * 🧙" went to a sixteen-year-old practising for an exam along with the confetti
+ * 🧙" went to a sixteen-year-old practicing for an exam along with the confetti
  * and the mascot. The advice is the same in every band because the advice is
  * true in every band; only how it is said changes.
  *

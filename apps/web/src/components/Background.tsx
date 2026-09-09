@@ -7,7 +7,7 @@
  * behind everything at once.
  *
  * `data-print-hide` because it is a fixed layer: on paper a fixed element is
- * painted onto every page, and this one is a full-bleed block of colour.
+ * painted onto every page, and this one is a full-bleed block of color.
  */
 export default function Background() {
   return <div data-print-hide className="pointer-events-none fixed inset-0 -z-10 bg-paper" />

@@ -69,7 +69,7 @@ const TERMS: Array<[string, string]> = [
 
 const deck: QuizDeck = {
   id: 'deck1',
-  title: 'Cells and a little maths',
+  title: 'Cells and a little math',
   description: '',
   tags: [],
   cards: TERMS.map(([term, definition], i) => ({
@@ -109,7 +109,7 @@ let rounds = 0
 let payloads = 0
 let spokenChecks = 0
 
-for (const mode of ['practise', 'test', 'review', 'study'] as TutorMode[]) {
+for (const mode of ['practice', 'test', 'review', 'study'] as TutorMode[]) {
   for (let learner = 0; learner < 12; learner++) {
     const skill = 0.3 + (learner / 11) * 0.65
     const knows = new Set(deck.cards.filter(() => random() < skill).map((c) => c.id))

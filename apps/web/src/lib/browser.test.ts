@@ -197,7 +197,7 @@ describe('sound', () => {
 
   it('stays silent when sound is off', () => {
     // Nothing observable to assert beyond not throwing — the point is that the
-    // toggle is honoured rather than the synth being built anyway.
+    // toggle is honored rather than the synth being built anyway.
     setSoundEnabled(false)
     expect(() => sfx.correct()).not.toThrow()
     setSoundEnabled(true)

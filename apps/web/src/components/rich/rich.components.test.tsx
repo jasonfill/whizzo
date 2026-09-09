@@ -1,6 +1,6 @@
 // Rendering the rich half of a card.
 //
-// The one thing worth asserting hard on here is that maths comes out as real
+// The one thing worth asserting hard on here is that math comes out as real
 // MathML elements. If React ever stopped putting them in the MathML namespace
 // the equations would silently degrade into a run-on line of characters —
 // which still *reads* almost right, and so would never be noticed by eye.
@@ -13,7 +13,7 @@ import RichField from './RichField'
 import RichText from './RichText'
 
 describe('RichText', () => {
-  it('renders maths as MathML in the MathML namespace', () => {
+  it('renders math as MathML in the MathML namespace', () => {
     const { container } = render(<RichText source="Simplify $\frac{6}{8}$" />)
     const math = container.querySelector('math')
     expect(math).not.toBeNull()
@@ -144,7 +144,7 @@ describe('RichField', () => {
     expect(document.querySelector('svg')).not.toBeNull()
   })
 
-  it('inserts a maths snippet at the cursor', () => {
+  it('inserts a math snippet at the cursor', () => {
     const onChange = vi.fn()
     render(<RichField value="" onChange={onChange} ariaLabel="Term" />)
     fireEvent.click(screen.getByLabelText('Fraction'))

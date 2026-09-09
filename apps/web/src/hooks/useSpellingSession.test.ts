@@ -58,7 +58,7 @@ describe('starting a round', () => {
     expect(result.current.current).not.toBeNull()
   })
 
-  it('honours the size asked for', () => {
+  it('honors the size asked for', () => {
     const { result } = renderHook(() => useSpellingSession())
     act(() => {
       result.current.start({ activity: 'test', mode: 'adaptive', size: 5 })

@@ -213,7 +213,7 @@ const itemDraftSchema = z.object({
   courseId: uuid.nullable().optional(),
   assessmentId: uuid.nullable().optional(),
   minutes: z.number().int().min(0).max(600).nullable().optional(),
-  purpose: z.enum(['organise', 'practise', 'prove', 'review']).nullable().optional(),
+  purpose: z.enum(['organize', 'practice', 'prove', 'review']).nullable().optional(),
   proposed: z.boolean().optional(),
   target: targetSchema.optional(),
   sortOrder: z.number().int().optional(),
@@ -582,7 +582,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
                 t.note, t.min_accuracy, t.due_on, t.goal
            from public.assignments a
            join public.assignment_sets t on t.id = a.set_id
-          where a.learner_id = $1 and a.status <> 'cancelled'
+          where a.learner_id = $1 and a.status <> 'canceled'
             and t.due_on >= $2::date and t.due_on < $2::date + 7
           order by t.due_on, a.sort_order`,
         [id, weekStart],
@@ -1036,7 +1036,7 @@ export async function plannerRoutes(app: FastifyInstance): Promise<void> {
           .array(
             z.object({
               onDay: day,
-              purpose: z.enum(['organise', 'practise', 'prove', 'review']),
+              purpose: z.enum(['organize', 'practice', 'prove', 'review']),
               minutes: z.number().int().min(0).max(600),
               title: z.string().trim().min(1).max(200),
             }),

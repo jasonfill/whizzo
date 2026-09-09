@@ -10,7 +10,7 @@ import {
 import RichText from './RichText'
 
 /**
- * One side of a card, with the tools for putting maths and figures in it.
+ * One side of a card, with the tools for putting math and figures in it.
  *
  * The thing this has to get right is that most cards are still "photosynthesis"
  * and a plain box to type in. So it stays a plain box: the toolbar is one row of

@@ -2,7 +2,7 @@
 //
 // The rule running through the local repo: storage being unavailable — a
 // private window, a full disk — must never crash the app or stop a child
-// practising. Progress stays in memory for the session instead.
+// practicing. Progress stays in memory for the session instead.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {

@@ -264,31 +264,90 @@ from the event log. `planner_events` remains what it was: history.
 
 ---
 
-## 8. Consumer two — watching a round
+## 8. Consumer two — doing a round together
 
-The one that needs new emission, because today the server learns nothing until
-the round ends.
+The goal is co-presence, not oversight: two people working through one set from
+two screens instead of huddling round one. That is a different product from
+monitoring, and it decides everything below.
 
-**Emit only when watched.** The child's client holds its own subscription to
-its own channel and receives `watch.begin` / `watch.end` when a grown-up opens
-or closes the view. Only between those does the round emit. A round nobody is
-watching — the overwhelming majority — costs exactly nothing extra.
+**The watcher's view is a mirror.** Same card, same position, no navigation of
+its own — otherwise you cannot talk about the card, which is the whole point.
+It follows the *learner*, not a round: they finish flashcards and start
+multiple choice, and the view comes along, because re-joining to keep up would
+defeat the object.
+
+**Emit only when watched.** The learner's client is already subscribed to its
+own channel (one connection per tab, pooled) and receives `watch.begin` /
+`watch.end` when a grown-up opens or closes the view. Only between those does a
+round emit. A round nobody has joined — the overwhelming majority — sends one
+message and never another.
 
 ```
-POST /api/learners/:id/live   { kind: 'round.tick', payload }   → 204, stores nothing
+POST /api/live/learners/:id   { kind: 'round.tick', … }   → 204, stores nothing
 ```
 
-| Event | When | Payload |
+| Event | When | Carries |
 | --- | --- | --- |
-| `round.begin` | a round starts | deck title, size, activity |
-| `round.tick` | a card is answered | index, total, correct, ms — **never the answer text** |
-| `round.end` | the round finishes | the summary the child sees |
-| `watch.begin` / `watch.end` | a watcher arrives or leaves | `{ watchers: n }` |
+| `round.begin` | a round starts | activity, deck title, card count |
+| `round.tick` | a card is shown, and again when answered | the prompt, position, outcome, `selfGraded` |
+| `round.draft` | typing **pauses** | what is in the box |
+| `round.end` | the round finishes | cards and correct |
+| `watch.begin` / `watch.end` | a watcher arrives or leaves | who, and everyone present |
 
-A tick carries the *shape* of the answer, not its content: a watching parent
-sees "7 of 12, correct, 3.1 s", not what was typed. Enough to follow along,
-not enough to turn into surveillance of a child's spelling mistakes in real
-time. The full record is available afterwards, where it belongs, in history.
+Three rules about content, and each earns its place:
+
+- **The question travels.** A grown-up who cannot see the card cannot talk
+  about it.
+- **The answer does not, until the learner has answered.** The same rule the
+  voice tutor works under: nobody is given the answer before the person whose
+  turn it is.
+- **Typing goes out on a pause, never on a keystroke** (`DRAFT_IDLE_MS`, with a
+  floor of `DRAFT_MIN_GAP_MS`). A pause is when a person is thinking and a
+  grown-up might usefully say something. It is also the difference between a
+  few messages a card and a hundred: a twelve-card round is roughly fifty
+  messages end to end. There is deliberately no feed of hesitation, and a
+  half-made multiple-choice decision is nobody's business until it is made —
+  choice activities emit on submit only.
+
+`selfGraded` is worth surfacing rather than hiding: flashcards is the one
+activity where the learner marks their own work, and "said they got it right"
+is different information from "got it right".
+
+**Discovery.** Watching is useless if you have to already know to look, so
+`round.begin` fans out to each linked grown-up's `user:` channel — one
+subscription for a tutor with thirty students rather than thirty. `round.end`
+goes to the same people, and that half is not optional: without it the
+"practicing now" chip outlives the round it advertises and offers to follow
+something that finished. The lookup reads `guardian_links` with admin rights on
+purpose — a child cannot select their own learner's links, and the answer never
+reaches the caller; it only decides which channels get the ping.
+
+**Emitting is narrower than reading.** Anyone RLS lets read a learner may
+*watch* a round. Only the learner's own session, or the owner's device the
+learner is borrowing, may *report* one. Everything posted here is rendered on a
+grown-up's screen as their child's work, and a surface like that is worth
+nothing if a second guardian or a connected tutor can stage it. Nothing is
+stored either way, so the difference is not about records — it is about whether
+what you are looking at is real.
+
+**Two counters, not one.** The stream endpoint is limited on *connections
+opened*, which are rare. The emit endpoint is limited separately and far more
+generously, because a watched round is several messages a card: sharing one
+bucket let a single round spend a learner's whole allowance and then leave them
+unable to reconnect, with every symptom swallowed on the way.
+
+**Presence gates ticks, not subscribers.** The server drops a tick when nobody
+is *announced* on the channel. Counting bus listeners instead would count the
+learner's own silent subscription — the one the round is using to find out
+whether anybody is there — and every round would look watched.
+
+The client side has a matching trap with the opposite sign. "Is anybody here?"
+must be asked of *everyone announced*, not of everyone announced who is not me:
+a learner working on a grown-up's account shares that account's user id, so
+filtering by person hides the very watcher who just arrived and the round stays
+silent through the whole session. The learner's own connection never announces,
+so anybody in that list is by definition another screen. Filtering self out is
+for the *display* — "Mom is here" should not list you — and nowhere else.
 
 For an MCP-tutored round the emission is server-side in `mcp/rounds.ts` and
 needs no client at all — which is the reason this design sits in the API.
@@ -297,7 +356,7 @@ needs no client at all — which is the reason this design sits in the API.
 
 ## 9. Consent
 
-A grown-up silently watching a child practise is a different product from one
+A grown-up silently watching a child practice is a different product from one
 where the child can see it. Whizzo takes the same posture here it takes with
 tutor connection codes:
 

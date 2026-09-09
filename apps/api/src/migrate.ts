@@ -65,7 +65,7 @@ export interface MigrationResult {
 }
 
 /**
- * A migration may declare how to recognise that it is already present:
+ * A migration may declare how to recognize that it is already present:
  *
  *   -- @applied-if: select to_regclass('public.learners') is not null
  *

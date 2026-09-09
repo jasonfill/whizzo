@@ -151,7 +151,7 @@ describe('what a task list offers', () => {
     render(<TasksScreen navigate={navigate} />)
     fireEvent.click(screen.getByText('Cancel it'))
     await waitFor(() =>
-      expect(net.updateAssignment).toHaveBeenCalledWith('l1', 'a1', { status: 'cancelled' }),
+      expect(net.updateAssignment).toHaveBeenCalledWith('l1', 'a1', { status: 'canceled' }),
     )
   })
 

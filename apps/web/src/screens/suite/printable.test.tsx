@@ -107,8 +107,8 @@ describe('what it will not claim', () => {
 })
 
 describe('what is slipping', () => {
-  it('is named on the sheet, in words rather than colour', () => {
-    // Printed in one ink: a band that reads as a colour on screen has to read
+  it('is named on the sheet, in words rather than color', () => {
+    // Printed in one ink: a band that reads as a color on screen has to read
     // as a word on paper.
     withMastery(
       item({ itemKey: 'gone', intervalDays: 2, dueOn: '2020-01-01', lapses: 3, reps: 4 }),

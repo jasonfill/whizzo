@@ -27,7 +27,7 @@ import { isSpeechAvailable, speak, stopSpeaking } from '../../lib/spelling/speec
  *
  * Either way the answer stays hidden until the learner asks for it, and the
  * grade buttons stay hidden until then too. Seeing both sides at once is a
- * layout choice, not a licence to grade without thinking first.
+ * layout choice, not a license to grade without thinking first.
  */
 
 export type CardLayout = 'flip' | 'slide'

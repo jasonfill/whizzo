@@ -137,13 +137,13 @@ export const TOOL_DEFS: ToolDef[] = [
     name: 'start_round',
     title: 'Start a round',
     description:
-      'Begin a round of practice and get the first question, plus the tutoring instructions to follow for the whole round. The result JSON carries roundId, which every answer, hint and end_round call needs. Modes: practise (default; each card asked at the level the learner is at), study (teach the cards first — the only mode whose result carries answers), test (every card from memory, no hints), review (whatever is due across all decks; no materialId needed). Starting a new round closes any round still open.',
+      'Begin a round of practice and get the first question, plus the tutoring instructions to follow for the whole round. The result JSON carries roundId, which every answer, hint and end_round call needs. Modes: practice (default; each card asked at the level the learner is at), study (teach the cards first — the only mode whose result carries answers), test (every card from memory, no hints), review (whatever is due across all decks; no materialId needed). Starting a new round closes any round still open.',
     inputSchema: {
       type: 'object',
       properties: {
         ...learnerArg,
         materialId: { type: 'string', description: 'A deck id from list_materials. Required except in review mode.' },
-        mode: { type: 'string', enum: [...TUTOR_MODES], default: 'practise' },
+        mode: { type: 'string', enum: [...TUTOR_MODES], default: 'practice' },
         size: { type: 'integer', minimum: 3, maximum: 30, description: 'How many cards. Defaults to a round length suited to the learner’s age.' },
         direction: {
           type: 'string',
@@ -269,6 +269,35 @@ function needsLearnerResult(e: NeedsLearner): ToolResult {
     say: `Which child is this for — ${list}?`,
   }
 }
+
+/**
+ * `practice`, as it used to be spelled.
+ *
+ * Assembled from parts rather than written out, because a spelling sweep across
+ * the repository has already eaten this shim once — converting the one string
+ * whose entire purpose is to still be the old one, leaving a duplicated enum
+ * member and a transform that could not fire. A literal here is a magnet for
+ * the next sweep; this is not.
+ */
+const LEGACY_PRACTICE_MODE = ('practi' + 'se') as 'practise'
+
+/**
+ * The round mode an assistant asks for.
+ *
+ * The British spelling was this value before the codebase moved to US spelling,
+ * and an assistant that connected before that deploy still has the old schema
+ * in its context. It is accepted on the way in and normalized here: never
+ * written, never returned, and never advertised — TUTOR_MODES carries the
+ * current spelling only, and `mcp_rounds_mode_check` only allows that.
+ *
+ * Exported so the compatibility path has a test of its own. It did not have one
+ * the first time, which is how a spelling sweep was able to delete it without a
+ * single case going red.
+ */
+export const roundModeSchema = z
+  .enum(['practice', 'study', 'test', 'review', LEGACY_PRACTICE_MODE])
+  .default('practice')
+  .transform((m) => (m === LEGACY_PRACTICE_MODE ? ('practice' as const) : m))
 
 const learnerParam = z.string().max(120).optional()
 
@@ -430,7 +459,7 @@ const handlers: Record<string, Handler> = {
       .object({
         learner: learnerParam,
         materialId: z.string().max(120).optional(),
-        mode: z.enum(['practise', 'study', 'test', 'review']).default('practise'),
+        mode: roundModeSchema,
         size: z.number().int().min(3).max(30).optional(),
         direction: z.enum(['term-first', 'definition-first']).optional(),
       })

@@ -91,7 +91,7 @@ P(correct) = 1 / (1 + e^((difficulty - ability) × 1.15))
 
 After each graded attempt the estimate shifts by the gap between what happened
 and what the model expected — the same update an Elo rating uses, and the
-discrete-response cousin of the item response theory behind standardised
+discrete-response cousin of the item response theory behind standardized
 reading assessments. The learning rate starts high so placement converges in a
 handful of words, then decays so a single bad round cannot undo a month.
 
@@ -140,7 +140,7 @@ being stuck one band too high is far more damaging than one band too low.
 
 ### 6. Stars are graded on a curve
 
-A learner practising at their frontier is *meant* to miss things. Scoring them
+A learner practicing at their frontier is *meant* to miss things. Scoring them
 against a flat 90% would hand out one star forever and teach them that working
 at their level is failure. So each round is also scored against what the model
 predicted for that exact set of words — beat your own prediction and you get
@@ -205,7 +205,7 @@ only format that proves you can produce the answer unaided. One deck can hold
 forty cards at forty different stages and every question still lands at the
 right level.
 
-**Only unaided recall moves your ability.** Recognising an answer among four is
+**Only unaided recall moves your ability.** Recognizing an answer among four is
 evidence about that card, so it updates the card's mastery and its review
 schedule — but it never moves the learner's ability estimate. A run of lucky
 four-way guesses should not read as getting cleverer.
@@ -237,7 +237,7 @@ closest to forgetting.
 Typed answers are graded with a tolerance that scales with the answer's length:
 one slip in a four-letter word is probably a different word, one slip in a
 fifteen-letter word is a typo. Near misses are marked "so close", shown the
-correct spelling, and credited — penalising a transposed letter on a biology
+correct spelling, and credited — penalizing a transposed letter on a biology
 deck tests typing, not biology. Answers written as `couch / sofa` accept
 either, and a leading article is always optional.
 
@@ -246,18 +246,18 @@ the two sides are separated by a tab, comma, dash, or colon, handles
 definitions that run over several lines, and reports the rows it could not
 parse instead of quietly mangling them.
 
-**Cards can carry maths and figures.** `$\frac{3}{4}$` sets a fraction as real
+**Cards can carry math and figures.** `$\frac{3}{4}$` sets a fraction as real
 MathML, equations pasted out of Word come in as they are, and
-`[[figure {"kind":"triangle", …}]]` draws a labelled triangle, a bar chart, a
+`[[figure {"kind":"triangle", …}]]` draws a labeled triangle, a bar chart, a
 number line or a coordinate grid — which is what it takes to ask a geometry
-question at all. Typed answers are graded against what the maths says, so
+question at all. Typed answers are graded against what the math says, so
 `$\frac{3}{4}$` is answered by typing `3/4`. See
 [docs/card-formatting.md](docs/card-formatting.md).
 
 ## The curriculum
 
 420 words across 42 lists, 2nd through 8th grade, each with an example sentence
-that is read aloud for context. Lists are organised by the rule they teach —
+that is read aloud for context. Lists are organized by the rule they teach —
 short vowels, magic e, bossy R, compound words, `-tion`, homophones, Greek and
 Latin roots, silent letters, `-able`/`-ible`, rule breakers, bee-level words.
 
@@ -329,7 +329,7 @@ Three properties make that history worth reading rather than just pretty:
   client's summary of them. The API recomputes the counts from the attempts and
   stores its own answer; the session says so (`evidence = 'attempts'`). Rounds
   that genuinely have no per-question record — typing counts keystrokes — are
-  labelled `'client'` instead of being quietly treated the same.
+  labeled `'client'` instead of being quietly treated the same.
 - **Verification is decided by the mode, not claimed by the caller.** Flashcards
   are self-graded by construction, so an attempt from that mode is recorded as
   unverified whatever the request says. Every session carries
@@ -377,7 +377,7 @@ learner can read their list and nothing else. All of it is pinned in
 
 **Oversight lives in Family**, not on a screen of its own. Each child's row
 there already says who they are; it now also says how they are doing —
-outstanding tasks, what is overdue, when they last practised, minutes and
+outstanding tasks, what is overdue, when they last practiced, minutes and
 questions this week, accuracy over checked answers, and their streak — with
 buttons straight into that child's tasks or history. One aggregated query for
 the whole family rather than a progress snapshot per child.
@@ -477,7 +477,7 @@ word-by-word mastery report, printable sheets, CSV export.
 Free keeps three study decks of your own; the starter decks that ship with the
 app never count against that.
 
-Plans are modelled end to end in the schema and gated in the UI. No payment
+Plans are modeled end to end in the schema and gated in the UI. No payment
 processor is connected yet; wiring Stripe in means a webhook that updates
 `profiles.plan`.
 

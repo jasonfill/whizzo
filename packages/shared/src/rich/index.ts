@@ -1,4 +1,4 @@
-// The rich-text core: maths, MathML and figures inside card text.
+// The rich-text core: math, MathML and figures inside card text.
 //
 // This lives in `shared` rather than in the web app because the API is where
 // generated content arrives, and the server cannot tell a valid figure from a

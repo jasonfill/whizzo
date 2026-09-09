@@ -149,7 +149,7 @@ applied; any failure raises, so a non-zero exit means the schema regressed.
    Both entries matter, and for the same reason. The app asks to come back to
    its own origin (`authRedirectUrl()` in
    [`apps/web/src/lib/supabase.ts`](../apps/web/src/lib/supabase.ts)), but
-   Supabase honours that only when it matches an entry in **Redirect URLs** —
+   Supabase honors that only when it matches an entry in **Redirect URLs** —
    otherwise it silently sends the browser to the **Site URL** instead. A new
    project ships with `http://localhost:3000` there, so a deployment that skips
    this step finishes Google sign-in by landing on `localhost:3000/?code=…`,
@@ -191,7 +191,7 @@ Pages workflow is manual-only now: Pages serves static files, and this app needs
 
 ## Notes
 
-- **Guest progress is merged on first sign-in.** A learner who practised before
+- **Guest progress is merged on first sign-in.** A learner who practiced before
   registering keeps everything: counters add, bests win, and the local copy is
   only cleared once the merge has been written. See `mergeSnapshots` in
   `src/lib/progress/repo.ts`. The merge marker is keyed by *learner*, so a
@@ -200,7 +200,7 @@ Pages workflow is manual-only now: Pages serves static files, and this app needs
   from the `attempts` log. If the cached values are ever doubted, that function
   is the answer — the attempt log is the source of truth, everything else is a
   cache.
-- **Plans are modelled but not billed.** `profiles.plan` is `free` or `pro` and
+- **Plans are modeled but not billed.** `profiles.plan` is `free` or `pro` and
   the app gates features on it, but no payment processor is wired up. Adding
   Stripe means a webhook (an Edge Function is the natural home) that updates
   `plan`, `plan_source`, and `plan_renews_at` with the service role.

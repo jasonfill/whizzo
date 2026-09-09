@@ -264,9 +264,9 @@ describe('one learner’s copy of a piece of work', () => {
     expect(res.statusCode).toBeLessThan(400)
   })
 
-  it('can be cancelled and put back', async () => {
+  it('can be canceled and put back', async () => {
     const app = await buildApp()
-    for (const status of ['cancelled', 'open']) {
+    for (const status of ['canceled', 'open']) {
       const res = await app.inject({
         method: 'PATCH',
         url: `/api/learners/${LEARNER}/assignments/${ASSIGNMENT}`,

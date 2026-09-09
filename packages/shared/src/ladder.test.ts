@@ -235,7 +235,7 @@ describe('slipping back', () => {
   ]
 
   it('forgives a single miss, because that is what the frontier looks like', () => {
-    // An item practised at the edge of what a learner can do is *meant* to be
+    // An item practiced at the edge of what a learner can do is *meant* to be
     // missed sometimes. Demoting on every miss is not merely harsh, it is
     // unstable — the ladder simulation showed a learner getting 90% right
     // ping-ponging and never reaching free recall at all.
@@ -416,7 +416,7 @@ describe('bridging from cached mastery', () => {
     expect(at(0.9, 0)).toBe(0)
   })
 
-  it('recognises before it asks for production', () => {
+  it('recognizes before it asks for production', () => {
     expect(at(0.1)).toBe(1)
     expect(at(0.34)).toBe(1)
   })

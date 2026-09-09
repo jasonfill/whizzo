@@ -176,12 +176,12 @@ describe('two kinds of done', () => {
   it('gives a linked card Start and no box', async () => {
     testState.plannerWeek = week([
       item({
-        id: 's1', kind: 'study', title: 'Practise · Chapter 7', purpose: 'practise', proposed: true,
+        id: 's1', kind: 'study', title: 'Practice · Chapter 7', purpose: 'practice', proposed: true,
         target: { subject: 'quiz', activity: 'learn', targetId: 'deck-1' },
       }),
     ])
     render(<PlannerScreen navigate={navigate} view="week" />)
-    const card = screen.getByRole('listitem', { name: 'Practise · Chapter 7' })
+    const card = screen.getByRole('listitem', { name: 'Practice · Chapter 7' })
     expect(within(card).queryByLabelText(/^Tick /)).toBeNull()
     expect(within(card).getByLabelText('Closed by doing it')).toBeTruthy()
     fireEvent.click(within(card).getByText('▶ Start'))
@@ -190,10 +190,10 @@ describe('two kinds of done', () => {
 
   it('will not tick a linked card from the keyboard either', async () => {
     testState.plannerWeek = week([
-      item({ id: 's1', kind: 'study', title: 'Practise', target: { subject: 'quiz', activity: 'learn', targetId: 'deck-1' } }),
+      item({ id: 's1', kind: 'study', title: 'Practice', target: { subject: 'quiz', activity: 'learn', targetId: 'deck-1' } }),
     ])
     render(<PlannerScreen navigate={navigate} view="week" />)
-    fireEvent.keyDown(screen.getByRole('listitem', { name: 'Practise' }), { key: ' ' })
+    fireEvent.keyDown(screen.getByRole('listitem', { name: 'Practice' }), { key: ' ' })
     expect(spies.plannerTick).not.toHaveBeenCalled()
   })
 

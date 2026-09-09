@@ -97,7 +97,7 @@ function session(over: Partial<SessionRecord> = {}): SessionRecord {
   }
 }
 
-/** No grown-up surface may carry a child's theme colour. */
+/** No grown-up surface may carry a child's theme color. */
 function assertThemeFree(container: HTMLElement) {
   const classes = [...container.querySelectorAll('*')]
     .flatMap((el) => [...el.classList])

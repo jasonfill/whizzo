@@ -66,7 +66,7 @@ export interface StartOptions {
 
 /**
  * Stars are graded on a curve against what the model predicted for this exact
- * set of words. A learner practising at their frontier is meant to miss things —
+ * set of words. A learner practicing at their frontier is meant to miss things —
  * scoring them against a flat 90% would hand out one star forever and teach them
  * that working at their level is failure. Beating your own prediction earns the
  * third star, whatever your grade.

@@ -332,7 +332,7 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
     const caller = callerOf(request)
     const { id } = parse(z.object({ id: uuid }), request.params)
     const { status } = parse(
-      z.object({ status: z.enum(['open', 'done', 'cancelled', 'all']).default('all') }),
+      z.object({ status: z.enum(['open', 'done', 'canceled', 'all']).default('all') }),
       request.query,
     )
 

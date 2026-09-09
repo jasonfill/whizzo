@@ -51,6 +51,7 @@ export type LiveKind =
   | 'planner.comment'
   | 'round.begin'
   | 'round.tick'
+  | 'round.draft'
   | 'round.end'
   | 'watch.begin'
   | 'watch.end'
@@ -73,6 +74,78 @@ export interface LiveEvent<T = unknown> {
   originId: string | null
   payload: T
 }
+
+/**
+ * A round, as somebody else's screen sees it.
+ *
+ * The point of these is co-presence, not oversight: two people working through
+ * the same set without huddling round one screen. That decides what they carry.
+ * The *question* travels, because a grown-up who cannot see the card cannot
+ * talk about it. What does not travel is a running commentary on how the
+ * learner is doing — there is no keystroke feed and no hesitation timing, and
+ * a half-made multiple-choice decision is nobody's business until it is made.
+ *
+ * None of it is stored. The round's real record is still written once, at the
+ * end, and these are gone the moment they are delivered.
+ */
+export interface RoundBeginPayload {
+  /** Distinguishes one round from the next on the same channel. */
+  roundId: string
+  /** `flashcards`, `choice`, `listen-spell` … the activity registry's id. */
+  activity: string
+  subject: string
+  /** The deck or list, as the learner sees it named. */
+  title: string
+  cards: number
+}
+
+export interface RoundTickPayload {
+  roundId: string
+  /** 1-based, and counts sightings — a requeued card is seen twice. */
+  at: number
+  cards: number
+  /** The card as the learner sees it, so the watcher's screen mirrors theirs. */
+  prompt: string
+  /**
+   * Filled in only once the card is answered. A card in progress carries a
+   * null outcome, which is how a watcher knows to show it as still open.
+   */
+  outcome: 'right' | 'close' | 'wrong' | null
+  /** The answer, revealed to the watcher only once the learner has answered. */
+  answer: string | null
+  /**
+   * True when the learner marked their own work — flashcards, and only
+   * flashcards. Worth showing: it is the difference between "got it right" and
+   * "said they got it right".
+   */
+  selfGraded: boolean
+  responseMs: number | null
+}
+
+/**
+ * What is in the answer box, sent when typing pauses.
+ *
+ * Never per keystroke: a pause is the point at which a person is thinking and
+ * a grown-up might usefully say something, and it is also the difference
+ * between a handful of messages a card and a hundred.
+ */
+export interface RoundDraftPayload {
+  roundId: string
+  at: number
+  text: string
+}
+
+export interface RoundEndPayload {
+  roundId: string
+  cards: number
+  correct: number
+}
+
+/** Typing is considered paused after this long, and a draft goes out. */
+export const DRAFT_IDLE_MS = 700
+
+/** And never more often than this, however stop-start the typing. */
+export const DRAFT_MIN_GAP_MS = 500
 
 /** Who is on a channel. The payload of every `watch.begin` and `watch.end`. */
 export interface WatchPayload {

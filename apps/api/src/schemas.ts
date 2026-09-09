@@ -91,7 +91,7 @@ export const assignmentPatchSchema = z.object({
   sortOrder: z.number().int().min(0).max(10000).optional(),
   // 'done' is not offered: finishing work is something you do, not something
   // you declare.
-  status: z.enum(['open', 'cancelled']).optional(),
+  status: z.enum(['open', 'canceled']).optional(),
 })
 
 export const attemptSchema = z.object({
@@ -177,8 +177,8 @@ export const dailySchema = z.object({
   correct: z.number().int().min(0),
 })
 
-// Either side of a card may carry maths or a figure, and a figure is a JSON
-// object inside the text — a labelled coordinate grid runs to a couple of
+// Either side of a card may carry math or a figure, and a figure is a JSON
+// object inside the text — a labeled coordinate grid runs to a couple of
 // thousand characters on its own. The ceiling is still there (a deck is read
 // and written whole), just set where a real question can fit under it.
 export const MAX_CARD_TEXT = 4000

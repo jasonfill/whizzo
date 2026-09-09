@@ -24,7 +24,7 @@ export function startCheckout(learnerIds: string[]): Promise<{ url: string }> {
 export interface CoverageChange {
   covered: number
   /** True when the last child came off and the subscription was ended. */
-  cancelled: boolean
+  canceled: boolean
 }
 
 /**
@@ -43,7 +43,7 @@ export function changeCoverage(change: {
   })
 }
 
-/** Stripe's own portal: the card, the invoices, and cancelling. */
+/** Stripe's own portal: the card, the invoices, and canceling. */
 export function billingPortal(): Promise<{ url: string }> {
   return api.post('/billing/portal', {})
 }

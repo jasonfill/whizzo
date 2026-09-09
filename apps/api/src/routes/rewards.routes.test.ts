@@ -209,7 +209,7 @@ describe('saying it has been handed over', () => {
     const app = await buildApp()
     const res = await app.inject({
       method: 'POST',
-      url: `/api/rewards/${REWARD}/fulfil`,
+      url: `/api/rewards/${REWARD}/fulfill`,
       headers: await auth(),
       payload: { note: 'chocolate' },
     })
@@ -224,7 +224,7 @@ describe('saying it has been handed over', () => {
     const app = await buildApp()
     const res = await app.inject({
       method: 'POST',
-      url: `/api/rewards/${REWARD}/fulfil`,
+      url: `/api/rewards/${REWARD}/fulfill`,
       headers: await auth(),
       payload: {},
     })
@@ -237,7 +237,7 @@ describe('saying it has been handed over', () => {
     const app = await buildApp()
     const res = await app.inject({
       method: 'POST',
-      url: `/api/rewards/${REWARD}/fulfil`,
+      url: `/api/rewards/${REWARD}/fulfill`,
       headers: await auth(),
       payload: {},
     })
@@ -250,7 +250,7 @@ describe('saying it has been handed over', () => {
     const app = await buildApp()
     const res = await app.inject({
       method: 'POST',
-      url: `/api/rewards/${REWARD}/fulfil`,
+      url: `/api/rewards/${REWARD}/fulfill`,
       headers: await auth(),
       payload: {},
     })
@@ -260,7 +260,7 @@ describe('saying it has been handed over', () => {
 
 describe('withdrawing one', () => {
   it('takes back a promise that has not come due', async () => {
-    query.mockResolvedValueOnce({ rows: [row({ status: 'cancelled' })] })
+    query.mockResolvedValueOnce({ rows: [row({ status: 'canceled' })] })
     const app = await buildApp()
     const res = await app.inject({
       method: 'POST',
@@ -268,7 +268,7 @@ describe('withdrawing one', () => {
       headers: await auth(),
       payload: {},
     })
-    expect(res.json().reward.status).toBe('cancelled')
+    expect(res.json().reward.status).toBe('canceled')
   })
 
   it('cannot take back one that has already been earned', async () => {

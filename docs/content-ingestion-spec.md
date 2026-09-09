@@ -6,7 +6,7 @@ The sentence this works toward:
 
 > **A grown-up hands us the thing they already have — a chapter PDF, a study
 > guide in Google Docs, a photo of a worksheet — and gets back content the
-> learner can practise, with nothing else to fill in.**
+> learner can practice, with nothing else to fill in.**
 
 [docs/learning-activities-spec.md](learning-activities-spec.md) — *What a
 grown-up actually does* — says a
@@ -209,7 +209,7 @@ doesn't.
 **`proposedShape: 'generator'` is the best possible outcome.** A times-table
 worksheet does not need forty generated cards; it needs the Tier 0 math-facts
 generator with `op: '×', range: [2, 12]`, which the activities spec's *Tier 0* already
-specifies. Recognising a worksheet as *a rule, not a list* produces better
+specifies. Recognizing a worksheet as *a rule, not a list* produces better
 content than any amount of extraction, costs nothing to store, and never
 drifts. The read stage should reach for it whenever the document is drill.
 
@@ -252,7 +252,7 @@ their best work, run in parallel, fail independently, and let a partial failure
 land five topics instead of none.
 
 **The first topic runs alone, then the rest fan out.** This looks like a
-needless serialisation and is the opposite: the cache is *written* by the first
+needless serialization and is the opposite: the cache is *written* by the first
 request to reach the server, so firing all six at once means all six start
 before any cache exists — every one is a miss, and the document is paid for six
 times. The failure is invisible in the output and shows up only on the bill.
@@ -316,7 +316,7 @@ the acceptance test for this stage, and it is checkable in code.
   to produce; `term` is the prompt. For a vocabulary list that is the obvious
   mapping. For a history chapter it is not, and the prompt must say so:
   *"1953"* is not a card, *"What year did Everest first get climbed?"* is.
-- **Maths is written in the grammar.** `$\frac{3}{4}$`, `$45^\circ$`,
+- **Math is written in the grammar.** `$\frac{3}{4}$`, `$45^\circ$`,
   `\text{cm}`. The card-formatting doc is included in the system prompt
   verbatim; it is 140 lines and it is the highest-leverage part of the whole
   prompt.
@@ -371,7 +371,7 @@ button is aimed at whatever a stranger emailed a parent.
    — length, the card-formatting grammar (§7), and no exceptions for content
    that "came from us".
 4. **Nothing generated is ever shown to a learner before an adult accepts it.**
-   §8. This is the actual mitigation; the rest is defence in depth.
+   §8. This is the actual mitigation; the rest is defense in depth.
 5. **Appropriateness is checked in the same call**, as a field on the bundle
    (`flagged: string[]`), not as a separate moderation pass. A chapter on the
    Holocaust is appropriate content that a model should handle carefully, not
@@ -394,7 +394,7 @@ Validation is server-side and total. Nothing reaches `decks.cards` unchecked.
 | Schema | `quizCardSchema` / `customWordListSchema` as they stand |
 | Card text | `parseRich()` from the moved `packages/shared/src/rich/` — every `$…$` compiles, every `[[figure]]` validates, or the card is dropped |
 | Count | ≤ 300 cards per deck (`MAX_CARDS_PER_DECK`); a bigger topic splits into "Part 1 / Part 2" |
-| Duplicates | same normalised `term` within a deck → keep the first |
+| Duplicates | same normalized `term` within a deck → keep the first |
 | Empties | either side blank → drop the card |
 | Answer sanity | `answerKind: 'numeric'` where the definition doesn't parse as a number → downgrade to `'text'` |
 | Difficulty | computed by `estimateDifficulty()`, never accepted from the model |
@@ -413,7 +413,7 @@ for themselves lands on the learner.
 
 ## 8. Provenance and review — the rule that must not bend
 
-The activities spec's non-negotiable 4 says generated content is labelled and
+The activities spec's non-negotiable 4 says generated content is labeled and
 reviewable, and §6 draws a hard line: enrichment never writes `term`,
 `definition`, `altAnswers` or `tolerance`, because a generated *answer* is not
 an authority.
@@ -423,7 +423,7 @@ the answer key. So the line has to move somewhere defensible, and this is
 where:
 
 > **A generated set is a draft until a grown-up accepts it. A draft can be
-> practised. A draft cannot be assigned, cannot close a goal, and cannot earn a
+> practiced. A draft cannot be assigned, cannot close a goal, and cannot earn a
 > reward.**
 
 That gives three properties worth having:
@@ -617,7 +617,7 @@ one `is not null`. RLS mirrors `decks` exactly, including the
 whoever can read the content it produced.
 
 `content_sources.sha256` exists so a second upload of the same file is
-recognised and offered the existing result rather than billed again.
+recognized and offered the existing result rather than billed again.
 
 ---
 
@@ -752,7 +752,7 @@ The other formats, links, and generators-from-documents follow at stage 8.
 
 ## 17. How we know it worked
 
-- **Actions to first round.** Upload to a learner practising, counted in
+- **Actions to first round.** Upload to a learner practicing, counted in
   clicks. Target: three, matching the activities spec's budget. If a document
   costs more setup than a paste, this feature has failed at its only job.
 - **Acceptance rate without edits.** Share of generated sets accepted whole.

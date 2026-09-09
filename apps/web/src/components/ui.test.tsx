@@ -1,6 +1,6 @@
 // The shared primitives.
 //
-// Small, but they set the rule the whole colour sweep rests on: `primary` is
+// Small, but they set the rule the whole color sweep rests on: `primary` is
 // brand chrome and stays spark on every surface, `play` is the themed CTA and
 // belongs only on a student play surface. Keeping them as separate variants is
 // what stops a progress report picking up a child's accent by reaching for the

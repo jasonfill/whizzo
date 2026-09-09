@@ -53,7 +53,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Fixtures: a parent, the teenager who practises and signs in, a tutor with
+-- Fixtures: a parent, the teenager who practices and signs in, a tutor with
 -- view-only access, and a stranger.
 -- ---------------------------------------------------------------------------
 reset role;
@@ -161,8 +161,8 @@ values (:exam::uuid, :kid::uuid, :course::uuid, 'test', 'Chapter 7', current_dat
 
 insert into public.planner_items (id, learner_id, week_start, on_day, kind, title, assessment_id,
                                   purpose, proposed, target_subject, target_activity, target_id, minutes)
-values (:study::uuid, :kid::uuid, :'monday'::date, :'monday'::date, 'study', 'Practise · Chapter 7',
-        :exam::uuid, 'practise', true, 'quiz', 'learn', 'starter-body', 20);
+values (:study::uuid, :kid::uuid, :'monday'::date, :'monday'::date, 'study', 'Practice · Chapter 7',
+        :exam::uuid, 'practice', true, 'quiz', 'learn', 'starter-body', 20);
 
 select pg_temp.check_denied('a linked card refuses a hand tick',
   'update public.planner_items set status = ''done'', done_at = now(), done_by = '
@@ -305,7 +305,7 @@ select pg_temp.check('and counts its sessions',
 select pg_temp.become(:teen);
 insert into public.planner_items (learner_id, week_start, on_day, kind, title,
                                   target_subject, target_activity, target_id)
-values (:kid::uuid, :'monday'::date, :'monday'::date, 'study', 'Practise again',
+values (:kid::uuid, :'monday'::date, :'monday'::date, 'study', 'Practice again',
         'quiz', 'learn', 'starter-body');
 insert into public.sessions
   (id, learner_id, subject, activity, list_id, items_total, items_correct, accuracy,

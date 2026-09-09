@@ -37,7 +37,7 @@ describe('generateLessonText', () => {
     expect(usesOnly(text, first.allowedKeys)).toBe(true)
   })
 
-  it('produces a different drill each time, so a lesson is not memorised', () => {
+  it('produces a different drill each time, so a lesson is not memorized', () => {
     const lesson = CURRICULUM[0]!
     const runs = new Set(Array.from({ length: 12 }, () => generateLessonText(lesson)))
     expect(runs.size).toBeGreaterThan(1)

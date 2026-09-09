@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const rewardsApi = vi.hoisted(() => ({
   rewardsFor: vi.fn(),
-  fulfilReward: vi.fn(),
+  fulfillReward: vi.fn(),
   cancelReward: vi.fn(),
   offerReward: vi.fn(),
 }))
@@ -58,8 +58,8 @@ function show(rewards: Reward[], userId = PARENT, ownsLearner = true) {
 
 beforeEach(() => {
   for (const fn of Object.values(rewardsApi)) fn.mockReset()
-  rewardsApi.fulfilReward.mockResolvedValue({ reward: reward() })
-  rewardsApi.cancelReward.mockResolvedValue({ reward: reward({ status: 'cancelled' }) })
+  rewardsApi.fulfillReward.mockResolvedValue({ reward: reward() })
+  rewardsApi.cancelReward.mockResolvedValue({ reward: reward({ status: 'canceled' }) })
 })
 
 describe('with nothing promised', () => {
@@ -93,7 +93,7 @@ describe('what is owed comes first', () => {
   it('settles it in one tap', async () => {
     show([reward({ id: 'b', status: 'earned', earnedAt: NOW })])
     fireEvent.click(await screen.findByText('✅ Given'))
-    await waitFor(() => expect(rewardsApi.fulfilReward).toHaveBeenCalledWith('b'))
+    await waitFor(() => expect(rewardsApi.fulfillReward).toHaveBeenCalledWith('b'))
   })
 })
 
@@ -144,7 +144,7 @@ describe('what has been given', () => {
 
 describe('when saving fails', () => {
   it('says so rather than looking like it worked', async () => {
-    rewardsApi.fulfilReward.mockRejectedValue(new Error('Only whoever promised this can.'))
+    rewardsApi.fulfillReward.mockRejectedValue(new Error('Only whoever promised this can.'))
     show([reward({ status: 'earned', earnedAt: NOW })])
     fireEvent.click(await screen.findByText('✅ Given'))
     expect(await screen.findByText(/Only whoever promised this can/)).toBeTruthy()
@@ -211,7 +211,7 @@ describe('promising something', () => {
     expect(await screen.findByText(/made themselves/)).toBeTruthy()
   })
 
-  it('goes back without promising anything when cancelled', async () => {
+  it('goes back without promising anything when canceled', async () => {
     await openForm()
     fireEvent.click(screen.getByText('Cancel'))
     await waitFor(() => expect(screen.queryByText('Promise it')).toBeNull())

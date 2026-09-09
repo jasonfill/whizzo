@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { newlyUnlocked, type QuizAchievement } from '../data/quizAchievements'
 import {
   applyAttemptToMastery,
@@ -7,6 +7,7 @@ import {
   updateStreak,
 } from '../lib/adaptive'
 import { useProgress } from '../lib/progress/ProgressProvider'
+import { useLiveRound } from './useLiveRound'
 import { applyChange, type ProgressChange } from '../lib/progress/repo'
 import {
   cardKey,
@@ -136,7 +137,7 @@ function starsFor(accuracy: number, predicted: number): number {
  * high scores, stars and — once rewards ship — things a parent actually hands
  * over. A learner tapping "Got it" through a deck they do not know must not be
  * able to score their way to a prize. Flashcards still award the thing they are
- * for, which is having practised.
+ * for, which is having practiced.
  */
 export function scoreFor(results: QuizItemResult[]): number {
   let score = 0
@@ -163,6 +164,11 @@ function newSessionId(): string {
 }
 
 export function useQuizSession() {
+  // Anybody working through this set from another screen. Silent and free when
+  // nobody is: see useLiveRound.
+  const live = useLiveRound()
+  const roundIdRef = useRef<string | null>(null)
+
   const { snapshot, skill, commit } = useProgress()
 
   const [plan, setPlan] = useState<PlannedCard[]>([])
@@ -227,9 +233,19 @@ export function useQuizSession() {
       publish()
       startedAtRef.current = Date.now()
       itemStartedAtRef.current = Date.now()
+
+      const roundId = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      roundIdRef.current = roundId
+      live.begin({
+        roundId,
+        activity: opts.mode,
+        subject: 'quiz',
+        title: opts.decks.length === 1 ? (opts.decks[0]?.title ?? 'a deck') : `${opts.decks.length} decks`,
+        cards: planned.length,
+      })
       return planned
     },
-    [publish, snapshot],
+    [live, publish, snapshot],
   )
 
   const beginItem = useCallback(() => {
@@ -258,7 +274,7 @@ export function useQuizSession() {
       const pass = (passesRef.current.get(planIndex) ?? 0) + 1
       passesRef.current.set(planIndex, pass)
 
-      // A near miss counts. The learner recalled the answer; penalising a
+      // A near miss counts. The learner recalled the answer; penalizing a
       // transposed letter on a biology deck tests typing, not biology.
       const correct = grade !== 'wrong'
       const policy = options ? requeuePolicy(options.mode) : null
@@ -287,10 +303,24 @@ export function useQuizSession() {
         requeued,
       }
       setResults((prev) => [...prev, result])
+      // The answer, and how it went. `verified: false` is flashcards marking
+      // its own work, which is worth showing a watcher as exactly that.
+      if (roundIdRef.current) {
+        live.card({
+          roundId: roundIdRef.current,
+          at: cursorRef.current + 1,
+          cards: plan.length,
+          prompt: question.prompt,
+          outcome: grade === 'correct' ? 'right' : grade,
+          answer: question.answer,
+          selfGraded: !result.verified,
+          responseMs: result.responseMs,
+        })
+      }
       publish()
       return result
     },
-    [options, plan, publish, questions],
+    [live, options, plan, publish, questions],
   )
 
   /**
@@ -348,6 +378,29 @@ export function useQuizSession() {
   const isComplete = plan.length > 0 && cursor >= queue.length
 
   /**
+   * The card on screen, sent as the learner arrives at it.
+   *
+   * A watcher's view mirrors theirs — same card, same position — which is what
+   * makes talking about it possible from two screens. The answer is withheld
+   * until the learner has answered, the same rule the voice tutor works under:
+   * nobody gets the answer before the person whose turn it is.
+   */
+  const showCard = live.card
+  useEffect(() => {
+    if (!roundIdRef.current || !currentQuestion) return
+    showCard({
+      roundId: roundIdRef.current,
+      at: cursor + 1,
+      cards: plan.length,
+      prompt: currentQuestion.prompt,
+      outcome: null,
+      answer: null,
+      selfGraded: false,
+      responseMs: null,
+    })
+  }, [cursor, currentQuestion, showCard, plan.length])
+
+  /**
    * What the learner sees as progress. Cards retired out of the deck, not
    * questions ticked off a list — under a requeue those are different numbers,
    * and the honest one is how many cards they have actually put away.
@@ -372,7 +425,7 @@ export function useQuizSession() {
    *
    * Two different flags are at work and they are deliberately not the same one:
    *   * mastery and the review schedule move on every honest attempt, because
-   *     recognising a card is still evidence about that card;
+   *     recognizing a card is still evidence about that card;
    *   * the learner's overall ability only moves on unaided recall — a written
    *     answer with no hint. Multiple choice is recognition, and a run of lucky
    *     four-way guesses should not read as getting cleverer.
@@ -502,7 +555,7 @@ export function useQuizSession() {
       // A card can appear more than once now, so the headline is scored on
       // first sight of each card. Otherwise a learner who missed one and then
       // drilled it three times would read as worse than one who never went
-      // back to it, which would punish exactly the behaviour this is for.
+      // back to it, which would punish exactly the behavior this is for.
       const firstAttempts: QuizItemResult[] = []
       const lastAttempt = new Map<string, QuizItemResult>()
       const seen = new Set<string>()
@@ -638,6 +691,11 @@ export function useQuizSession() {
 
       await commit(change)
 
+      if (roundIdRef.current) {
+        live.end({ roundId: roundIdRef.current, cards: itemsTotal, correct: itemsCorrect })
+        roundIdRef.current = null
+      }
+
       const built: QuizSummary = {
         mode: options.mode,
         deckId,
@@ -661,7 +719,7 @@ export function useQuizSession() {
       setSummary(built)
       return built
     },
-    [commit, options, results, snapshot, state],
+    [commit, live, options, results, snapshot, state],
   )
 
   const reset = useCallback(() => {
@@ -675,6 +733,19 @@ export function useQuizSession() {
     passesRef.current = new Map()
     publish()
   }, [publish])
+
+  /**
+   * What is in the answer box, for anybody working through this with them.
+   *
+   * Call it freely on every change — useLiveRound holds it until typing pauses,
+   * and drops it entirely when nobody is there.
+   */
+  const draft = useCallback(
+    (text: string) => {
+      if (roundIdRef.current) live.draft(roundIdRef.current, cursorRef.current + 1, text)
+    },
+    [live],
+  )
 
   return useMemo(
     () => ({
@@ -700,6 +771,10 @@ export function useQuizSession() {
       advance,
       finish,
       reset,
+      draft,
+      /** True while somebody else is following this round from another screen. */
+      watched: live.watched,
+      watcherNames: live.watcherNames,
     }),
     [
       plan,
@@ -722,6 +797,9 @@ export function useQuizSession() {
       advance,
       finish,
       reset,
+      draft,
+      live.watched,
+      live.watcherNames,
     ],
   )
 }

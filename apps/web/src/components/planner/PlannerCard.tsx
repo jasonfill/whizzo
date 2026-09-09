@@ -1,6 +1,6 @@
 // Every item on the planner is one of these, so the learner learns one object.
 //
-// The anatomy: a colour bar from the course, the title, a minutes chip, and a
+// The anatomy: a color bar from the course, the title, a minutes chip, and a
 // state mark — an empty box for a claim, the verified mark for app work, a
 // faint outline for a proposed session not yet accepted. Start appears on any
 // card the app can run and nowhere else. A card the app can run has no box:

@@ -15,7 +15,7 @@ import { ACTIVITY_TABLE } from './copy'
 /**
  * Everything the product does, in one place.
  *
- * The front page is an argument; this is a catalogue, and it is written for the
+ * The front page is an argument; this is a catalog, and it is written for the
  * visitor who has already decided they are interested and now wants to know
  * whether the specific thing they need is here. That reader is best served by
  * being able to scan, so every block is the same shape: what it is, then the
@@ -42,7 +42,7 @@ const BLOCKS: Block[] = [
     nav: 'Spelling',
     eyebrow: 'Subject',
     title: 'Adaptive spelling, 2nd through 8th grade',
-    lede: '420 words across 42 lists, each organised by the rule it teaches rather than by the week it falls in — short vowels, magic e, bossy R, -tion, homophones, Greek and Latin roots, silent letters, -able and -ible, and the rule breakers.',
+    lede: '420 words across 42 lists, each organized by the rule it teaches rather than by the week it falls in — short vowels, magic e, bossy R, -tion, homophones, Greek and Latin roots, silent letters, -able and -ible, and the rule breakers.',
     points: [
       'The level is found from the first handful of words, with no placement test to sit',
       'Every word has an example sentence, read aloud for context',
@@ -73,7 +73,7 @@ const BLOCKS: Block[] = [
     lede: 'Two-sided cards — vocabulary, capitals, dates, formulas, conjugations — running on the same engine as spelling instead of on a shuffle.',
     points: [
       'Five modes, including free recall of an entire set',
-      'Maths, fractions and figures render properly on a card, and typed answers are graded against the equation',
+      'Math, fractions and figures render properly on a card, and typed answers are graded against the equation',
       'Direction can be flipped: term first, definition first, or mixed',
       'Starter decks ship with the app and never count against your own',
     ],
@@ -83,7 +83,7 @@ const BLOCKS: Block[] = [
     nav: 'The mastery ladder',
     eyebrow: 'The engine',
     title: 'The mastery ladder, and the path through it',
-    lede: 'Knowing something is not one state. An item moves from having been met, to being recognised among others, to being produced with a scaffold, to being produced from nothing — and the app asks at the rung the learner is actually on.',
+    lede: 'Knowing something is not one state. An item moves from having been met, to being recognized among others, to being produced with a scaffold, to being produced from nothing — and the app asks at the rung the learner is actually on.',
     points: [
       'Every rung is recomputed from the answer history, never stored and trusted',
       'Assign a goal on a set — "master this by Friday" — and the batching, the rungs and the checks are derived',
@@ -146,7 +146,7 @@ const BLOCKS: Block[] = [
       'There is no "mark as earned" button anywhere, for anyone',
       'Whether you handed it over is your claim, recorded and attributed as one',
       'Conditions can hang off a task, a mastered set, a count of mastered items, or a checkpoint',
-      'Offers can expire, cap their number of awards, or be cancelled',
+      'Offers can expire, cap their number of awards, or be canceled',
     ],
   },
   {
@@ -159,7 +159,7 @@ const BLOCKS: Block[] = [
       'Level by grade, and accuracy measured over checked answers only',
       'Word-by-word and card-by-card mastery, including every miss',
       'Retention: what is sticking, and what is about to slip',
-      'Family shows every child at once — outstanding work, overdue, last practised, minutes and questions this week, streak',
+      'Family shows every child at once — outstanding work, overdue, last practiced, minutes and questions this week, streak',
       'Printable weekly progress sheets, and CSV export of the lot',
     ],
   },
@@ -280,7 +280,7 @@ export default function FeaturesScreen({ navigate }: { navigate: Navigate }) {
 function Activities() {
   return (
     <Section
-      eyebrow="The catalogue"
+      eyebrow="The catalog"
       title="Every activity, and whether it counts"
       lede="Practice activities are good for learning and are deliberately kept out of the ability estimate. Only unaided, checked work moves a level."
     >
@@ -326,7 +326,7 @@ function Activities() {
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <Panel title="Typing is counted separately">
-          A typing lesson records keystrokes rather than answers, so its rounds are labelled as
+          A typing lesson records keystrokes rather than answers, so its rounds are labeled as
           having no per-question record instead of being quietly treated like graded work.
         </Panel>
         <Panel title="A hint ends the evidence, not the round">

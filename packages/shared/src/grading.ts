@@ -81,7 +81,7 @@ const ARTICLES = /^(a|an|the|to|el|la|los|las|le|les|un|una|der|die|das)\s+/i
  * punctuation, and a leading article. Someone who typed "the mitochondrion"
  * knows the answer, and a quiz that says otherwise is testing typing.
  *
- * Maths comes through here as what a learner would type, not as its source:
+ * Math comes through here as what a learner would type, not as its source:
  * the answer `$\frac{3}{4}$` is graded as "3/4", because that is what is in
  * the box when they press enter. Nobody types a backslash.
  */
@@ -101,7 +101,7 @@ export function normalize(value: string): string {
  * Splitting on the slash is worth the small risk of a genuine slash in an
  * answer, because alternatives are extremely common on vocabulary decks.
  *
- * Two slashes are not that, and both turn up constantly on a maths deck: the
+ * Two slashes are not that, and both turn up constantly on a math deck: the
  * one inside an equation, and the one between two numbers. "3/4 cup" is one
  * answer, and splitting it would accept "3". Everything else still splits, so
  * `$\frac{1}{2}$ / a half` remains two ways of saying the same thing.

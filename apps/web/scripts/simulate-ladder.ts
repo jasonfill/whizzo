@@ -9,7 +9,7 @@
 // Four claims, all of which would be worth shipping the ladder for and none of
 // which are safe to assume:
 //
-//   1. Practising three times an evening promotes nothing. The requeue is the
+//   1. Practicing three times an evening promotes nothing. The requeue is the
 //      obvious way this ladder gets silently wrong.
 //   2. Spaced practice does promote — a rule that never promotes is safe and
 //      useless.
@@ -136,7 +136,7 @@ for (const [label, skill, seed] of [
     // per-item ladder is that the question follows the learner.
     level = deriveLadderState(attempts).level
     const activity = activityFor(level)
-    // Harder rungs are harder: recognising is easier than producing.
+    // Harder rungs are harder: recognizing is easier than producing.
     const chance = skill - stageOf(activity) * 0.08
     attempts.push(
       attempt({

@@ -58,7 +58,7 @@ export interface TrackReading {
   accuracy: number | null
   /** Only shown where it means something — see `showsAbility`. */
   ability: number | null
-  lastPractisedAt: number | null
+  lastPracticedAt: number | null
 }
 
 /**
@@ -103,7 +103,7 @@ export function trackReadings(
       mastered: bucket.mastered,
       accuracy: checked,
       ability: showsAbility(trackId, bucket.items) ? (skill?.ability ?? null) : null,
-      lastPractisedAt: bucket.last,
+      lastPracticedAt: bucket.last,
     })
   }
 

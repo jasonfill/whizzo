@@ -156,7 +156,7 @@ describe('troubleWords — what a parent is shown to work on', () => {
     expect(troubleWords(snap)[0]!.itemKey).toBe('slippy')
   })
 
-  it('honours the limit the caller asked for', () => {
+  it('honors the limit the caller asked for', () => {
     const many = Array.from({ length: 30 }, (_, i) =>
       item({ itemKey: `w${i}`, mastery: 0.1, totalAttempts: 4 }),
     )

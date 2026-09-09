@@ -51,7 +51,7 @@ export interface ActivityDef {
   /**
    * Whether a grown-up can set this as a piece of work.
    *
-   * Not everything in this catalogue is a round you can start. The scaffolded
+   * Not everything in this catalog is a round you can start. The scaffolded
    * kinds are how a *question* is asked inside Learn, chosen per card by the
    * ladder — "do twenty word-banks" is not a coherent thing to assign, and a
    * task pointing at one would have nowhere to go.
@@ -202,7 +202,7 @@ export const ACTIVITY_CATALOG: ActivityDef[] = [
     id: 'tutor',
     name: 'Tutor round',
     emoji: '🗣️',
-    blurb: 'Practise out loud with the assistant you already use.',
+    blurb: 'Practice out loud with the assistant you already use.',
     subjects: ['quiz'],
     stage: 3,
     isTest: true,

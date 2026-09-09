@@ -8,12 +8,12 @@ specified for implementation in the **whizzo_app monorepo**.
 ## 0. Read this first
 
 **The files in this bundle are design references written in HTML.** They are
-prototypes of intended look and behaviour, not production code. Do not port the
+prototypes of intended look and behavior, not production code. Do not port the
 markup. Recreate each screen in `apps/web` using the app's existing patterns
 (React 18 + TypeScript + Vite + Tailwind), lifting the exact values from the
 token tables below.
 
-**Fidelity: high.** Colours, type, spacing, radii and copy are final. The copy
+**Fidelity: high.** Colors, type, spacing, radii and copy are final. The copy
 in particular is load-bearing — phrases like "Counts toward your level",
 "Practice only · doesn't affect level" and "Hint — this word stops counting" are
 the product's honesty made visible. Keep them.
@@ -35,7 +35,7 @@ two disagree, **the monorepo wins**.
 
 **The brand is the chassis. A theme is the paint.**
 
-A theme swaps exactly two visual tokens — one accent colour and one mascot — plus
+A theme swaps exactly two visual tokens — one accent color and one mascot — plus
 a small set of copy strings (a verb and a collectible noun). Nothing else in any
 screen changes. The app today is built around Cats; Cats becomes one of ten equal
 themes.
@@ -46,7 +46,7 @@ Three rules that must survive implementation:
    ribbon (Horses) and a fossil (Dinosaurs) are the same graded round underneath.
    Otherwise switching themes becomes a way to farm easy wins. `lib/adaptive.ts`
    is not touched by any of this.
-2. **Progress colour is never the theme accent.** Mastery bars, grade rows and
+2. **Progress color is never the theme accent.** Mastery bars, grade rows and
    charts use `pine`, always, so a progress bar means the same thing in every
    theme. The accent is for play surfaces and CTAs.
 3. **Grown-up surfaces are theme-free.** Family, Progress, Account, Library,
@@ -58,10 +58,10 @@ Three rules that must survive implementation:
 ## 2. Brand: direction "Spark" (approved)
 
 ### Wordmark
-`whizzo`, Outfit 900, `letter-spacing: -0.035em`, colour `ink #1C1A16`,
+`whizzo`, Outfit 900, `letter-spacing: -0.035em`, color `ink #1C1A16`,
 **always lowercase**. Mark to its left: a 34px squircle (`border-radius: 11px`)
 in `ink`, containing the glyph `wz` in Outfit 900, `letter-spacing: -0.08em`,
-coloured with the active theme accent.
+colored with the active theme accent.
 
 ### App icons (approved set — see `01-icons-wz-squircle.png`)
 | Variant | Use | Spec |
@@ -220,7 +220,7 @@ student who wants Dinosaurs gets Dinosaurs.
 
 ---
 
-## 5. Sweeping theme colour out of the existing screens
+## 5. Sweeping theme color out of the existing screens
 
 ```bash
 grep -rn "cream\|grape\|bubble\|violet-\|fuchsia-\|purple-\|pink-" apps/web/src
@@ -279,7 +279,7 @@ Both views share a bottom pair: a progress card (14px accent-filled bar,
 "GRADE 4 · DOUBLED CONSONANT" — that second label is the error pattern from the
 existing difficulty model, the same source the proofread distractors use. 68px
 replay button, sentence with the blank as a `tray` chip, live input with a 2px
-accent border and a 3px caret, "Check". Below: the hint button labelled
+accent border and a 3px caret, "Check". Below: the hint button labeled
 **"Hint — this word stops counting"** and "You've had this one right 2 of 7
 times." Then a `tintA` mascot strip with themed cheer copy — **the mascot is the
 only themed element on this screen**, stated in the footnote.
@@ -393,7 +393,7 @@ into `GamePlay:129`.
 
 ### Slots and states
 Sizes 200 (K–5 hero) / 108 (reward) / 62 (session) / 34 (avatar). **34px decides
-the design** — if the silhouette is not recognisable as one flat shape at 34px it
+the design** — if the silhouette is not recognizable as one flat shape at 34px it
 is the wrong silhouette. States: idle, cheer, thinking, resting. No sad state.
 
 Build the slot as a fixed-aspect container rendering `theme.mascotSrc` with the
@@ -415,7 +415,7 @@ a fox — so redraw it first, then Cats / Space / Robots as the style test
 - [ ] Tailwind palette and fonts replaced; `Baloo 2` gone; all keyframes kept
 - [ ] `lib/themes.ts` + provider; `--wz-accent` live; theme persists per learner
 - [ ] No `grape`/`cream`/`bubble`/violet/fuchsia left in `src`
-- [ ] Progress and data colours are `pine` in every theme
+- [ ] Progress and data colors are `pine` in every theme
 - [ ] Grown-up surfaces render with no theme accent at all
 - [ ] Theme picker, both Home views, Session, Reward, and all three World shapes
 - [ ] `Mascot` renamed, `sad` retired, all 24 sites migrated, 6 `color`

@@ -186,7 +186,7 @@ describe('merging guest play into an account', () => {
     expect(merged.highScores[0]!.score).toBe(114)
   })
 
-  it('adds up a day practised on two devices', () => {
+  it('adds up a day practiced on two devices', () => {
     const day = todayString()
     const row = { day, subject: 'spelling', seconds: 60, items: 10, correct: 8, sessions: 1 } as never
     const merged = mergeSnapshots(snapshotWith({ daily: [row] }), snapshotWith({ daily: [row] }))

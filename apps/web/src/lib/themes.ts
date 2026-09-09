@@ -1,7 +1,7 @@
 // The theme layer.
 //
 // The brand is the chassis; a theme is the paint. A theme swaps exactly one
-// accent colour and one mascot, plus a handful of copy strings — a verb and a
+// accent color and one mascot, plus a handful of copy strings — a verb and a
 // collectible noun. Nothing else in any screen changes.
 //
 // Three rules this file exists to keep honest:
@@ -10,7 +10,7 @@
 //      A ribbon and a fossil are the same graded round underneath, so nothing
 //      here is reachable from `lib/adaptive.ts`. Earn rate is fixed across all
 //      ten themes; otherwise switching themes becomes a way to farm easy wins.
-//   2. Progress colour is never the accent. Mastery bars, grade rows and charts
+//   2. Progress color is never the accent. Mastery bars, grade rows and charts
 //      are `pine` in every theme, so a progress bar means the same thing to
 //      every learner. The accent is for play surfaces and CTAs only.
 //   3. Grown-up surfaces are theme-free. Family, Progress, Account, Library,

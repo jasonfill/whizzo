@@ -178,7 +178,7 @@ describe('AssignForm', () => {
     expect(assignmentsApi.createAssignments).not.toHaveBeenCalled()
   })
 
-  it('can be cancelled without setting anything', async () => {
+  it('can be canceled without setting anything', async () => {
     const onCancel = vi.fn()
     render(
       <AssignForm

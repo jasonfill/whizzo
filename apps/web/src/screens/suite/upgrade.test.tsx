@@ -20,7 +20,7 @@ vi.mock('../../lib/theme/ThemeProvider', async () =>
 
 const billing = vi.hoisted(() => ({
   startCheckout: vi.fn(async () => ({ url: 'https://checkout.stripe/x' })),
-  changeCoverage: vi.fn(async () => ({ covered: 2, cancelled: false })),
+  changeCoverage: vi.fn(async () => ({ covered: 2, canceled: false })),
   billingPortal: vi.fn(async () => ({ url: 'https://billing.stripe/x' })),
   isUnconfigured: vi.fn(() => false),
 }))
@@ -39,7 +39,7 @@ beforeEach(() => {
   navigate.mockClear()
   assign.mockClear()
   billing.startCheckout.mockClear().mockResolvedValue({ url: 'https://checkout.stripe/x' })
-  billing.changeCoverage.mockClear().mockResolvedValue({ covered: 2, cancelled: false })
+  billing.changeCoverage.mockClear().mockResolvedValue({ covered: 2, canceled: false })
   billing.isUnconfigured.mockReturnValue(false)
   Object.defineProperty(window, 'location', {
     configurable: true,

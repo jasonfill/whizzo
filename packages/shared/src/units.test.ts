@@ -22,7 +22,7 @@ const MONEY: Unit[] = [
   unit('insurance'),
 ]
 
-describe('a catalogue that is sound', () => {
+describe('a catalog that is sound', () => {
   it('has nothing to report', () => {
     expect(validateCatalog(MONEY)).toEqual([])
   })
@@ -77,7 +77,7 @@ describe('what the validator catches', () => {
   })
 
   it('reports everything at once, not one thing at a time', () => {
-    // Somebody fixing a catalogue wants the list.
+    // Somebody fixing a catalog wants the list.
     const problems = validateCatalog([unit('a', ['ghost']), { ...unit('b'), title: '' }])
     expect(problems.length).toBeGreaterThanOrEqual(2)
   })
@@ -126,7 +126,7 @@ describe('a sensible order to work through', () => {
     expect(suggestedOrder(flat).map((u) => u.id)).toEqual(['c', 'a', 'b'])
   })
 
-  it('terminates on a catalogue that has a loop in it', () => {
+  it('terminates on a catalog that has a loop in it', () => {
     // The validator reports the loop; this must not hang while it is being
     // fixed.
     const looped = [unit('a', ['b']), unit('b', ['a'])]

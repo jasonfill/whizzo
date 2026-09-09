@@ -87,7 +87,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   // Swap the storage backend whenever the active learner changes — signing in,
   // signing out, or a parent switching from one child to another. Selecting a
   // learner pulls their cloud snapshot and folds any guest play into it first,
-  // so a kid who practised before their account existed keeps everything.
+  // so a kid who practiced before their account existed keeps everything.
   //
   // Keyed on the learner's id, not the record: the list is refetched now and
   // then (adding a sibling, a refresh) and hands back a new object for the same
@@ -100,7 +100,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     // then swapping would double-count the round in progress.
     if (status === 'signed-in' && learnerStatus === 'loading') return
 
-    let cancelled = false
+    let canceled = false
 
     async function boot() {
       setSync('loading')
@@ -108,7 +108,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         if (status === 'signed-in' && activeId) {
           const cloud = new ApiProgressRepo(activeId)
           const cloudSnapshot = await cloud.load()
-          if (cancelled) return
+          if (canceled) return
 
           const local = loadLocalSnapshot()
           const hasGuestPlay =
@@ -118,7 +118,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
             setSync('merging')
             const merged = mergeSnapshots(cloudSnapshot, local)
             await cloud.pushSnapshot(merged)
-            if (cancelled) return
+            if (canceled) return
             markMerged(activeId)
             clearLocalProgress()
             repoRef.current = cloud
@@ -130,14 +130,14 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         } else {
           const local = new LocalProgressRepo()
           const loaded = await local.load()
-          if (cancelled) return
+          if (canceled) return
           repoRef.current = local
           setSnapshot(loaded)
         }
-        if (!cancelled) setSync('idle')
+        if (!canceled) setSync('idle')
       } catch (err) {
         console.warn('[cat-academy] progress load failed, falling back to local', err)
-        if (cancelled) return
+        if (canceled) return
         const local = new LocalProgressRepo()
         repoRef.current = local
         setSnapshot(await local.load())
@@ -147,7 +147,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
     void boot()
     return () => {
-      cancelled = true
+      canceled = true
     }
   }, [status, learnerStatus, activeId])
 

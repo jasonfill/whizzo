@@ -57,8 +57,8 @@ button {
    and only one screen is ever meant to reach a printer.
 
    The app paints on a tinted ground with a fixed background layer behind it.
-   Left alone, a browser either drops all of that (and prints pale grey text on
-   white) or honours it and empties a cartridge. So the sheet is forced to ink
+   Left alone, a browser either drops all of that (and prints pale gray text on
+   white) or honors it and empties a cartridge. So the sheet is forced to ink
    on white, and the decorative layers are removed rather than trusted. */
 @media print {
   /* Anything explicitly marked, wherever it sits in the tree.
@@ -86,7 +86,7 @@ button {
     color: #000 !important;
   }
 
-  /* Tailwind's text colours are all tuned for the tinted ground. On paper the
+  /* Tailwind's text colors are all tuned for the tinted ground. On paper the
      only thing that matters is that it is legible in one ink. */
   [data-print-sheet] * {
     color: #000 !important;

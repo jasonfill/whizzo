@@ -30,7 +30,7 @@ describe('coverage', () => {
   it('treats a failed card as covered, not as a reason to take the report away', () => {
     expect(isActiveStatus('past_due')).toBe(true)
     expect(isActiveStatus('active')).toBe(true)
-    expect(isActiveStatus('cancelled')).toBe(false)
+    expect(isActiveStatus('canceled')).toBe(false)
   })
 })
 

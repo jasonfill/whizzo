@@ -1,7 +1,7 @@
 // The mastery bar.
 //
 // It appears on both a student screen and a parent report, which is exactly
-// why it is the component most likely to drift into a theme colour. The rule:
+// why it is the component most likely to drift into a theme color. The rule:
 // progress is pine in every world, always.
 
 import { render, screen } from '@testing-library/react'
@@ -55,16 +55,16 @@ describe('a progress bar is pine in every world', () => {
     expect(classes).not.toContain('tintB')
   })
 
-  it('runs the track on the inert tray colour', () => {
+  it('runs the track on the inert tray color', () => {
     const { container } = render(<MasteryBar mastered={1} practiced={1} learning={1} total={9} />)
     expect(container.querySelector('.bg-tray')).not.toBeNull()
   })
 
-  it('gives the legend the same colours as the bar', () => {
+  it('gives the legend the same colors as the bar', () => {
     // A legend that disagrees with the bar it explains is worse than none.
     const { container } = render(<MasteryBar mastered={1} practiced={1} learning={1} total={9} />)
-    for (const colour of ['bg-pine', 'bg-pineSoft', 'bg-sun', 'bg-tray']) {
-      expect(container.querySelectorAll(`.${colour.replace('.', '\\.')}`).length).toBeGreaterThan(0)
+    for (const color of ['bg-pine', 'bg-pineSoft', 'bg-sun', 'bg-tray']) {
+      expect(container.querySelectorAll(`.${color.replace('.', '\\.')}`).length).toBeGreaterThan(0)
     }
   })
 })

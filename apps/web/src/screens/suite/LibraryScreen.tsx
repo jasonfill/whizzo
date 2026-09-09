@@ -164,7 +164,7 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
           <div className="space-y-5">
             {/* Grouped by the document each set came from. A chapter that came
                 back as six sets is six rows under one heading with one button,
-                rather than six rows the parent has to recognise and set one at
+                rather than six rows the parent has to recognize and set one at
                 a time. */}
             {groups.map((group) => (
               <section key={group.sourceId ?? 'loose'}>

@@ -68,6 +68,8 @@ export function routeToPath(route: Route): string {
       return '/library/add'
     case 'planner':
       return withQuery(route.weekStart ? `/planner/week/${route.weekStart}` : '/planner', { view: route.view })
+    case 'watch':
+      return `/watch/${route.learnerId}`
     case 'planner-plan':
       return '/planner/plan'
     case 'planner-wrap':

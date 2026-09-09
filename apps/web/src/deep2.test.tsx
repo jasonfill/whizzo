@@ -128,7 +128,7 @@ describe('useAssignments', () => {
 
   it('says so when the list will not load, without stopping the app', async () => {
     // A task list that fails is worth saying so about; it must never stop a
-    // child getting on with practising.
+    // child getting on with practicing.
     assignmentsApi.listAssignments.mockRejectedValue(new Error('offline'))
     const { result } = renderHook(() => useAssignments())
     await waitFor(() => expect(result.current.error).toBeTruthy())
@@ -211,7 +211,7 @@ describe('LibraryScreen — with material in it', () => {
   })
 
   // A chapter arrives as several sets. In a flat list those are several rows
-  // the parent has to recognise; under the document's own name they are the
+  // the parent has to recognize; under the document's own name they are the
   // thing they uploaded.
   describe('a document that came back as several sets', () => {
     const chapter = (over: Record<string, unknown>) => ({

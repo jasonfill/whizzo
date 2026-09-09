@@ -18,7 +18,10 @@ const withUser = vi.hoisted(() =>
 
 vi.mock('../db.js', () => ({
   withUser: (...a: Parameters<typeof withUser>) => withUser(...a),
-  withAdmin: (...a: Parameters<typeof withUser>) => withUser(...a),
+  // One argument, not two: withAdmin takes the callback alone. Standing it in
+  // with withUser's shape passes the callback as the user id and `undefined`
+  // as the callback — harmless only for as long as nothing here reaches for it.
+  withAdmin: (fn: (db: unknown) => Promise<unknown>) => fn({ query }),
   pool: { connect: vi.fn(), query: vi.fn(), on: vi.fn() },
 }))
 

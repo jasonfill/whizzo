@@ -72,7 +72,7 @@ describe('the addresses it calls', () => {
 
   it('polls a job', async () => {
     await jobStatus('j1')
-    // The signal is passed through so a poll loop can be cancelled when the
+    // The signal is passed through so a poll loop can be canceled when the
     // screen goes away.
     expect(apiMock.get).toHaveBeenCalledWith('/content/jobs/j1', undefined)
   })

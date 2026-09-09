@@ -173,7 +173,7 @@ describe('what can be assigned', () => {
     }
   })
 
-  it('agrees with the catalogue about which activities are checked', () => {
+  it('agrees with the catalog about which activities are checked', () => {
     for (const a of ASSIGNABLE) {
       expect(a.graded, a.activity).toBe(activityDef(a.activity)?.isTest)
     }

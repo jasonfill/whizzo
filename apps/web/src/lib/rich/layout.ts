@@ -109,7 +109,7 @@ export function centroid(points: Pt[]): Pt {
  *
  * Aspect ratio is preserved, always: a square drawn as a rectangle is a wrong
  * answer waiting to happen, and a learner asked "is this a rhombus?" is
- * entitled to trust the picture. Input is in maths coordinates (y upward);
+ * entitled to trust the picture. Input is in math coordinates (y upward);
  * output is in SVG coordinates (y downward).
  */
 export function fitPoints(points: Pt[], width: number, height: number, pad = 26): Pt[] {
@@ -157,7 +157,7 @@ export function arcPath(cx: number, cy: number, r: number, startDeg: number, end
   return `M ${x1} ${y1} A ${r} ${r} 0 ${large} ${sweep} ${x2} ${y2}`
 }
 
-/** A pie slice or a shaded sector: the arc, closed back through the centre. */
+/** A pie slice or a shaded sector: the arc, closed back through the center. */
 export function sectorPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
   if (Math.abs(endDeg - startDeg) >= 359.99) {
     return `M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} A ${r} ${r} 0 1 0 ${cx - r} ${cy} Z`
@@ -221,7 +221,7 @@ export function angleAt(vertex: Pt, a: Pt, b: Pt): { start: number; end: number 
     (Math.atan2(-(p[1] - vertex[1]), p[0] - vertex[0]) * 180) / Math.PI
   const start = bearing(a)
   let delta = bearing(b) - start
-  // Normalise to the turn of at most half a circle: at a polygon's corner the
+  // Normalize to the turn of at most half a circle: at a polygon's corner the
   // angle anyone means is the one inside the shape, not the reflex one around it.
   while (delta <= -180) delta += 360
   while (delta > 180) delta -= 360
@@ -229,7 +229,7 @@ export function angleAt(vertex: Pt, a: Pt, b: Pt): { start: number; end: number 
 }
 
 /**
- * Default triangle vertices, in maths coordinates.
+ * Default triangle vertices, in math coordinates.
  *
  * An author writing `{"kind":"triangle","sides":["3","4","5"]}` wants a
  * triangle, not a coordinate geometry exercise — so the shape is chosen for

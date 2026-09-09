@@ -1,7 +1,7 @@
 // The adaptive engine.
 //
 // simulate-adaptive.ts already checks that whole simulated learners converge,
-// which is the behaviour that matters — but it is aggregate, it is random, and
+// which is the behavior that matters — but it is aggregate, it is random, and
 // it cannot say *which* rule broke when the numbers drift. These pin the rules
 // one at a time.
 //

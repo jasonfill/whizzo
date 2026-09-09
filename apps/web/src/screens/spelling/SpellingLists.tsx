@@ -168,7 +168,7 @@ export default function SpellingLists({ navigate }: { navigate: Navigate }) {
                     })
                   }
                 >
-                  🎧 Practise
+                  🎧 Practice
                 </Button>
               </div>
             ))}

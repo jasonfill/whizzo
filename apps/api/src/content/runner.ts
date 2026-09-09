@@ -282,7 +282,7 @@ async function writeDraft(
   set: { title: string; track: string | null; objectives: string[]; cards: QuizCard[] },
 ): Promise<void> {
   // `accepted_at` stays null: this is a draft until a grown-up looks at it. It
-  // can be practised and it cannot be assigned or earn a reward.
+  // can be practiced and it cannot be assigned or earn a reward.
   await db.query(
     `insert into public.decks
        (owner_user_id, learner_id, title, description, tags, cards,

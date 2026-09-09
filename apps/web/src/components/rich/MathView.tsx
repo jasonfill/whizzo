@@ -8,9 +8,9 @@ const ALLOWED = new Set<string>(MATH_TAGS)
  *
  * React has rendered the MathML namespace since 16, so `<mfrac>` here is a
  * genuine `<mfrac>` in the document and the browser sets the equation itself —
- * no layout engine shipped to the client, no `innerHTML`, and the maths is in
- * the accessibility tree for a screen reader to read as maths rather than as a
- * picture of maths.
+ * no layout engine shipped to the client, no `innerHTML`, and the math is in
+ * the accessibility tree for a screen reader to read as math rather than as a
+ * picture of math.
  *
  * The allow-list is checked again on the way out. It has already been applied
  * once during parsing, and belt-and-braces is cheap when the alternative is
@@ -28,7 +28,7 @@ export default function MathView({
   display = false,
 }: {
   node: MathNode
-  /** Block form: on its own line, centred, at full size. */
+  /** Block form: on its own line, centerd, at full size. */
   display?: boolean
 }) {
   const rendered = toElement(node, 0)
