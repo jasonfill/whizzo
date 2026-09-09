@@ -6,6 +6,11 @@ import { DeferredEdits, editingKey } from './editing'
 import { openLive } from './client'
 import type { LiveEvent } from '@whizzo/shared'
 
+// The reconnect cases wait out a real backoff delay, so they depend on
+// wall-clock time. Vitest's default 5s budget per test was the same number as
+// the waits inside them: fine locally, a coin flip on a loaded CI container.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 })
+
 vi.mock('../api/client', () => ({
   authHeader: async () => ({ authorization: 'Bearer test' }),
   ORIGIN_ID: 'origin-under-test',
@@ -55,7 +60,7 @@ describe('openLive', () => {
     )
 
     const close = openLive('/live/learners/l1', { onEvent: (e) => seen.push(e) })
-    await vi.waitFor(() => expect(seen).toHaveLength(2), { timeout: 5000 })
+    await vi.waitFor(() => expect(seen).toHaveLength(2), { timeout: 10_000 })
     close()
 
     expect(seen.map((e) => e.kind)).toEqual(['planner.item', 'planner.week'])
@@ -72,7 +77,7 @@ describe('openLive', () => {
     )
 
     const close = openLive('/live/learners/l1', { onEvent: (e) => seen.push(e) })
-    await vi.waitFor(() => expect(seen).toHaveLength(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(seen).toHaveLength(1), { timeout: 10_000 })
     close()
     expect(seen[0]!.payload).toEqual({ id: 'split' })
   })
@@ -94,7 +99,7 @@ describe('openLive', () => {
 
     // A real backoff delay separates these, so give it room: the point of the
     // test is that a reconnect happens at all, not how fast.
-    await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2), { timeout: 10_000 })
     close()
     expect(resyncs).toBeGreaterThanOrEqual(1)
   })
@@ -107,7 +112,7 @@ describe('openLive', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const close = openLive('/live/learners/l1', { onEvent: () => {} })
-    await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2), { timeout: 10_000 })
     close()
   })
 
@@ -121,7 +126,7 @@ describe('openLive', () => {
       onEvent: () => {},
       onStatus: (s) => statuses.push(s),
     })
-    await vi.waitFor(() => expect(statuses).toContain('offline'), { timeout: 5000 })
+    await vi.waitFor(() => expect(statuses).toContain('offline'), { timeout: 10_000 })
     await new Promise((r) => setTimeout(r, 50))
     close()
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -187,7 +192,7 @@ describe('DeferredEdits', () => {
     edits.applyOrDefer('card-1', apply)
 
     input.blur()
-    await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce(), { timeout: 5000 })
+    await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce(), { timeout: 10_000 })
   })
 
   // Only the newest matters: an intermediate state nobody saw is not worth
@@ -201,7 +206,7 @@ describe('DeferredEdits', () => {
     edits.applyOrDefer('card-1', second)
 
     input.blur()
-    await vi.waitFor(() => expect(second).toHaveBeenCalledOnce(), { timeout: 5000 })
+    await vi.waitFor(() => expect(second).toHaveBeenCalledOnce(), { timeout: 10_000 })
     expect(first).not.toHaveBeenCalled()
   })
 

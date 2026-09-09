@@ -182,6 +182,14 @@ function stream(
         })
       }
     }
+    // Release the socket too, whatever ended this.
+    //
+    // A watcher that navigates away aborts the request: cleanup runs, but the
+    // response was hijacked and never finished, so without this the connection
+    // sits in limbo until a keep-alive timeout — holding a server socket for a
+    // client that has gone, and making the next graceful shutdown wait several
+    // seconds behind it. endStream is safe to call twice.
+    endStream()
     request.log.debug({ channel }, 'live stream closed')
   }
 

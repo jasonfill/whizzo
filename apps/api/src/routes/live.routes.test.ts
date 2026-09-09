@@ -12,6 +12,14 @@ import { SignJWT } from 'jose'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 
+// These cases drive a real listening socket and real reconnect delays, so they
+// are the only ones here that depend on wall-clock time. Vitest's default 5s
+// budget per test was the same number as the waits inside them, which is fine on
+// an idle laptop and a coin flip on a loaded CI container — and this suite gates
+// the deploy. The ceiling is generous so a genuine hang still fails; the waits
+// below are what should report first.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 })
+
 const { query } = vi.hoisted(() => ({ query: vi.fn() }))
 const withUser = vi.hoisted(() =>
   vi.fn(async (_id: string, fn: (db: unknown) => Promise<unknown>) => fn({ query })),
@@ -67,7 +75,12 @@ beforeEach(async () => {
   const { HttpError } = await import('../errors.js')
   resetPresence()
 
-  app = Fastify({ logger: false })
+  // forceCloseConnections, in the harness only: aborting a streaming fetch
+  // leaves the client's socket in a state the server counts as a connection,
+  // and close() then waits out a keep-alive timeout. That put one case at four
+  // seconds against vitest's five-second default — fine here, a coin flip on a
+  // loaded CI container, and this suite gates the deploy.
+  app = Fastify({ logger: false, forceCloseConnections: true })
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof HttpError) {
       reply.code(error.status).send({ error: { code: error.code, message: error.message } })
@@ -167,7 +180,7 @@ describe('GET /api/live/learners/:id', () => {
     expect(response.headers.get('cache-control')).toContain('no-transform')
     expect(response.headers.get('x-accel-buffering')).toBe('no')
 
-    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
     const snapshot = dataOf(stream.frames[0]!)
     expect(snapshot.kind).toBe('watch.begin')
     // `watcher: null` marks a snapshot rather than an arrival, so a client can
@@ -184,11 +197,11 @@ describe('GET /api/live/learners/:id', () => {
 
     const stream = listen(`/api/live/learners/${LEARNER}`, await token())
     await stream.response
-    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     publishLearner(null, LEARNER, 'planner.item', { id: 'card-1', title: 'Read' })
 
-    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(2), { timeout: 10_000 })
     const event = dataOf(stream.frames[1]!)
     expect(event.kind).toBe('planner.item')
     expect(event.payload).toEqual({ id: 'card-1', title: 'Read' })
@@ -206,7 +219,7 @@ describe('GET /api/live/learners/:id', () => {
 
     const stream = listen(`/api/live/learners/${LEARNER}`, await token())
     await stream.response
-    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     publishLearner(null, OTHER, 'planner.item', { id: 'not-yours' })
     await new Promise((r) => setTimeout(r, 60))
@@ -219,7 +232,7 @@ describe('GET /api/live/learners/:id', () => {
     query.mockResolvedValue({ rows: [{ auth_user_id: null, display_name: 'Mom' }] })
     const watcher = listen(`/api/live/learners/${LEARNER}?announce=1`, await token())
     await watcher.response
-    await vi.waitFor(() => expect(watcher.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(watcher.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     // The arriver hears only its own snapshot, never its own arrival.
     expect(watcher.frames).toHaveLength(1)
@@ -227,14 +240,14 @@ describe('GET /api/live/learners/:id', () => {
     // A second person on the same channel, so there is somebody left to be told.
     const second = listen(`/api/live/learners/${LEARNER}?announce=1`, await token(OTHER))
     await second.response
-    await vi.waitFor(() => expect(watcher.frames.length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    await vi.waitFor(() => expect(watcher.frames.length).toBeGreaterThanOrEqual(2), { timeout: 10_000 })
     const arrival = dataOf(watcher.frames[1]!)
     expect(arrival.kind).toBe('watch.begin')
     expect((arrival.payload as { watcher: { userId: string } }).watcher.userId).toBe(OTHER)
     expect((arrival.payload as { watchers: unknown[] }).watchers).toHaveLength(2)
 
     second.close()
-    await vi.waitFor(() => expect(watcher.frames.length).toBeGreaterThanOrEqual(3), { timeout: 5000 })
+    await vi.waitFor(() => expect(watcher.frames.length).toBeGreaterThanOrEqual(3), { timeout: 10_000 })
     const departure = dataOf(watcher.frames[2]!)
     expect(departure.kind).toBe('watch.end')
     expect((departure.payload as { watchers: unknown[] }).watchers).toHaveLength(1)
@@ -251,7 +264,7 @@ describe('presence is opt-in', () => {
     query.mockResolvedValue({ rows: [{ auth_user_id: null, display_name: 'Mom' }] })
     const silent = listen(`/api/live/learners/${LEARNER}`, await token())
     await silent.response
-    await vi.waitFor(() => expect(silent.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(silent.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     expect((dataOf(silent.frames[0]!).payload as { watchers: unknown[] }).watchers).toEqual([])
     silent.close()
@@ -262,10 +275,10 @@ describe('presence is opt-in', () => {
     const { publishLearner } = await import('../live/publish.js')
     const silent = listen(`/api/live/learners/${LEARNER}`, await token())
     await silent.response
-    await vi.waitFor(() => expect(silent.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(silent.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     publishLearner(null, LEARNER, 'planner.item', { id: 'card-1' })
-    await vi.waitFor(() => expect(silent.frames.length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    await vi.waitFor(() => expect(silent.frames.length).toBeGreaterThanOrEqual(2), { timeout: 10_000 })
     expect(dataOf(silent.frames[1]!).kind).toBe('planner.item')
     silent.close()
   })
@@ -276,7 +289,7 @@ describe('presence is opt-in', () => {
     query.mockResolvedValue({ rows: [{ auth_user_id: null, display_name: 'Mom' }] })
     const watching = listen(`/api/live/learners/${LEARNER}?announce=1`, await token())
     await watching.response
-    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     const silent = listen(`/api/live/learners/${LEARNER}`, await token(OTHER))
     await silent.response
@@ -407,12 +420,12 @@ describe('POST /api/live/learners/:id', () => {
     query.mockResolvedValue({ rows: [{ auth_user_id: null, display_name: 'Mom' }] })
     const watching = listen(`/api/live/learners/${LEARNER}?announce=1`, await token())
     await watching.response
-    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     query.mockResolvedValue({ rows: [{ display_name: 'Ada', auth_user_id: OTHER, owner_id: CALLER }] })
     expect((await post(tick, OTHER)).status).toBe(204)
 
-    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    await vi.waitFor(() => expect(watching.frames.length).toBeGreaterThanOrEqual(2), { timeout: 10_000 })
     const event = dataOf(watching.frames[1]!)
     expect(event.kind).toBe('round.tick')
     expect(event.payload).toMatchObject({ prompt: 'Capital of Peru?', outcome: 'right', selfGraded: true })
@@ -430,7 +443,7 @@ describe('shutdown', () => {
     query.mockResolvedValue({ rows: [{ auth_user_id: null, display_name: 'Mom' }] })
     const stream = listen(`/api/live/learners/${LEARNER}?announce=1`, await token())
     await stream.response
-    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     // Exactly what server.ts's SIGTERM handler does, and in that order. An
     // onClose hook cannot stand in for this: it runs after the wait it is
@@ -453,10 +466,10 @@ describe('GET /api/live/me', () => {
     const stream = listen('/api/live/me', await token())
     const response = await stream.response
     expect(response.status).toBe(200)
-    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
+    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(1), { timeout: 10_000 })
 
     publishUser(null, CALLER, 'planner.item', { ping: true })
-    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    await vi.waitFor(() => expect(stream.frames.length).toBeGreaterThanOrEqual(2), { timeout: 10_000 })
     expect(dataOf(stream.frames[1]!).payload).toEqual({ ping: true })
 
     stream.close()
