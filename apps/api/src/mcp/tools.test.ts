@@ -10,9 +10,30 @@
 // converted the legacy string itself: the enum ended up with `practice` twice
 // and a transform that could not fire, and the whole suite stayed green.
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { TUTOR_MODES } from '@whizzo/shared'
-import { roundModeSchema } from './tools.js'
+
+// tools.ts reaches env.ts through tokens.ts, and env.ts validates the whole
+// environment at module load and exits the process when it does not like it.
+// Every other test file in this directory stands it up the same way. Without
+// this the file passes on a machine with apps/api/.env and dies in CI, where
+// there is no such file — which is exactly what it did.
+const { envMock } = vi.hoisted(() => ({
+  envMock: {
+    DATABASE_URL: 'postgres://test',
+    SUPABASE_URL: 'https://test.supabase.co',
+    SUPABASE_JWT_SECRET: 'a-test-secret-long-enough-for-hs256-signing',
+    MCP_TOKEN_SECRET: 'an-mcp-secret-that-is-at-least-thirty-two-characters',
+    APP_URL: 'https://whizzo.test',
+    WEB_ORIGINS: '',
+    PG_POOL_MAX: 4,
+    NODE_ENV: 'test',
+    PORT: 8099,
+  } as Record<string, unknown>,
+}))
+vi.mock('../env.js', () => ({ env: envMock, isProduction: false, webOrigins: [] }))
+
+const { roundModeSchema } = await import('./tools.js')
 
 // Built the same way the shim builds it, so this test cannot be "fixed" into
 // agreement by the same find-and-replace that would break the code.
