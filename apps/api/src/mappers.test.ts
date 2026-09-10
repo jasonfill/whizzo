@@ -236,6 +236,13 @@ describe('toDeck', () => {
     expect(deck.sourceTitle).toBeNull()
   })
 
+  it('says whether the set is still a draft', () => {
+    // The assignment gate reads accepted_at and nothing else, so the client
+    // needs the same bit to explain a refusal before it happens.
+    expect(toDeck(row()).acceptedAt).toBeNull()
+    expect(toDeck(row({ accepted_at: new Date(5000) })).acceptedAt).toBe(5000)
+  })
+
   it('keeps the id when only the title was not joined', () => {
     // The single-set queries do not join the title. Losing the id there would
     // silently ungroup a whole document on the next read.

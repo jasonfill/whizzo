@@ -14,7 +14,7 @@ import {
 import { useLearners } from '../../lib/learners/LearnerProvider'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import type { CustomWordList, QuizDeck } from '../../lib/progress/types'
-import { allDecks, newId } from '../../lib/quiz/decks'
+import { allDecks, isDraftDeck, newId } from '../../lib/quiz/decks'
 import type { Navigate } from '../../routes'
 import AssignForm from './AssignForm'
 import { groupBySource } from '../../lib/library/groups'
@@ -48,6 +48,8 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
   } | null>(null)
 
   const groups = useMemo(() => groupBySource(decks), [decks])
+
+  const isDraft = isDraftDeck
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -185,6 +187,12 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
                     </Pill>
                     <Button
                       className="ml-auto"
+                      disabled={group.decks.some(isDraft)}
+                      title={
+                        group.decks.some(isDraft)
+                          ? 'Some parts are still drafts. Open each one and accept it first.'
+                          : undefined
+                      }
                       onClick={() =>
                         setAssigning({
                           kind: 'deck',
@@ -220,14 +228,30 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
                       <Pill className="bg-wash text-xs text-muted">
                         {deck.cards.length} cards
                       </Pill>
+                      {isDraft(deck) && (
+                        <Pill className="bg-sun/30 text-xs text-ink" title="Not looked over yet">
+                          Draft
+                        </Pill>
+                      )}
                       <div className="ml-auto flex flex-wrap gap-2">
-                        <Button
-                          onClick={() =>
-                            setAssigning({ kind: 'deck', ids: [deck.id], label: deck.title })
-                          }
-                        >
-                          Set as work
-                        </Button>
+                        {/* A draft cannot be set as work — the database says
+                            no — so the button that would fail is replaced by
+                            the one that leads to the review. */}
+                        {isDraft(deck) ? (
+                          <Button
+                            onClick={() => navigate({ name: 'library-deck', deckId: deck.id })}
+                          >
+                            Review
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() =>
+                              setAssigning({ kind: 'deck', ids: [deck.id], label: deck.title })
+                            }
+                          >
+                            Set as work
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           onClick={() => navigate({ name: 'library-edit', deckId: deck.id })}

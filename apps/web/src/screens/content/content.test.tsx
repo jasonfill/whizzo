@@ -15,7 +15,6 @@ const contentApi = vi.hoisted(() => ({
   startBuild: vi.fn(),
   uploadFiles: vi.fn(),
   jobStatus: vi.fn(),
-  acceptDeck: vi.fn(),
 }))
 
 vi.mock('../../lib/content/api', async () => {

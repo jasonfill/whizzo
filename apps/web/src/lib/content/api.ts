@@ -87,10 +87,6 @@ export function jobStatus(jobId: string, signal?: AbortSignal): Promise<{ job: J
   return api.get(`/content/jobs/${jobId}`, signal)
 }
 
-export function acceptDeck(deckId: string): Promise<{ acceptedAt: number }> {
-  return api.post(`/library/decks/${deckId}/accept`)
-}
-
 export function isFinished(job: JobView): boolean {
   return job.status === 'done' || job.status === 'failed'
 }

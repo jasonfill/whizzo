@@ -35,6 +35,15 @@ export async function saveLibraryLists(customLists: CustomWordList[]): Promise<C
   return res.customLists
 }
 
+/**
+ * Accept a draft — a set an assistant or ingestion wrote, now looked over.
+ * Until this, the deck cannot be set as work; the gate is in the database.
+ */
+export async function acceptLibraryDeck(deckId: string): Promise<number> {
+  const res = await api.post<{ acceptedAt: number }>(`/library/decks/${deckId}/accept`)
+  return res.acceptedAt
+}
+
 export async function deleteLibraryDeck(deckId: string): Promise<void> {
   await api.del<void>(`/library/decks/${deckId}`)
 }

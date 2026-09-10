@@ -17,6 +17,7 @@ import {
   parseImport,
   serializeCards,
   copyDeck,
+  isDraftDeck,
 } from './decks'
 import type { QuizDeck } from '../progress/types'
 import { findFigure } from '../rich/figures'
@@ -93,6 +94,18 @@ describe('normalizeDeck', () => {
 
   it('gives an untitled deck a title rather than leaving it blank', () => {
     expect(normalizeDeck(deck({ title: '   ' })).title).toBeTruthy()
+  })
+})
+
+describe('isDraftDeck', () => {
+  const base = { ...emptyDeck(), title: 'T' }
+
+  it('is null and only null — absent is not a draft', () => {
+    // A starter, a deck kept offline, and a deck saved before the field
+    // existed all have no value; none of them was ever unreviewed.
+    expect(isDraftDeck({ ...base, acceptedAt: null })).toBe(true)
+    expect(isDraftDeck({ ...base, acceptedAt: 1 })).toBe(false)
+    expect(isDraftDeck(base)).toBe(false)
   })
 })
 

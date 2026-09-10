@@ -221,6 +221,9 @@ export function toDeck(row: any): QuizDeck {
     source: 'user',
     termLabel: row.term_label ?? 'Term',
     definitionLabel: row.definition_label ?? 'Definition',
+    // Null is the draft state, and the library has to be able to say so:
+    // the assignment gate reads this column and nothing else.
+    acceptedAt: row.accepted_at ? epoch(row.accepted_at) : null,
     createdAt: epoch(row.created_at),
     updatedAt: epoch(row.updated_at),
   }

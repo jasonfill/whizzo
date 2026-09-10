@@ -6,13 +6,25 @@ import { Button, Card, Pill, StarRow } from '../../components/ui'
 import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { listKey, todayString, type QuizCard, type QuizDeck } from '../../lib/progress/types'
-import { allDecks, copyDeck, deckStats, findDeck, masteryForCard } from '../../lib/quiz/decks'
+import {
+  allDecks,
+  copyDeck,
+  deckStats,
+  findDeck,
+  isDraftDeck,
+  masteryForCard,
+} from '../../lib/quiz/decks'
 import type { DeckScope } from '../../lib/quiz/scope'
 import { MODES, type DirectionSetting } from '../../lib/quiz/session'
 import type { Navigate } from '../../routes'
 import { bandForGrade, tutorPacket } from '@whizzo/shared'
 import { useLearners } from '../../lib/learners'
-import { deleteLibraryDeck, getLibraryDeck, saveLibraryDecks } from '../../lib/assignments/library'
+import {
+  acceptLibraryDeck,
+  deleteLibraryDeck,
+  getLibraryDeck,
+  saveLibraryDecks,
+} from '../../lib/assignments/library'
 import AssignForm from '../suite/AssignForm'
 
 /**
@@ -40,38 +52,62 @@ export default function DeckScreen({
   const [busy, setBusy] = useState(false)
   const [packetCopied, setPacketCopied] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+  const [acceptError, setAcceptError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const { active, learners } = useLearners()
   const today = todayString()
   const inLibrary = scope === 'library'
 
   const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
 
-  // A library deck comes from the API rather than the snapshot. Undefined is
-  // "still loading", null is "not there", so the two read differently.
-  const [libraryDeck, setLibraryDeck] = useState<QuizDeck | null | undefined>(undefined)
+  // A library deck comes from the API rather than the snapshot. Three things
+  // can come back and they read differently: still loading, not there, and
+  // could not be fetched — the last is not "gone", and says so.
+  type Load =
+    | { status: 'loading' }
+    | { status: 'missing' }
+    | { status: 'failed' }
+    | { status: 'ready'; deck: QuizDeck }
+  const [load, setLoad] = useState<Load>({ status: 'loading' })
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     if (!inLibrary) return
     const controller = new AbortController()
-    setLibraryDeck(undefined)
+    setLoad({ status: 'loading' })
     getLibraryDeck(deckId, controller.signal)
       .then((d) => {
-        if (!controller.signal.aborted) setLibraryDeck(d)
+        if (!controller.signal.aborted) setLoad(d ? { status: 'ready', deck: d } : { status: 'missing' })
       })
       .catch(() => {
-        if (!controller.signal.aborted) setLibraryDeck(null)
+        if (!controller.signal.aborted) setLoad({ status: 'failed' })
       })
     return () => controller.abort()
-  }, [deckId, inLibrary])
+  }, [deckId, inLibrary, attempt])
 
-  const deck = inLibrary ? libraryDeck : findDeck(decks, deckId)
+  const deck = inLibrary ? (load.status === 'ready' ? load.deck : undefined) : findDeck(decks, deckId)
   const home = inLibrary ? ({ name: 'library' } as const) : ({ name: 'quiz' } as const)
 
-  if (inLibrary && deck === undefined) {
+  if (inLibrary && load.status === 'loading') {
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
         <ScreenHeader title="Opening…" onBack={() => navigate(home)} backLabel="← Library" />
         <Card>
           <p className="font-bold text-stone">Loading…</p>
+        </Card>
+      </div>
+    )
+  }
+
+  if (inLibrary && load.status === 'failed') {
+    return (
+      <div className="mx-auto w-full max-w-3xl py-4">
+        <ScreenHeader title="Could not open that" onBack={() => navigate(home)} backLabel="← Library" />
+        <Card>
+          <p className="mb-3 font-bold text-muted">
+            The deck is still there, but it could not be fetched. Check your connection.
+          </p>
+          <Button onClick={() => setAttempt((n) => n + 1)}>Try again</Button>
         </Card>
       </div>
     )
@@ -115,10 +151,45 @@ export default function DeckScreen({
     }
   }
 
+  /**
+   * A draft is a set somebody other than this grown-up wrote — an assistant
+   * over the tutor connection, or ingestion from a document — in either
+   * scope: an assistant can put a learner's own deck back into review as
+   * easily as file a new one. Accepting is one action on the whole set: the
+   * cards are right there to read, and editing exists for anyone who wants
+   * to change one first. A learner's deck is accepted the way any hand-made
+   * deck is, by the person saving it (docs/content-ingestion-spec.md).
+   */
+  const isDraft = isDraftDeck(deck)
+  const accept = async () => {
+    setAccepting(true)
+    setAcceptError(null)
+    try {
+      if (inLibrary) {
+        const acceptedAt = await acceptLibraryDeck(deck.id)
+        setLoad({ status: 'ready', deck: { ...deck, acceptedAt } })
+      } else {
+        await saveDeck(deck)
+      }
+    } catch {
+      setAcceptError('That did not save. Check your connection and try again.')
+    } finally {
+      setAccepting(false)
+    }
+  }
+
   const remove = async () => {
-    if (inLibrary) await deleteLibraryDeck(deck.id)
-    else await deleteDeck(deck.id)
-    navigate(home)
+    setBusy(true)
+    setDeleteError(null)
+    try {
+      if (inLibrary) await deleteLibraryDeck(deck.id)
+      else await deleteDeck(deck.id)
+      navigate(home)
+    } catch {
+      setDeleteError('That did not delete. Check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -128,10 +199,35 @@ export default function DeckScreen({
         subtitle={deck.description || `${deck.cards.length} cards`}
         onBack={() => navigate(home)}
         backLabel={inLibrary ? '← Library' : '← Decks'}
-        right={progress?.stars ? <StarRow stars={progress.stars} size={22} /> : undefined}
+        right={
+          // Stars are a learner's; a library deck shares its id with the copy
+          // a student was set, so without this the header would show whoever
+          // is on screen.
+          !inLibrary && progress?.stars ? <StarRow stars={progress.stars} size={22} /> : undefined
+        }
       />
 
-      {inLibrary ? (
+      {isDraft && (
+        /* The review. It cannot be set as work until accepted — the database
+           refuses — so the way forward is here. Editing and saving counts as
+           looking it over too, which the sentence says. */
+        <Card className="mb-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <Pill className="bg-sun/30 text-ink">Draft</Pill>
+            <p className="flex-1 font-bold text-muted">
+              {inLibrary
+                ? 'Not looked over yet. Read the cards below and accept it to be able to set it as work — or edit and save, which counts.'
+                : 'An assistant changed this deck. Read the cards below and accept it before it can be set as work — or edit and save, which counts.'}
+            </p>
+            <Button onClick={accept} disabled={accepting}>
+              {accepting ? 'Accepting…' : '✓ Accept'}
+            </Button>
+          </div>
+          {acceptError && <p className="mt-2 font-bold text-rose-600">{acceptError}</p>}
+        </Card>
+      )}
+
+      {inLibrary && !isDraft ? (
         /* No progress here, and the reason why: a library deck is yours, and
            the learning happens on the copy a student sees once it is set. */
         <Card className="mb-5">
@@ -156,7 +252,7 @@ export default function DeckScreen({
             </div>
           )}
         </Card>
-      ) : (
+      ) : inLibrary ? null : (
         /* Progress summary */
         <Card className="mb-5">
           <div className="flex flex-wrap items-center gap-4">
@@ -239,7 +335,7 @@ export default function DeckScreen({
           with no tools at all. It records nothing and says so — the real
           thing is a connected app (Account → Connected apps); this is for the
           car this afternoon. */}
-      {!tooSmall && (
+      {!tooSmall && !inLibrary && (
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <Button
             variant="ghost"
@@ -288,13 +384,18 @@ export default function DeckScreen({
             >
               ✏️ Edit deck
             </Button>
-            <Button variant="ghost" onClick={takeCopy} disabled={busy}>
-              📋 Duplicate
-            </Button>
+            {/* A copy of a draft would come back accepted — the library insert
+                stamps every new deck — so there is no copying until this one
+                has been looked over. */}
+            {!isDraft && (
+              <Button variant="ghost" onClick={takeCopy} disabled={busy}>
+                📋 Duplicate
+              </Button>
+            )}
             {confirmDelete ? (
               <>
-                <Button variant="danger" onClick={remove}>
-                  Delete for good
+                <Button variant="danger" onClick={remove} disabled={busy}>
+                  {busy ? 'Deleting…' : 'Delete for good'}
                 </Button>
                 <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
                   Keep it
@@ -308,6 +409,8 @@ export default function DeckScreen({
           </>
         )}
       </div>
+
+      {deleteError && <p className="mb-4 font-bold text-rose-600">{deleteError}</p>}
 
       {/* The cards themselves, weakest first so the list is useful to read */}
       <h3 className="mb-3 text-xl font-extrabold text-ink">

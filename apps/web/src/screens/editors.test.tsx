@@ -23,6 +23,7 @@ vi.mock('../lib/theme/ThemeProvider', async () =>
 const lib = vi.hoisted(() => ({
   loadLibrary: vi.fn(async () => ({ decks: [] as unknown[], customLists: [] as unknown[] })),
   getLibraryDeck: vi.fn(async (): Promise<unknown> => null),
+  acceptLibraryDeck: vi.fn(async () => 1234),
   saveLibraryDecks: vi.fn(async () => []),
   saveLibraryLists: vi.fn(async () => []),
   deleteLibraryDeck: vi.fn(async () => {}),
@@ -62,6 +63,7 @@ function deck(over: Record<string, unknown> = {}) {
     source: 'user' as const,
     termLabel: 'City',
     definitionLabel: 'Country',
+    acceptedAt: 1,
     createdAt: 0,
     updatedAt: 0,
     ...over,
@@ -535,6 +537,20 @@ describe('a library deck, opened by its owner', () => {
     expect(screen.getByText(/Yours, not any one learner/)).toBeTruthy()
   })
 
+  it('shows nothing that belongs to the learner on screen', async () => {
+    // Stars and the voice-assistant packet both read the active learner; a
+    // library deck shares its id with the copy a child was set, so either
+    // would quietly show whoever happens to be selected.
+    testState.snapshot = {
+      ...emptySnapshot(),
+      lists: { 'quiz:lib-1': { stars: 3 } } as never,
+    }
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    await screen.findByText('Rivers')
+    expect(screen.queryByText(/Copy for a voice assistant/)).toBeNull()
+    expect(document.querySelector('[aria-label*="star"], [title*="star"]')).toBeNull()
+  })
+
   it('offers to set it as work right there', async () => {
     render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
     fireEvent.click(await screen.findByText('Set as work'))
@@ -565,12 +581,109 @@ describe('a library deck, opened by its owner', () => {
     expect(navigate).toHaveBeenCalledWith({ name: 'library' })
   })
 
+  it('says a delete that failed failed, and stays on the deck', async () => {
+    lib.deleteLibraryDeck.mockRejectedValueOnce(new Error('offline'))
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    fireEvent.click(await screen.findByText('Delete'))
+    fireEvent.click(screen.getByText('Delete for good'))
+    expect(await screen.findByText(/That did not delete/)).toBeTruthy()
+    expect(navigate).not.toHaveBeenCalled()
+    expect(screen.getByText('Rivers')).toBeTruthy()
+  })
+
+  it('tells a dropped connection apart from a deleted deck, and offers a retry', async () => {
+    lib.getLibraryDeck.mockRejectedValueOnce(new Error('offline'))
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    expect(await screen.findByText(/could not be fetched/)).toBeTruthy()
+    expect(screen.queryByText(/That deck is gone/)).toBeNull()
+    fireEvent.click(screen.getByText('Try again'))
+    expect(await screen.findByText('Rivers')).toBeTruthy()
+  })
+
   it('says so when the deck is no longer in the library', async () => {
     lib.getLibraryDeck.mockResolvedValue(null)
     render(<DeckScreen deckId="gone" scope="library" navigate={navigate} />)
     expect(await screen.findByText('Deck not found')).toBeTruthy()
     fireEvent.click(screen.getByText('← Library'))
     expect(navigate).toHaveBeenCalledWith({ name: 'library' })
+  })
+})
+
+describe('a draft in the library, opened by its owner', () => {
+  beforeEach(() => {
+    lib.getLibraryDeck.mockResolvedValue(deck({ id: 'lib-1', title: 'Rivers', acceptedAt: null }))
+    testState.snapshot = emptySnapshot()
+  })
+
+  it('says it is a draft, and cannot be set as work yet', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    await screen.findByText('Rivers')
+    expect(screen.getByText('Draft')).toBeTruthy()
+    expect(screen.getByText(/Not looked over yet/)).toBeTruthy()
+    expect(screen.queryByText('Set as work')).toBeNull()
+  })
+
+  it('still shows the cards, because that is what the review is', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    await screen.findByText('Rivers')
+    expect(screen.getByText('Paris')).toBeTruthy()
+    expect(screen.getByText('✏️ Edit deck')).toBeTruthy()
+  })
+
+  it('accepts it, and then it can be set as work', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    fireEvent.click(await screen.findByText('✓ Accept'))
+    await waitFor(() => expect(lib.acceptLibraryDeck).toHaveBeenCalledWith('lib-1'))
+    expect(await screen.findByText('Set as work')).toBeTruthy()
+    expect(screen.queryByText('Draft')).toBeNull()
+  })
+
+  it('will not duplicate a draft — the copy would come back accepted', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    await screen.findByText('Rivers')
+    expect(screen.queryByText('📋 Duplicate')).toBeNull()
+    expect(screen.getByText('✏️ Edit deck')).toBeTruthy()
+  })
+
+  it('says so when accepting did not go through', async () => {
+    lib.acceptLibraryDeck.mockRejectedValueOnce(new Error('offline'))
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    fireEvent.click(await screen.findByText('✓ Accept'))
+    expect(await screen.findByText(/That did not save/)).toBeTruthy()
+    expect(screen.getByText('Draft')).toBeTruthy()
+  })
+})
+
+describe('a learner’s own deck an assistant put back into review', () => {
+  // update_deck over the tutor connection clears accepted_at on any deck it
+  // can reach, a child's own included, and the database then refuses to set
+  // it as work. The deck page has to say so wherever the deck lives.
+  beforeEach(() => {
+    testState.snapshot = {
+      ...emptySnapshot(),
+      decks: [deck({ id: 'd1', acceptedAt: null })],
+    }
+  })
+
+  it('shows the draft banner on the learner deck too', () => {
+    render(<DeckScreen deckId="d1" navigate={navigate} />)
+    expect(screen.getByText('Draft')).toBeTruthy()
+    expect(screen.getByText(/An assistant changed this deck/)).toBeTruthy()
+    expect(screen.queryByText('📋 Duplicate')).toBeNull()
+  })
+
+  it('accepts by saving, which is how a hand-made deck is accepted', async () => {
+    render(<DeckScreen deckId="d1" navigate={navigate} />)
+    fireEvent.click(screen.getByText('✓ Accept'))
+    await waitFor(() => expect(spies.saveDeck).toHaveBeenCalled())
+    expect(lib.acceptLibraryDeck).not.toHaveBeenCalled()
+  })
+
+  it('leaves an ordinary learner deck alone', () => {
+    testState.snapshot = { ...emptySnapshot(), decks: [deck({ id: 'd1' })] }
+    render(<DeckScreen deckId="d1" navigate={navigate} />)
+    expect(screen.queryByText('Draft')).toBeNull()
+    expect(screen.getByText('📋 Duplicate')).toBeTruthy()
   })
 })
 
@@ -626,6 +739,26 @@ describe('editing a library deck', () => {
     await waitFor(() => expect(lib.saveLibraryDecks).toHaveBeenCalled())
     expect(spies.saveDeck).not.toHaveBeenCalled()
     expect(lib.getLibraryDeck).not.toHaveBeenCalled()
+  })
+
+  it('tells a failed fetch apart from a missing deck, and retries', async () => {
+    lib.getLibraryDeck.mockRejectedValueOnce(new Error('offline'))
+    render(<DeckEditor deckId="lib-1" scope="library" navigate={navigate} />)
+    expect(await screen.findByText(/could not be fetched/)).toBeTruthy()
+    expect(screen.queryByText(/not in your library any more/)).toBeNull()
+    fireEvent.click(screen.getByText('Try again'))
+    expect(await screen.findByText('Edit deck ✏️')).toBeTruthy()
+  })
+
+  it('forgets the last deck’s verdict when the id changes', async () => {
+    // The route reuses the component across ids, so a "not found" for one
+    // deck must not stand for the next.
+    lib.getLibraryDeck.mockResolvedValueOnce(null)
+    const view = render(<DeckEditor deckId="gone" scope="library" navigate={navigate} />)
+    expect(await screen.findByText('Deck not found')).toBeTruthy()
+    view.rerender(<DeckEditor deckId="lib-1" scope="library" navigate={navigate} />)
+    expect(await screen.findByText('Edit deck ✏️')).toBeTruthy()
+    expect((screen.getByPlaceholderText(/Water Cycle/) as HTMLInputElement).value).toBe('Rivers')
   })
 
   it('says so when the deck to edit is gone', async () => {

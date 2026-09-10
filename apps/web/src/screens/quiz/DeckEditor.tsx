@@ -49,31 +49,35 @@ export default function DeckEditor({
   const [error, setError] = useState<string | null>(null)
 
   // A library deck being edited arrives from the API. Until it does there is
-  // nothing to type into, and if it never does the screen says so rather than
-  // offering to "edit" an empty deck under the old id.
-  const [loading, setLoading] = useState(inLibrary && !!deckId)
-  const [missing, setMissing] = useState(false)
+  // nothing to type into; if it is not there the screen says so rather than
+  // offering to "edit" an empty deck under the old id; and if it could not be
+  // fetched at all that is a different sentence, because the deck is fine.
+  //
+  // Reset at the top of the effect: the route reuses this component across
+  // deck ids, so a verdict about the last deck must not stand for the next.
+  type Load = 'loading' | 'ready' | 'missing' | 'failed'
+  const [load, setLoad] = useState<Load>(inLibrary && deckId ? 'loading' : 'ready')
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     if (!inLibrary || !deckId) return
     const controller = new AbortController()
+    setLoad('loading')
     getLibraryDeck(deckId, controller.signal)
       .then((deck) => {
         if (controller.signal.aborted) return
         if (deck) {
           setDraft(deck)
           setShowImport(false)
+          setLoad('ready')
         } else {
-          setMissing(true)
+          setLoad('missing')
         }
       })
       .catch(() => {
-        if (!controller.signal.aborted) setMissing(true)
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
+        if (!controller.signal.aborted) setLoad('failed')
       })
     return () => controller.abort()
-  }, [deckId, inLibrary])
+  }, [deckId, inLibrary, attempt])
 
   const isNew = inLibrary ? !deckId : !existing
   const overDeckLimit = !inLibrary && isNew && snapshot.decks.length >= coverage.deckLimit
@@ -137,18 +141,25 @@ export default function DeckEditor({
     }
   }
 
-  if (loading || missing) {
+  if (load !== 'ready') {
+    const title =
+      load === 'loading' ? 'Opening…' : load === 'missing' ? 'Deck not found' : 'Could not open that'
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
-        <ScreenHeader
-          title={loading ? 'Opening…' : 'Deck not found'}
-          onBack={() => navigate({ name: 'library' })}
-          backLabel="← Library"
-        />
+        <ScreenHeader title={title} onBack={() => navigate({ name: 'library' })} backLabel="← Library" />
         <Card>
           <p className="font-bold text-muted">
-            {loading ? 'Loading…' : 'That deck is not in your library any more.'}
+            {load === 'loading'
+              ? 'Loading…'
+              : load === 'missing'
+                ? 'That deck is not in your library any more.'
+                : 'The deck is still there, but it could not be fetched. Check your connection.'}
           </p>
+          {load === 'failed' && (
+            <Button className="mt-3" onClick={() => setAttempt((n) => n + 1)}>
+              Try again
+            </Button>
+          )}
         </Card>
       </div>
     )

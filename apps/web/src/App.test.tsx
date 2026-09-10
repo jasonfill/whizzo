@@ -33,6 +33,7 @@ vi.mock('./lib/assignments/api', async (orig) => ({
 vi.mock('./lib/assignments/library', () => ({
   loadLibrary: vi.fn(async () => ({ decks: [], customLists: [] })),
   getLibraryDeck: vi.fn(async () => null),
+  acceptLibraryDeck: vi.fn(async () => 1),
   saveLibraryDecks: vi.fn(async () => []),
   saveLibraryLists: vi.fn(async () => []),
   deleteLibraryDeck: vi.fn(async () => {}),

@@ -308,6 +308,16 @@ export interface QuizDeck {
   cards: QuizCard[]
   /** Starter decks ship with the app and are copied, not edited, in place. */
   source: 'user' | 'starter'
+  /**
+   * When a grown-up accepted this set, or null while it is still a draft.
+   *
+   * A set an assistant or ingestion wrote is unreviewed until somebody looks
+   * it over, and a draft cannot be set as work (migration 0017). The API sends
+   * it for every stored deck, a learner's own included — an assistant editing
+   * a child's deck puts that back into review too. Absent only where there is
+   * no row: starters, and decks kept offline.
+   */
+  acceptedAt?: number | null
   /** What to call each side, e.g. 'Spanish' / 'English'. Purely cosmetic. */
   termLabel: string
   definitionLabel: string

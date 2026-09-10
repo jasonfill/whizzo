@@ -14,7 +14,6 @@ const apiMock = vi.hoisted(() => ({
 vi.mock('../api/client', () => ({ api: apiMock }))
 
 import {
-  acceptDeck,
   addLink,
   contentStatus,
   estimateFor,
@@ -77,10 +76,6 @@ describe('the addresses it calls', () => {
     expect(apiMock.get).toHaveBeenCalledWith('/content/jobs/j1', undefined)
   })
 
-  it('accepts a draft', async () => {
-    await acceptDeck('d1')
-    expect(apiMock.post).toHaveBeenCalledWith('/library/decks/d1/accept')
-  })
 })
 
 const job = (status: JobView['status']): JobView => ({

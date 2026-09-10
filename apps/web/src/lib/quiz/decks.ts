@@ -317,6 +317,19 @@ export function deckStats(
   }
 }
 
+/**
+ * Still a draft: written by an assistant or by ingestion and not yet looked
+ * over, so the database will refuse to set it as work (migration 0017).
+ *
+ * Null, not merely absent: a starter deck, a deck made offline, and a deck
+ * saved before the field existed have no value at all, and none of those was
+ * ever a draft. The same test applies whoever owns the deck — an assistant
+ * can put a learner's own deck back into review too.
+ */
+export function isDraftDeck(deck: QuizDeck): boolean {
+  return deck.acceptedAt === null
+}
+
 export function findDeck(decks: QuizDeck[], id: string): QuizDeck | undefined {
   return decks.find((d) => d.id === id)
 }

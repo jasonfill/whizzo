@@ -29,6 +29,7 @@ vi.mock('../../lib/theme/ThemeProvider', async () =>
 const lib = vi.hoisted(() => ({
   loadLibrary: vi.fn(async () => ({ decks: [] as unknown[], customLists: [] as unknown[] })),
   getLibraryDeck: vi.fn(async () => null),
+  acceptLibraryDeck: vi.fn(async () => 1),
   saveLibraryDecks: vi.fn(async () => []),
   saveLibraryLists: vi.fn(async () => []),
   deleteLibraryDeck: vi.fn(async () => {}),
@@ -87,6 +88,7 @@ function deck(over: Record<string, unknown> = {}) {
     source: 'user' as const,
     termLabel: 'Term',
     definitionLabel: 'Definition',
+    acceptedAt: 1,
     createdAt: 0,
     updatedAt: 0,
     ...over,
@@ -201,6 +203,55 @@ describe('a library with material in it', () => {
     const listCard = screen.getByText('Week 1').closest('li')!
     fireEvent.click(within(listCard).getByText('🗑️'))
     await waitFor(() => expect(lib.deleteLibraryList).toHaveBeenCalledWith('l1'))
+  })
+})
+
+// A draft is a set somebody else wrote — an assistant over the tutor
+// connection, or ingestion from a document. The database refuses to set one
+// as work, so the library has to say which ones those are and lead to the
+// review instead of to a button that fails.
+describe('a draft in the library', () => {
+  beforeEach(() => {
+    lib.loadLibrary.mockResolvedValue({
+      decks: [
+        deck({ id: 'draft-1', title: 'Coordinate plane', acceptedAt: null }),
+        deck({ id: 'd2', title: 'Planets' }),
+      ],
+      customLists: [],
+    })
+  })
+
+  it('is marked as one', async () => {
+    render(<LibraryScreen navigate={navigate} />)
+    await screen.findByText('Coordinate plane')
+    const draftRow = screen.getByText('Coordinate plane').closest('li')!
+    expect(within(draftRow).getByText('Draft')).toBeTruthy()
+    const otherRow = screen.getByText('Planets').closest('li')!
+    expect(within(otherRow).queryByText('Draft')).toBeNull()
+  })
+
+  it('offers a review instead of a set-as-work that would be refused', async () => {
+    render(<LibraryScreen navigate={navigate} />)
+    await screen.findByText('Coordinate plane')
+    const draftRow = screen.getByText('Coordinate plane').closest('li')!
+    expect(within(draftRow).queryByText('Set as work')).toBeNull()
+    fireEvent.click(within(draftRow).getByText('Review'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'library-deck', deckId: 'draft-1' })
+    const otherRow = screen.getByText('Planets').closest('li')!
+    expect(within(otherRow).getByText('Set as work')).toBeTruthy()
+  })
+
+  it('will not set a whole document while any part of it is a draft', async () => {
+    lib.loadLibrary.mockResolvedValue({
+      decks: [
+        deck({ id: 'p1', title: 'Part 1', sourceId: 's1', sourceTitle: 'Chapter 7', acceptedAt: null }),
+        deck({ id: 'p2', title: 'Part 2', sourceId: 's1', sourceTitle: 'Chapter 7' }),
+      ],
+      customLists: [],
+    })
+    render(<LibraryScreen navigate={navigate} />)
+    await screen.findByText('Part 1')
+    expect((screen.getByText('Set the whole thing') as HTMLButtonElement).disabled).toBe(true)
   })
 })
 

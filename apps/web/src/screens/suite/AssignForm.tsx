@@ -3,10 +3,11 @@ import { Button, Card } from '../../components/ui'
 import { CURRICULUM } from '../../data/lessons'
 import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { GRADES } from '../../data/spelling'
+import { ApiError } from '../../lib/api/client'
 import { createAssignments, type AssignmentDraft } from '../../lib/assignments/api'
 import { ASSIGNABLE, type AssignableActivity } from '../../lib/assignments/routing'
 import { useProgress } from '../../lib/progress/ProgressProvider'
-import { allDecks } from '../../lib/quiz/decks'
+import { allDecks, isDraftDeck } from '../../lib/quiz/decks'
 
 /**
  * Setting one piece of work.
@@ -51,7 +52,15 @@ export default function AssignForm({
         ) ?? ASSIGNABLE[0])
       : ASSIGNABLE[0],
   )
-  const [selected, setSelected] = useState<string[]>(defaultLearnerIds)
+  // With one person to choose from there is no picker, so the choice is made
+  // here — otherwise the form asks for someone and offers no way to say who.
+  const [selected, setSelected] = useState<string[]>(() =>
+    defaultLearnerIds.length > 0
+      ? defaultLearnerIds
+      : learners.length === 1
+        ? [learners[0]!.id]
+        : [],
+  )
   const [targetId, setTargetId] = useState(fixedTarget?.ids[0] ?? '')
   const [title, setTitle] = useState('')
   const [note, setNote] = useState('')
@@ -79,7 +88,10 @@ export default function AssignForm({
   const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
 
   const targets = useMemo(() => {
-    if (choice.target === 'deck') return decks.map((d) => ({ id: d.id, name: d.title }))
+    // A draft would be refused by the database, so it is not offered.
+    if (choice.target === 'deck') {
+      return decks.filter((d) => !isDraftDeck(d)).map((d) => ({ id: d.id, name: d.title }))
+    }
     if (choice.target === 'spelling-list') {
       return GRADES.flatMap((g) =>
         g.lists.map((l) => ({ id: l.id, name: `Grade ${g.grade} — ${l.title}` })),
@@ -106,6 +118,13 @@ export default function AssignForm({
       setError('Choose at least one person to give it to.')
       return
     }
+    // Checked here rather than left to the server, whose reply would name a
+    // field path nobody typed.
+    const bar = minAccuracy.trim() ? Number(minAccuracy) : null
+    if (bar !== null && (!Number.isInteger(bar) || bar < 1 || bar > 100)) {
+      setError('The score to beat has to be a whole number from 1 to 100.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -128,15 +147,12 @@ export default function AssignForm({
         // A score bar measures one round. A goal is a statement about a state,
         // and the two would be answering different questions about the same
         // task.
-        minAccuracy: !asGoal && choice.graded && minAccuracy ? Number(minAccuracy) : null,
+        minAccuracy: !asGoal && choice.graded ? bar : null,
       }))
       await createAssignments(selected, drafts)
       await onDone()
-    } catch {
-      setError(
-        'Could not save that. Setting work is for the grown-up who owns the profile, or a ' +
-          'guardian they have trusted with content.',
-      )
+    } catch (err) {
+      setError(explainRefusal(err))
     } finally {
       setSaving(false)
     }
@@ -372,4 +388,37 @@ const SUBJECT_LABEL: Record<string, string> = {
   quiz: 'Quiz',
   spelling: 'Spelling',
   typing: 'Typing',
+}
+
+/**
+ * What to say when setting work was refused.
+ *
+ * Decided by the error's code, which is the stable part of the contract; the
+ * message is not. A database refusal ('rejected') is the one case whose text
+ * is worth repeating, because the only check on this path that can fire is
+ * the draft gate, and its sentence was written for a parent. A permission
+ * refusal names a policy nobody should read, a learner the server cannot see
+ * means the list on screen is stale, and a validation message names a field
+ * path. Each of those gets its own words.
+ */
+function explainRefusal(err: unknown): string {
+  const prefix = 'Could not save that.'
+  if (err instanceof ApiError) {
+    switch (err.code) {
+      case 'forbidden':
+        return (
+          `${prefix} Setting work is for the grown-up who owns the profile, or a ` +
+          'guardian they have trusted with content.'
+        )
+      case 'not_found':
+        return `${prefix} One of the people chosen is no longer in your list — reload and try again.`
+      case 'offline':
+        return `${prefix} Check your connection and try again.`
+      case 'rejected':
+        return err.message ? `${prefix} ${err.message}` : `${prefix} Try again.`
+      default:
+        return `${prefix} Try again.`
+    }
+  }
+  return `${prefix} Check your connection and try again.`
 }

@@ -42,8 +42,27 @@ vi.mock('../../lib/assignments/api', async (orig) => ({
 import { spies } from '../../test/mockProviders'
 import { aLearner, anAssignment, signIn, testState } from '../../test/state'
 import { emptySnapshot } from '../../lib/progress/types'
+import { ApiError } from '../../lib/api/client'
 import type { SessionRecord } from '../../lib/progress/types'
 import AssignForm from './AssignForm'
+
+function deckFixture(id: string, title: string) {
+  return {
+    id,
+    title,
+    description: '',
+    tags: [],
+    cards: [
+      { id: `${id}-1`, term: 'a', definition: 'b', hint: null, difficulty: 3 },
+      { id: `${id}-2`, term: 'c', definition: 'd', hint: null, difficulty: 3 },
+    ],
+    source: 'user' as const,
+    termLabel: 'Term',
+    definitionLabel: 'Definition',
+    createdAt: 0,
+    updatedAt: 0,
+  }
+}
 import TasksScreen from './TasksScreen'
 
 const navigate = spies.navigate
@@ -445,8 +464,56 @@ describe('the form for setting work', () => {
     expect(title.placeholder.length).toBeGreaterThan(0)
   })
 
-  it('saves the work, and says who to blame when it is refused', async () => {
-    net.createAssignments.mockRejectedValueOnce(new Error('forbidden'))
+  it('picks the only learner there is, so the form can be sent at all', async () => {
+    // The picker only appears with two or more. With one and no default the
+    // form asked for somebody and offered no way to say who.
+    renderForm({ learners: [learners[0]], defaultLearnerIds: [] })
+    expect(screen.queryByText('Who it is for')).toBeNull()
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    const targetSelect = selects[selects.length - 1]!
+    const option = [...targetSelect.options].find((o) => o.value)
+    expect(option).toBeDefined()
+    fireEvent.change(targetSelect, { target: { value: option!.value } })
+    fireEvent.click(screen.getByText('Set this task'))
+    await waitFor(() => expect(net.createAssignments).toHaveBeenCalled())
+    expect(net.createAssignments.mock.calls[0]![0]).toEqual([learners[0]!.id])
+  })
+
+  it('checks the score to beat itself rather than relaying a field path', async () => {
+    renderForm()
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    const targetSelect = selects[selects.length - 1]!
+    const option = [...targetSelect.options].find((o) => o.value)
+    if (!option) return
+    fireEvent.change(targetSelect, { target: { value: option.value } })
+    const score = screen.getByPlaceholderText(/e\.g\. 80|not available/) as HTMLInputElement
+    expect(score.disabled).toBe(false)
+    fireEvent.change(score, { target: { value: '150' } })
+    fireEvent.click(screen.getByText('Set this task'))
+    expect(await screen.findByText(/whole number from 1 to 100/)).toBeTruthy()
+    expect(net.createAssignments).not.toHaveBeenCalled()
+  })
+
+  it('does not offer a draft deck, which the database would refuse', () => {
+    testState.snapshot = {
+      ...emptySnapshot(),
+      decks: [
+        { ...deckFixture('ok', 'Reviewed'), acceptedAt: 1 },
+        { ...deckFixture('draft', 'Unreviewed'), acceptedAt: null },
+      ],
+    }
+    renderForm()
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    const targetSelect = selects[selects.length - 1]!
+    const names = [...targetSelect.options].map((o) => o.textContent)
+    expect(names).toContain('Reviewed')
+    expect(names).not.toContain('Unreviewed')
+  })
+
+  it('saves the work, and says whose permission is missing when it is refused', async () => {
+    net.createAssignments.mockRejectedValueOnce(
+      new ApiError(403, 'new row violates row-level security policy', 'forbidden'),
+    )
     renderForm()
     const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
     const targetSelect = selects[selects.length - 1]!
@@ -455,6 +522,65 @@ describe('the form for setting work', () => {
     fireEvent.change(targetSelect, { target: { value: option.value } })
     fireEvent.click(screen.getByText('Set this task'))
     expect(await screen.findByText(/Setting work is for the grown-up who owns the profile/)).toBeTruthy()
+    expect(screen.queryByText(/row-level security/)).toBeNull()
+  })
+
+  it('repeats the server\'s own reason when the refusal is not about permission', async () => {
+    // A draft deck is the real case: the gate is in the database, and its
+    // message is the useful one. Calling that a permissions problem sent a
+    // parent who owned the child off to check the wrong thing.
+    net.createAssignments.mockRejectedValueOnce(
+      new ApiError(400, 'That set is still a draft. Look it over and accept it before setting it as work.', 'rejected'),
+    )
+    renderForm()
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    const targetSelect = selects[selects.length - 1]!
+    const option = [...targetSelect.options].find((o) => o.value)
+    if (!option) return
+    fireEvent.change(targetSelect, { target: { value: option.value } })
+    fireEvent.click(screen.getByText('Set this task'))
+    expect(await screen.findByText(/That set is still a draft/)).toBeTruthy()
+    expect(screen.queryByText(/owns the profile/)).toBeNull()
+  })
+
+  it('says the list is stale when the server cannot see a learner', async () => {
+    net.createAssignments.mockRejectedValueOnce(new ApiError(404, 'No such learner', 'not_found'))
+    renderForm()
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    const targetSelect = selects[selects.length - 1]!
+    const option = [...targetSelect.options].find((o) => o.value)
+    if (!option) return
+    fireEvent.change(targetSelect, { target: { value: option.value } })
+    fireEvent.click(screen.getByText('Set this task'))
+    expect(await screen.findByText(/no longer in your list/)).toBeTruthy()
+    expect(screen.queryByText(/No such learner/)).toBeNull()
+  })
+
+  it('never relays a validation message, which names a field path', async () => {
+    net.createAssignments.mockRejectedValueOnce(
+      new ApiError(400, 'assignments.0.minAccuracy: Number must be less than or equal to 100', 'bad_request'),
+    )
+    renderForm()
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    const targetSelect = selects[selects.length - 1]!
+    const option = [...targetSelect.options].find((o) => o.value)
+    if (!option) return
+    fireEvent.change(targetSelect, { target: { value: option.value } })
+    fireEvent.click(screen.getByText('Set this task'))
+    expect(await screen.findByText(/Could not save that\. Try again\./)).toBeTruthy()
+    expect(screen.queryByText(/minAccuracy/)).toBeNull()
+  })
+
+  it('blames the connection when the request never got an answer', async () => {
+    net.createAssignments.mockRejectedValueOnce(new ApiError(0, 'Could not reach the server', 'offline'))
+    renderForm()
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    const targetSelect = selects[selects.length - 1]!
+    const option = [...targetSelect.options].find((o) => o.value)
+    if (!option) return
+    fireEvent.change(targetSelect, { target: { value: option.value } })
+    fireEvent.click(screen.getByText('Set this task'))
+    expect(await screen.findByText(/Check your connection/)).toBeTruthy()
   })
 
   it('saves successfully and hands back', async () => {
