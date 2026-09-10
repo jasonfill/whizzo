@@ -119,10 +119,12 @@ assistant may work with (all of them by default), reads three lines:
 
 > **Claude** will be able to: see Maya's decks and how she is doing on
 > them; run practice rounds and record the answers she gives; make new decks
-> for her library, marked as made by Claude.
+> for her library, marked as made by Claude; change decks in your library
+> and Maya's own decks — add, correct or take out cards — which puts a
+> reviewed deck back up for your review.
 >
-> It will not be able to see other children, change settings, or delete
-> anything.
+> It will not be able to see other children or their decks, change
+> settings, or delete a deck or a learner.
 
 and approves. The client receives its token and lists our tools. The whole
 thing is under a minute and never involves a code, a PIN or a child.
@@ -345,7 +347,7 @@ family its own *reconnect* prompt on the next attempt.
 
 ## 6. The tools
 
-Ten tools. Names are stable, descriptions say when to call them, every
+Twelve tools. Names are stable, descriptions say when to call them, every
 result carries `say`, and read tools are annotated `readOnlyHint` so the
 clients can run them without a confirmation prompt — which matters, because
 a confirmation dialog on every `answer` would make a voice round unusable.
@@ -364,7 +366,8 @@ Account screen's instructions say to do that for exactly these two.
 | `hint` | write | Returns the scaffold for the open question and lowers the rung it is recorded at |
 | `end_round` | write | Closes early; returns the summary |
 | `create_deck` | write | Files a deck the assistant made, marked as generated, into the connecting grown-up's library |
-| `search` / `fetch` | read | ChatGPT's connector contract; card-free search over titles and terms, fetch of a deck's *prompt sides* |
+| `update_deck` | write | Changes a deck in the grown-up's library or a learner's own: title, track, labels; cards added, corrected or removed, matched by term; cards changed make it a draft again |
+| `search` / `fetch` | read | ChatGPT's connector contract; card-free search over titles and terms — the learners' decks and the grown-up's library — and fetch of a deck's *prompt sides* |
 
 A prompt, `tutor`, carries the tutoring instructions for clients that
 surface prompts. Because neither client reliably does, **the same
@@ -542,11 +545,74 @@ land on the learner and it is not assigned, because *nothing shared is ever
 auto-assigned*, and a deck the assistant just wrote is unreviewed by
 definition.
 
+### `update_deck`
+
+The second write that is not a round: *"add these three to Maya's cells
+deck"*, *"the mitochondria card is wrong — fix the answer"*, *"take out the
+ones about plant cells"*. Without it a deck the assistant filed yesterday
+can only be replaced by filing another, and the learner's progress on the
+first is stranded.
+
+```ts
+{
+  deckId: string,
+  title?: string, track?: TrackId | '', termLabel?: string, definitionLabel?: string,
+  cards?: GeneratedCard[],   // added, or replacing the card with the same term
+  remove?: string[],         // terms of cards to take out
+  replaceCards?: boolean     // cards becomes the whole deck
+}
+```
+
+Cards are matched **by term**, because the question side is all the
+assistant is ever shown of a card it did not write — on the same key
+ingestion dedupes on (case and punctuation ignored), so an assistant cannot
+make the pair of cards a build would have refused. A matched card is a
+**correction**: it keeps its id, so the mastery keyed `deckId:cardId`
+survives, and it keeps **every field the assistant did not send** — media,
+answer kind and tolerance, alternates, order, source pages, a hand-written
+hint — because those were set by someone who saw more of the card than its
+question side. A rich term (math, a figure) is kept over the plain echo
+`fetch` gave the assistant. Anything else in `cards` is appended. `remove`
+drops by the same match and names the terms it could not find; a term both
+removed and sent in `cards` is a correction, not a removal that comes back
+with a fresh id. `replaceCards` makes `cards` the whole set, still keeping
+ids and fields where a term stayed. The deck can never be left empty or
+grow past the ingestion cap, and a call that changes no cards leaves the
+card JSON untouched.
+
+**Cards written by an assistant make the deck a draft again.** The update
+clears `accepted_at` and adds the same `generated` tag `create_deck` stamps,
+whoever made the deck, so a reviewed, assigned deck cannot be quietly
+rewritten with unreviewed content — `accepted_at is null` is the one
+predicate the review gate rests on (migration 0017), and this write honors
+it. The spoken line says so when the deck had been reviewed.
+
+It reaches exactly two kinds of deck: one in the **connecting grown-up's
+library** and a **learner's own** deck on the connection — the learners
+ticked at consent, not every learner on the account. A library deck stays
+the account's after a child is set it as work, so the library reach rule
+(`libraryDecksFor` in `progressRead.ts`, shared by `search`, `fetch` and
+this tool) excludes any deck a learner *outside* the grant holds: a
+connection scoped to Maya can neither read nor rewrite the deck Ben is
+practicing. A library deck another account set the learner as work is
+reachable for practice but not for editing, and RLS has the last word — a
+tutor who can see a learner's deck without managing it gets a refusal, not
+a write. Changes land at once in whatever the learner practices, so the
+tool's description tells the assistant to say back what will change before
+calling it, and the annotation is `destructiveHint: true` so a client that
+confirms destructive calls does so here (there is no round in progress to
+interrupt).
+
 ### `search` and `fetch`
 
 ChatGPT's connector contract, and the reason a Whizzo deck can be cited in a
 deep-research answer or turned into a study guide. `search` returns
-`{ id, title, url }` results over deck titles and card terms; `fetch`
+`{ id, title, url, learner, library, cards }` results over deck titles and
+card terms — the learners' decks and the connecting grown-up's library
+(under the same consent-scoped reach rule as `update_deck`), which is where
+`create_deck` files its drafts and the only way an assistant finds one again
+to `update_deck` it. Decks no learner holds are listed first, so a cap on
+the list never hides a draft; `total` says how many matched. `fetch`
 returns one deck's title, track, card count and **prompt sides only** —
 never the answer side. That is enough to write a study guide *from* the
 deck's terms, and it is the one place a general-purpose read tool touches

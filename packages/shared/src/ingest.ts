@@ -44,8 +44,12 @@ export interface ValidatedSet {
   dropped: DroppedCard[]
 }
 
-/** What makes two questions the same question. */
-function dedupeKey(term: string): string {
+/**
+ * What makes two questions the same question. Exported so a tool that edits
+ * a deck by term matches cards the way ingestion dedupes them — anything
+ * looser lets a trailing question mark turn a correction into a duplicate.
+ */
+export function dedupeKey(term: string): string {
   return richToPlain(term)
     .toLowerCase()
     .replace(/[.,!?;:'"()[\]{}]/g, '')

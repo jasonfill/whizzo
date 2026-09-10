@@ -1,6 +1,6 @@
 // The tools an assistant gets.
 //
-// Ten, with a name, a title, a description that says when to call it, a JSON
+// Twelve, with a name, a title, a description that says when to call it, a JSON
 // schema, and safety annotations — the directory checklist, in code. Every
 // result carries `say`, a sentence the assistant can read aloud as written,
 // because in voice a tool result *is* the next thing the child hears.
@@ -18,7 +18,10 @@ import {
   cardKey,
   todayString,
   validateGeneratedCards,
+  dedupeKey,
+  MAX_CARDS_PER_SET,
   type QuizCard,
+  type QuizDeck,
   type RawGeneratedCard,
   type TutorMode,
   TUTOR_MODES,
@@ -28,7 +31,7 @@ import {
 import { richToPlain } from '@whizzo/shared/rich'
 import { z } from 'zod'
 import { dayOf } from '../progressMappers.js'
-import { decksFor, masteryFor } from '../progressRead.js'
+import { deckFor, decksFor, editableDeckFor, libraryDeckFor, libraryDecksFor, masteryFor } from '../progressRead.js'
 import { appUrl, newId } from './tokens.js'
 import {
   asUser,
@@ -77,6 +80,23 @@ const learnerArg = {
 }
 
 const uuid = z.string().uuid()
+
+const trackArg = { type: 'string', description: `A subject track id, e.g. science.biology. One of: ${TRACKS.map((t) => t.id).join(', ')}.` }
+
+/** One card as an assistant writes it: the ingestion build call's `GeneratedCard`, reused. */
+const cardInput = {
+  type: 'object',
+  properties: {
+    term: { type: 'string', minLength: 1 },
+    definition: { type: 'string', minLength: 1 },
+    hint: { type: 'string' },
+    example: { type: 'string' },
+    explanation: { type: 'string' },
+    category: { type: 'string' },
+  },
+  required: ['term', 'definition'],
+  additionalProperties: false,
+}
 
 // --- Definitions, in the order clients list them (deterministic, per the spec) ---------------
 
@@ -201,32 +221,15 @@ export const TOOL_DEFS: ToolDef[] = [
     name: 'create_deck',
     title: 'Make a deck',
     description:
-      'File a new deck, made from notes or a conversation, into the connecting grown-up’s Whizzo library as a draft marked as made by an assistant. It is not assigned to anyone: the grown-up reviews it in the app and sets it as work from there. Cards need a term and a definition; hint, example, explanation and category are optional and unlock more activities.',
+      'File a new deck, made from notes or a conversation, into the connecting grown-up’s Whizzo library as a draft marked as made by an assistant. It is not assigned to anyone: the grown-up reviews it in the app and sets it as work from there. Cards need a term and a definition; hint, example, explanation and category are optional and unlock more activities. To change a deck that already exists, use update_deck instead of making another.',
     inputSchema: {
       type: 'object',
       properties: {
         title: { type: 'string', minLength: 1, maxLength: 80 },
-        track: { type: 'string', description: `A subject track id, e.g. science.biology. One of: ${TRACKS.map((t) => t.id).join(', ')}.` },
+        track: trackArg,
         termLabel: { type: 'string', maxLength: 30, description: 'What to call the question side, e.g. "Spanish".' },
         definitionLabel: { type: 'string', maxLength: 30, description: 'What to call the answer side, e.g. "English".' },
-        cards: {
-          type: 'array',
-          minItems: 1,
-          maxItems: 200,
-          items: {
-            type: 'object',
-            properties: {
-              term: { type: 'string', minLength: 1 },
-              definition: { type: 'string', minLength: 1 },
-              hint: { type: 'string' },
-              example: { type: 'string' },
-              explanation: { type: 'string' },
-              category: { type: 'string' },
-            },
-            required: ['term', 'definition'],
-            additionalProperties: false,
-          },
-        },
+        cards: { type: 'array', minItems: 1, maxItems: 200, items: cardInput },
       },
       required: ['title', 'cards'],
       additionalProperties: false,
@@ -234,9 +237,47 @@ export const TOOL_DEFS: ToolDef[] = [
     annotations: write,
   },
   {
+    name: 'update_deck',
+    title: 'Change a deck',
+    description:
+      'Change a deck that already exists: retitle it, set its track or side labels, add cards, correct cards, or take cards out. Find the deck first — search covers the connecting grown-up’s library, drafts made with create_deck included, and list_materials covers a learner’s decks — and pass its id. A card whose term matches one already in the deck (ignoring case and punctuation) is corrected in place: it keeps the learner’s progress and every field you do not send. Any other card is added. Terms in remove are matched the same way. Changing cards makes the deck a draft again if a grown-up had reviewed it. Reaches decks in the grown-up’s own library and a learner’s own decks on this connection, never a deck another child on the account is working on. Changes land at once in whatever the learner practices, so say back what will change before calling this.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        deckId: { type: 'string', description: 'A deck id from search, fetch or list_materials.' },
+        title: { type: 'string', minLength: 1, maxLength: 80 },
+        track: { ...trackArg, description: `${trackArg.description} Pass an empty string to clear it.` },
+        termLabel: { type: 'string', maxLength: 30, description: 'What to call the question side, e.g. "Spanish".' },
+        definitionLabel: { type: 'string', maxLength: 30, description: 'What to call the answer side, e.g. "English".' },
+        cards: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 200,
+          items: cardInput,
+          description: 'Cards to add, or to replace the existing card with the same term.',
+        },
+        remove: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 200,
+          items: { type: 'string', minLength: 1 },
+          description: 'Terms of the cards to take out.',
+        },
+        replaceCards: {
+          type: 'boolean',
+          description: 'Make cards the whole deck: every card not in it is removed. Cards whose term is already in the deck keep their progress. Default false.',
+        },
+      },
+      required: ['deckId'],
+      additionalProperties: false,
+    },
+    annotations: { ...write, destructiveHint: true, idempotentHint: true },
+  },
+  {
     name: 'search',
     title: 'Search decks',
-    description: 'Search the learners’ decks by title and question side. Returns ids, titles and links for fetch.',
+    description:
+      'Search the learners’ decks and the connecting grown-up’s library by title and question side. Returns ids, titles and links for fetch or update_deck; library decks, drafts made with create_deck among them, are marked library.',
     inputSchema: {
       type: 'object',
       properties: { query: { type: 'string' } },
@@ -248,7 +289,8 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'fetch',
     title: 'Fetch a deck',
-    description: 'One deck’s title, subject and question sides, by id from search or list_materials. Answer sides are never included.',
+    description:
+      'One deck’s title, subject and question sides, by id from search or list_materials — a learner’s deck or one in the grown-up’s library. Answer sides are never included.',
     inputSchema: {
       type: 'object',
       properties: { id: { type: 'string' } },
@@ -300,6 +342,122 @@ export const roundModeSchema = z
   .transform((m) => (m === LEGACY_PRACTICE_MODE ? ('practice' as const) : m))
 
 const learnerParam = z.string().max(120).optional()
+
+const cardParam = z.object({
+  term: z.string().min(1).max(2000),
+  definition: z.string().min(1).max(2000),
+  hint: z.string().max(500).optional(),
+  example: z.string().max(1000).optional(),
+  explanation: z.string().max(1000).optional(),
+  category: z.string().max(80).optional(),
+})
+type CardInput = z.infer<typeof cardParam>
+
+/**
+ * Cards as the assistant wrote them, checked the way ingestion checks a
+ * model's output: a term and a definition each, no two asking the same thing,
+ * nothing malformed. Each card carries what it was given, marked as generated.
+ */
+function buildCards(input: CardInput[]): { cards: QuizCard[]; problems: string[] } {
+  const raw: RawGeneratedCard[] = input.map((c) => ({ ...c }))
+  const validated = validateGeneratedCards(raw, (term, definition) => ({
+    id: newId(),
+    term,
+    definition,
+    hint: null,
+    difficulty: 2,
+  }))
+  const cards: QuizCard[] = validated.cards.map((c) => ({
+    ...c,
+    generated: ['term', 'definition', ...(c.example ? ['example'] : []), ...(c.explanation ? ['explanation'] : [])],
+  }))
+  return { cards, problems: validated.dropped.map((d) => `${d.text}: ${d.reason}`) }
+}
+
+/**
+ * How two terms are compared when a card is corrected or removed by term:
+ * the same key ingestion dedupes on, so an assistant cannot make a pair of
+ * cards a build would have refused.
+ */
+const termKey = dedupeKey
+
+/** A track id as the assistant sent it: a known id, '' to clear, or a refusal. */
+function parseTrack(value: string | undefined): TrackId | null | undefined {
+  if (value === undefined) return undefined
+  if (value === '') return null
+  if (!TRACKS.some((t) => t.id === value)) {
+    throw new ToolRefused(`No track called ${value}. One of: ${TRACKS.map((t) => t.id).join(', ')}.`)
+  }
+  return value as TrackId
+}
+
+const OPTIONAL_CARD_FIELDS = ['hint', 'example', 'explanation', 'category'] as const
+
+/**
+ * A correction keeps everything the assistant did not send. The fields that
+ * unlock activities — media, answer kind and tolerance, alternates, order,
+ * source pages — were set by someone who saw more of the card than its
+ * question side, which is all fetch ever shows an assistant. A rich term
+ * (math, a figure) is kept over the plain echo of it; a plain one takes the
+ * new spelling.
+ */
+function correctCard(prior: QuizCard, fresh: QuizCard, given: CardInput | undefined): QuizCard {
+  const plainTerm = richToPlain(prior.term) === prior.term
+  const supplied = given ? OPTIONAL_CARD_FIELDS.filter((k) => given[k] !== undefined) : [...OPTIONAL_CARD_FIELDS]
+  const out: QuizCard = { ...prior, term: plainTerm ? fresh.term : prior.term, definition: fresh.definition }
+  for (const k of supplied) out[k] = fresh[k] ?? null
+  out.generated = [...new Set([...(prior.generated ?? []), 'definition', ...supplied])]
+  return out
+}
+
+interface Merge {
+  cards: QuizCard[]
+  added: number
+  corrected: number
+  /** Question sides of the cards no longer in the deck. */
+  removed: string[]
+  /** Terms in `remove` that matched nothing. */
+  notFound: string[]
+}
+
+/**
+ * The deck's cards after an edit. Pure, so the rules can be read in one
+ * place: an incoming card whose term matches an existing one is a correction
+ * and keeps its id; anything else is added; a term in `remove` takes its card
+ * out unless the same call also sends that card, which is a correction, not
+ * a removal-and-return with a fresh id. With `replace`, the incoming cards
+ * are the whole deck and existing ones still lend their ids by term.
+ */
+function mergeCards(existing: QuizCard[], incoming: QuizCard[], given: Map<string, CardInput>, remove: string[], replace: boolean): Merge {
+  const prior = new Map(existing.map((c) => [termKey(c.term), c] as const))
+  const next = new Map(replace ? [] : prior)
+  const sent = new Set<string>()
+  let added = 0
+  let corrected = 0
+  for (const card of incoming) {
+    const key = termKey(card.term)
+    sent.add(key)
+    const was = prior.get(key)
+    if (was) corrected += 1
+    else added += 1
+    next.set(key, was ? correctCard(was, card, given.get(key)) : card)
+  }
+  const notFound: string[] = []
+  for (const term of remove) {
+    const key = termKey(term)
+    if (!prior.has(key)) {
+      if (!notFound.includes(term.trim())) notFound.push(term.trim())
+      continue
+    }
+    if (!sent.has(key)) next.delete(key)
+  }
+  const kept = new Set([...next.values()].map((c) => c.id))
+  const removed = existing.filter((c) => !kept.has(c.id)).map((c) => richToPlain(c.term).trim())
+  return { cards: [...next.values()], added, corrected, removed, notFound }
+}
+
+/** The arguments to update_deck that change something; a call with none of them is refused. */
+const DECK_CHANGES = ['title', 'track', 'termLabel', 'definitionLabel', 'cards', 'remove'] as const
 
 const handlers: Record<string, Handler> = {
   async whoami(ctx) {
@@ -506,33 +664,12 @@ const handlers: Record<string, Handler> = {
         track: z.string().max(60).optional(),
         termLabel: z.string().max(30).optional(),
         definitionLabel: z.string().max(30).optional(),
-        cards: z
-          .array(
-            z.object({
-              term: z.string().min(1).max(2000),
-              definition: z.string().min(1).max(2000),
-              hint: z.string().max(500).optional(),
-              example: z.string().max(1000).optional(),
-              explanation: z.string().max(1000).optional(),
-              category: z.string().max(80).optional(),
-            }),
-          )
-          .min(1)
-          .max(200),
+        cards: z.array(cardParam).min(1).max(200),
       })
       .parse(input)
 
-    const track: TrackId | null = args.track && TRACKS.some((t) => t.id === args.track) ? (args.track as TrackId) : null
-    const raw: RawGeneratedCard[] = args.cards.map((c) => ({ ...c }))
-    const validated = validateGeneratedCards(raw, (term, definition) => ({
-      id: newId(),
-      term,
-      definition,
-      hint: null,
-      difficulty: 2,
-    }))
-    const cards: QuizCard[] = validated.cards.map((c) => ({ ...c, generated: ['term', 'definition', ...(c.example ? ['example'] : []), ...(c.explanation ? ['explanation'] : [])] }))
-    const problems = validated.dropped.map((d) => `${d.text}: ${d.reason}`)
+    const track = parseTrack(args.track) ?? null
+    const { cards, problems } = buildCards(args.cards)
     if (!cards.length) throw new ToolRefused(`None of those cards were usable: ${problems.slice(0, 3).join('; ')}`)
 
     const deckId = newId()
@@ -566,19 +703,146 @@ const handlers: Record<string, Handler> = {
     }
   },
 
+  async update_deck(ctx, input) {
+    const args = z
+      .object({
+        deckId: uuid,
+        title: z.string().min(1).max(80).optional(),
+        track: z.string().max(60).optional(),
+        termLabel: z.string().max(30).optional(),
+        definitionLabel: z.string().max(30).optional(),
+        cards: z.array(cardParam).min(1).max(200).optional(),
+        remove: z.array(z.string().min(1).max(2000)).min(1).max(200).optional(),
+        replaceCards: z.boolean().optional(),
+      })
+      .parse(input)
+
+    if (args.replaceCards && !args.cards) throw new ToolRefused('replaceCards needs cards — the ones the deck should hold.')
+    if (DECK_CHANGES.every((k) => args[k] === undefined)) {
+      throw new ToolRefused('Nothing to change: give a new title, track or labels, cards to add or correct, or terms to remove.')
+    }
+    const track = parseTrack(args.track)
+    const { deckId } = args
+
+    return asUser(ctx.grant, async (db) => {
+      const found = await editableDeckFor(db, ctx.grant.userId, ctx.grant.learnerIds, deckId)
+      if (!found) {
+        throw new ToolRefused(
+          'No deck with that id can be changed on this connection. It may be shared with the learner rather than theirs or yours, or be one another child on this account is working on.',
+        )
+      }
+      const { deck, learnerId, accepted } = found
+
+      let merge: Merge | null = null
+      const problems: string[] = []
+      if (args.cards || args.remove || args.replaceCards) {
+        let incoming: QuizCard[] = []
+        const given = new Map<string, CardInput>()
+        if (args.cards) {
+          const built = buildCards(args.cards)
+          problems.push(...built.problems)
+          if (!built.cards.length) throw new ToolRefused(`None of those cards were usable: ${problems.slice(0, 3).join('; ')}`)
+          incoming = built.cards
+          for (const c of args.cards) given.set(termKey(c.term), c)
+        }
+        merge = mergeCards(deck.cards, incoming, given, args.remove ?? [], Boolean(args.replaceCards))
+        if (!merge.cards.length) throw new ToolRefused('That would leave the deck with no cards. Remove fewer, or add some.')
+        if (merge.cards.length > MAX_CARDS_PER_SET) {
+          throw new ToolRefused(`That would make ${merge.cards.length} cards; a deck holds at most ${MAX_CARDS_PER_SET}.`)
+        }
+      }
+
+      const title = args.title ?? deck.title
+      const nextTrack: TrackId | null = track === undefined ? (deck.track ?? null) : track
+      const sets = ['title = $2', 'track = $3', 'term_label = $4', 'definition_label = $5', 'updated_at = now()']
+      const params: unknown[] = [deckId, title, nextTrack, args.termLabel ?? deck.termLabel, args.definitionLabel ?? deck.definitionLabel]
+      if (merge) {
+        // Cards an assistant wrote make the deck unreviewed again, whoever
+        // made it: back to a draft, with the provenance create_deck stamps,
+        // so the Library shows what happened and the review gate holds.
+        params.push(JSON.stringify(merge.cards), [...new Set([...deck.tags, 'generated', ctx.grant.clientLabel])])
+        sets.push('cards = $6', 'tags = $7', 'accepted_at = null')
+      }
+      const { rowCount } = await db.query(`update public.decks set ${sets.join(', ')} where id = $1`, params)
+      // RLS decides who may write: an account that can see a learner's deck
+      // without managing it gets the row above and no update here.
+      if (!rowCount) throw new ToolRefused('This connection can see that deck but may not change it.')
+
+      const parts: string[] = []
+      if (args.title !== undefined && args.title !== deck.title) parts.push(`renamed it "${title}"`)
+      if (track !== undefined && nextTrack !== (deck.track ?? null)) parts.push(nextTrack ? `filed it under ${nextTrack}` : 'took it off its track')
+      if ((args.termLabel !== undefined && args.termLabel !== deck.termLabel) || (args.definitionLabel !== undefined && args.definitionLabel !== deck.definitionLabel)) {
+        parts.push('relabeled the sides')
+      }
+      if (merge && args.replaceCards) parts.push(`replaced the cards, ${merge.corrected} of them keeping their progress`)
+      else if (merge) {
+        if (merge.added) parts.push(`added ${merge.added} ${merge.added === 1 ? 'card' : 'cards'}`)
+        if (merge.corrected) parts.push(`corrected ${merge.corrected}`)
+        if (merge.removed.length) parts.push(`removed ${merge.removed.length}`)
+      }
+      const count = merge ? merge.cards.length : deck.cards.length
+      const notFound = merge?.notFound ?? []
+      const say =
+        `Updated "${title}"` +
+        (parts.length ? `: ${parts.join(', ')}` : '') +
+        `. It has ${count} ${count === 1 ? 'card' : 'cards'} now.` +
+        (problems.length ? ` ${problems.length} ${problems.length === 1 ? 'card was' : 'cards were'} left out.` : '') +
+        (notFound.length ? ` No card matched ${notFound.map((t) => `"${t}"`).join(', ')}.` : '') +
+        (merge && accepted ? ' It is a draft again: look it over in the app before it is set as work.' : '')
+      return {
+        data: {
+          deck: { id: deckId, title, cards: count, track: nextTrack },
+          added: merge?.added ?? 0,
+          corrected: merge?.corrected ?? 0,
+          removed: merge?.removed ?? [],
+          notFound,
+          dropped: problems.slice(0, 10),
+          draft: Boolean(merge),
+          url: learnerId ? `${appUrl()}/quiz/deck/${deckId}` : `${appUrl()}/library`,
+        },
+        say,
+      }
+    })
+  },
+
   async search(ctx, input) {
     const { query } = z.object({ query: z.string().max(200) }).parse(input)
     const needle = query.trim().toLowerCase()
     return asUser(ctx.grant, async (db) => {
       const learners = await grantedLearners(db, ctx.grant)
-      const results: Array<{ id: string; title: string; url: string; learner: string }> = []
-      for (const l of learners) {
-        for (const d of await decksFor(db, l.id)) {
-          const hit = !needle || d.title.toLowerCase().includes(needle) || d.cards.some((c) => richToPlain(c.term).toLowerCase().includes(needle))
-          if (hit && !results.some((r) => r.id === d.id)) results.push({ id: d.id, title: d.title, url: `${appUrl()}/quiz/deck/${d.id}`, learner: l.displayName })
+      const [library, ...perLearner] = await Promise.all([
+        libraryDecksFor(db, ctx.grant.userId, ctx.grant.learnerIds),
+        ...learners.map((l) => decksFor(db, l.id)),
+      ])
+      const hit = (d: QuizDeck) => !needle || d.title.toLowerCase().includes(needle) || d.cards.some((c) => richToPlain(c.term).toLowerCase().includes(needle))
+      const inLibrary = new Set(library.map((d) => d.id))
+      const results: Array<{ id: string; title: string; url: string; learner: string | null; library: boolean; cards: number }> = []
+      const seen = new Set<string>()
+      learners.forEach((l, i) => {
+        for (const d of perLearner[i] ?? []) {
+          if (!hit(d) || seen.has(d.id)) continue
+          seen.add(d.id)
+          results.push({ id: d.id, title: d.title, url: `${appUrl()}/quiz/deck/${d.id}`, learner: l.displayName, library: inLibrary.has(d.id), cards: d.cards.length })
         }
+      })
+      for (const d of library) {
+        if (!hit(d) || seen.has(d.id)) continue
+        seen.add(d.id)
+        results.push({ id: d.id, title: d.title, url: `${appUrl()}/library`, learner: null, library: true, cards: d.cards.length })
       }
-      return { data: { results: results.slice(0, 20) }, say: results.length ? `${results.length} matching ${results.length === 1 ? 'deck' : 'decks'}.` : 'No matching decks.' }
+      // Decks no learner holds come first: a draft filed with create_deck is
+      // reachable through nothing but this tool, so it must not be the row a
+      // cap cuts off. Stable, so each group keeps its own order.
+      results.sort((a, b) => Number(a.learner !== null) - Number(b.learner !== null))
+      const page = results.slice(0, 20)
+      const libraryHits = results.filter((r) => r.library).length
+      const say = results.length
+        ? `${results.length} matching ${results.length === 1 ? 'deck' : 'decks'}` +
+          (libraryHits ? `, ${libraryHits} in your library` : '') +
+          (results.length > page.length ? `; the first ${page.length} are listed` : '') +
+          '.'
+        : 'No matching decks.'
+      return { data: { results: page, total: results.length }, say }
     })
   },
 
@@ -586,22 +850,24 @@ const handlers: Record<string, Handler> = {
     const { id } = z.object({ id: z.string().max(120) }).parse(input)
     return asUser(ctx.grant, async (db) => {
       const learners = await grantedLearners(db, ctx.grant)
-      for (const l of learners) {
-        const deck = (await decksFor(db, l.id)).find((d) => d.id === id)
-        if (!deck) continue
-        const prompts = deck.cards.map((c) => richToPlain(c.term).trim())
-        return {
-          data: {
-            id: deck.id,
-            title: deck.title,
-            text: `${deck.title}\n${deck.track ? `Track: ${deck.track}\n` : ''}${deck.cards.length} cards. Question sides:\n${prompts.map((p) => `- ${p}`).join('\n')}`,
-            url: `${appUrl()}/quiz/deck/${deck.id}`,
-            metadata: { track: deck.track ?? null, cards: deck.cards.length, termLabel: deck.termLabel, definitionLabel: deck.definitionLabel },
-          },
-          say: `"${deck.title}", ${deck.cards.length} cards.`,
-        }
+      const [inLibrary, ...perLearner] = await Promise.all([
+        libraryDeckFor(db, ctx.grant.userId, ctx.grant.learnerIds, id),
+        ...learners.map((l) => deckFor(db, l.id, id)),
+      ])
+      const held = perLearner.find((d) => d !== null) ?? null
+      const deck = held ?? inLibrary
+      if (!deck) throw new ToolRefused('No deck with that id is available on this connection.')
+      const prompts = deck.cards.map((c) => richToPlain(c.term).trim())
+      return {
+        data: {
+          id: deck.id,
+          title: deck.title,
+          text: `${deck.title}\n${deck.track ? `Track: ${deck.track}\n` : ''}${deck.cards.length} cards. Question sides:\n${prompts.map((p) => `- ${p}`).join('\n')}`,
+          url: held ? `${appUrl()}/quiz/deck/${deck.id}` : `${appUrl()}/library`,
+          metadata: { track: deck.track ?? null, cards: deck.cards.length, termLabel: deck.termLabel, definitionLabel: deck.definitionLabel, library: inLibrary !== null },
+        },
+        say: `"${deck.title}", ${deck.cards.length} cards${held ? '' : ', in your library'}.`,
       }
-      throw new ToolRefused('No deck with that id is available on this connection.')
     })
   },
 }

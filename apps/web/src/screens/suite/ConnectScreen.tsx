@@ -86,11 +86,15 @@ export default function ConnectScreen({ navigate }: { navigate: Navigate }) {
             <li>see the decks and how each learner is doing on them</li>
             <li>run practice rounds out loud and record the answers they give</li>
             <li>make new decks for your library, marked as made by {who}</li>
+            <li>
+              change decks in your library and these learners’ own decks — add, correct or take out
+              cards — which puts a reviewed deck back up for your review
+            </li>
           </ul>
           <p className="mb-5 font-bold text-muted">
-            It will not be able to see other children, change settings, or delete anything. Answers
-            are checked by Whizzo, never by {who} — it is never told an answer before the learner
-            has tried.
+            It will not be able to see other children or their decks, change settings, or delete a
+            deck or a learner. Answers are checked by Whizzo, never by {who} — it is never told an
+            answer before the learner has tried.
           </p>
 
           <p className="mb-2 text-sm font-extrabold uppercase tracking-wide text-stone">

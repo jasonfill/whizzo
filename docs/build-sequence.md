@@ -16,7 +16,7 @@
 | 7 Generators | **done** | math fact banks — six out of the box, stable ids, difficulty as children meet it |
 | 8 Publishing | **partial** | units, prerequisites and `validateCatalog`. Groups, slots and the supplied catalog deliberately deferred |
 | 9 Planner | **done** | migration 0019, `planner.ts` + `simulate:planner`, courses, the week and Today, cards with drag, tests planned backwards, linked sessions closed by evidence, trigger-written history, comments, plan and wrap flows, print, the Family line — [weekly-planner-spec.md](weekly-planner-spec.md) |
-| 10 MCP | **code done, needs config** | OAuth server, `/mcp`, ten tools, grading and the adaptive engine moved to shared, `channel` on attempts, migration 0020, `simulate:tutor`. Needs `APP_URL` and `MCP_TOKEN_SECRET`, then the voice spike — see §3d |
+| 10 MCP | **code done, needs config** | OAuth server, `/mcp`, twelve tools, grading and the adaptive engine moved to shared, `channel` on attempts, migration 0020, `simulate:tutor`. Needs `APP_URL` and `MCP_TOKEN_SECRET`, then the voice spike — see §3d |
 | 11 Realtime | **in progress** | One SSE channel on the gateway, an in-process bus behind a `LiveBus` interface, `learner:` and `user:` channel families with one gate each. Planner is consumer one; watching a live round is consumer two and needs the round to emit, which it does not today. No migration — nothing here is stored — [realtime-spec.md](realtime-spec.md) |
 
 Three proposals exist, they overlap, and each one has its own "Phase 1". This

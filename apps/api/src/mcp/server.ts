@@ -34,7 +34,8 @@ const LIST_TTL_MS = 60 * 60 * 1000
 
 const SERVER_INSTRUCTIONS =
   'Whizzo is a learning app for children. These tools let you tutor a learner out loud on their own flashcard decks. ' +
-  'Call whoami first. Use list_materials to find the deck, start_round to begin, and answer for every reply — send exactly what the learner said. ' +
+  'Call whoami first. Use list_materials to find a learner’s deck, start_round to begin, and answer for every reply — send exactly what the learner said. ' +
+  'To find a deck in the grown-up’s library, including one you made with create_deck, use search; update_deck changes a deck rather than making another. ' +
   'Every result is a spoken line followed by JSON: read the line aloud, and take ids (deck ids, roundId) and the next question from the JSON. ' +
   'Follow the instructions returned by start_round for the whole round. You are never given an answer before the learner has tried.'
 

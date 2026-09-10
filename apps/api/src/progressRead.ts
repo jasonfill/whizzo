@@ -36,6 +36,71 @@ export async function deckFor(db: Queryable, learnerId: string, deckId: string):
   return decks.find((d) => d.id === deckId) ?? null
 }
 
+/**
+ * A library deck some learner outside `$2` has been set as work. A grown-up's
+ * library is theirs, but a deck in a child's hands is that child's practice,
+ * and a connection scoped to a sibling was not given it — so such a deck is
+ * out of reach for reading and for editing alike. Any assignment counts,
+ * open or done: the child has progress on it either way.
+ */
+const HELD_BY_OTHER_LEARNER = `exists (
+      select 1 from public.assignment_sets t
+        join public.assignments a on a.set_id = t.id
+       where t.subject = 'quiz' and t.target_id = d.id::text
+         and a.learner_id <> all($2::uuid[]))`
+
+/**
+ * The decks in a grown-up's library that a connection scoped to `learnerIds`
+ * may reach: the account's own, minus any held by a learner outside the
+ * scope. This is where an assistant's drafts land, reachable by no learner
+ * until one is set as work.
+ */
+export async function libraryDecksFor(db: Queryable, userId: string, learnerIds: string[]): Promise<QuizDeck[]> {
+  const { rows } = await db.query(
+    `select * from public.decks d
+      where d.owner_user_id = $1 and not ${HELD_BY_OTHER_LEARNER}
+      order by d.updated_at desc`,
+    [userId, learnerIds],
+  )
+  return rows.map(toDeck)
+}
+
+/** One library deck by id, under the same reach rule. */
+export async function libraryDeckFor(db: Queryable, userId: string, learnerIds: string[], deckId: string): Promise<QuizDeck | null> {
+  const { rows } = await db.query(
+    `select * from public.decks d
+      where d.id = $3 and d.owner_user_id = $1 and not ${HELD_BY_OTHER_LEARNER}`,
+    [userId, learnerIds, deckId],
+  )
+  return rows[0] ? toDeck(rows[0]) : null
+}
+
+export interface EditableDeck {
+  deck: QuizDeck
+  /** Set when the deck is a learner's own rather than a library deck. */
+  learnerId: string | null
+  /** Whether a grown-up has reviewed and accepted it (never true of a hand-made deck). */
+  accepted: boolean
+}
+
+/**
+ * A deck a connection may change: a learner's own, or a library deck under
+ * the reach rule above. A library deck another account shared with the
+ * learner is reachable for practice but is not theirs to edit, and does not
+ * come back here. RLS still has the last word on the write itself.
+ */
+export async function editableDeckFor(db: Queryable, userId: string, learnerIds: string[], deckId: string): Promise<EditableDeck | null> {
+  const { rows } = await db.query(
+    `select * from public.decks d
+      where d.id = $3
+        and (d.learner_id = any($2::uuid[]) or (d.owner_user_id = $1 and not ${HELD_BY_OTHER_LEARNER}))`,
+    [userId, learnerIds, deckId],
+  )
+  const row = rows[0] as { learner_id: string | null; accepted_at: Date | string | null } | undefined
+  if (!row) return null
+  return { deck: toDeck(row), learnerId: row.learner_id ?? null, accepted: row.accepted_at != null }
+}
+
 /** A learner's quiz mastery rows, by item key. */
 export async function masteryFor(db: Queryable, learnerId: string): Promise<Map<string, ItemMastery>> {
   const { rows } = await db.query(
