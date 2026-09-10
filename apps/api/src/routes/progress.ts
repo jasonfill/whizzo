@@ -604,6 +604,27 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
     return library
   })
 
+  /** One deck from your library — the page it opens on, and the editor's load. */
+  app.get('/library/decks/:deckId', async (request) => {
+    const caller = callerOf(request)
+    const { deckId } = parse(z.object({ deckId: uuid }), request.params)
+
+    const deck = await withUser(caller.id, async (db) => {
+      const { rows } = await db.query(
+        `select d.*,
+                coalesce(nullif(s.source_map ->> 'title', ''), s.origin) as source_title
+           from public.decks d
+           left join public.content_sources s on s.id = d.source_id
+          where d.id = $1 and d.owner_user_id = $2`,
+        [deckId, caller.id],
+      )
+      return rows[0] ? toDeck(rows[0]) : null
+    })
+    if (!deck) throw notFound('That deck is not in your library')
+
+    return { deck }
+  })
+
   /**
    * A deck a person saves is reviewed by the person saving it. Ingestion's
    * drafts (`source_id` set) stay drafts until the review screen accepts

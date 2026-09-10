@@ -55,6 +55,15 @@ export type Route =
   | { name: 'library' }
   /** Hand over a document; get practice material back. */
   | { name: 'content-new' }
+  /**
+   * One of your own decks, opened from the library. The same screens as a
+   * learner's deck, read from your library rather than from whichever child
+   * is on screen: a deck you own is not in any learner's snapshot until you
+   * have set it for them.
+   */
+  | { name: 'library-deck'; deckId: string }
+  /** No deckId means "start a new deck in the library". */
+  | { name: 'library-edit'; deckId?: string }
   // The planner: the learner's week, and the two guided flows around it.
   /** The week grid, or Today. No weekStart means this week. */
   | { name: 'planner'; weekStart?: string; view?: 'today' | 'week' }

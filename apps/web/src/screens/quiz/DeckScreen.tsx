@@ -1,32 +1,90 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../../auth/AuthProvider'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import RichText from '../../components/rich/RichText'
 import { Button, Card, Pill, StarRow } from '../../components/ui'
 import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { useProgress } from '../../lib/progress/ProgressProvider'
-import { listKey, todayString, type QuizCard } from '../../lib/progress/types'
+import { listKey, todayString, type QuizCard, type QuizDeck } from '../../lib/progress/types'
 import { allDecks, copyDeck, deckStats, findDeck, masteryForCard } from '../../lib/quiz/decks'
+import type { DeckScope } from '../../lib/quiz/scope'
 import { MODES, type DirectionSetting } from '../../lib/quiz/session'
 import type { Navigate } from '../../routes'
 import { bandForGrade, tutorPacket } from '@whizzo/shared'
 import { useLearners } from '../../lib/learners'
+import { deleteLibraryDeck, getLibraryDeck, saveLibraryDecks } from '../../lib/assignments/library'
+import AssignForm from '../suite/AssignForm'
 
-export default function DeckScreen({ deckId, navigate }: { deckId: string; navigate: Navigate }) {
+/**
+ * One deck: what is in it, how it is going, and the ways to study it.
+ *
+ * In the library scope this is the grown-up's own deck. It is in no learner's
+ * snapshot, so there is no mastery to show and no round to start — a round is
+ * a learner practicing, and this deck reaches a learner only by being set as
+ * work. What is left is what an owner needs: read it, change it, copy it, set
+ * it, or delete it.
+ */
+export default function DeckScreen({
+  deckId,
+  scope = 'learner',
+  navigate,
+}: {
+  deckId: string
+  scope?: DeckScope
+  navigate: Navigate
+}) {
   const { snapshot, saveDeck, deleteDeck } = useProgress()
+  const { user } = useAuth()
   const [direction, setDirection] = useState<DirectionSetting>('term-first')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [packetCopied, setPacketCopied] = useState(false)
-  const { active } = useLearners()
+  const [assigning, setAssigning] = useState(false)
+  const { active, learners } = useLearners()
   const today = todayString()
+  const inLibrary = scope === 'library'
 
   const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
-  const deck = findDeck(decks, deckId)
+
+  // A library deck comes from the API rather than the snapshot. Undefined is
+  // "still loading", null is "not there", so the two read differently.
+  const [libraryDeck, setLibraryDeck] = useState<QuizDeck | null | undefined>(undefined)
+  useEffect(() => {
+    if (!inLibrary) return
+    const controller = new AbortController()
+    setLibraryDeck(undefined)
+    getLibraryDeck(deckId, controller.signal)
+      .then((d) => {
+        if (!controller.signal.aborted) setLibraryDeck(d)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLibraryDeck(null)
+      })
+    return () => controller.abort()
+  }, [deckId, inLibrary])
+
+  const deck = inLibrary ? libraryDeck : findDeck(decks, deckId)
+  const home = inLibrary ? ({ name: 'library' } as const) : ({ name: 'quiz' } as const)
+
+  if (inLibrary && deck === undefined) {
+    return (
+      <div className="mx-auto w-full max-w-3xl py-4">
+        <ScreenHeader title="Opening…" onBack={() => navigate(home)} backLabel="← Library" />
+        <Card>
+          <p className="font-bold text-stone">Loading…</p>
+        </Card>
+      </div>
+    )
+  }
 
   if (!deck) {
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
-        <ScreenHeader title="Deck not found" onBack={() => navigate({ name: 'quiz' })} />
+        <ScreenHeader
+          title="Deck not found"
+          onBack={() => navigate(home)}
+          backLabel={inLibrary ? '← Library' : '← Back'}
+        />
         <Card>
           <p className="font-bold text-muted">
             That deck is gone. It may have been deleted on another device.
@@ -39,16 +97,28 @@ export default function DeckScreen({ deckId, navigate }: { deckId: string; navig
   const stats = deckStats(snapshot, deck, today)
   const progress = snapshot.lists[listKey('quiz', deck.id)]
   const tooSmall = deck.cards.length < 2
+  const assignable = learners.filter((l) => l.authUserId !== user?.id)
 
   const takeCopy = async () => {
     setBusy(true)
     try {
       const copy = copyDeck(deck)
-      await saveDeck(copy)
-      navigate({ name: 'quiz-deck', deckId: copy.id })
+      if (inLibrary) {
+        await saveLibraryDecks([copy])
+        navigate({ name: 'library-deck', deckId: copy.id })
+      } else {
+        await saveDeck(copy)
+        navigate({ name: 'quiz-deck', deckId: copy.id })
+      }
     } finally {
       setBusy(false)
     }
+  }
+
+  const remove = async () => {
+    if (inLibrary) await deleteLibraryDeck(deck.id)
+    else await deleteDeck(deck.id)
+    navigate(home)
   }
 
   return (
@@ -56,23 +126,50 @@ export default function DeckScreen({ deckId, navigate }: { deckId: string; navig
       <ScreenHeader
         title={deck.title}
         subtitle={deck.description || `${deck.cards.length} cards`}
-        onBack={() => navigate({ name: 'quiz' })}
-        backLabel="← Decks"
+        onBack={() => navigate(home)}
+        backLabel={inLibrary ? '← Library' : '← Decks'}
         right={progress?.stars ? <StarRow stars={progress.stars} size={22} /> : undefined}
       />
 
-      {/* Progress summary */}
-      <Card className="mb-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <Stat label="Cards" value={String(stats.total)} />
-          <Stat label="Mastered" value={String(stats.mastered)} />
-          <Stat label="Still learning" value={String(stats.practiced + stats.learning)} />
-          <Stat label="Not seen" value={String(stats.total - stats.seen)} />
-          {stats.due > 0 && <Pill className="bg-sun/30 text-ink">🔁 {stats.due} due</Pill>}
-        </div>
-      </Card>
+      {inLibrary ? (
+        /* No progress here, and the reason why: a library deck is yours, and
+           the learning happens on the copy a student sees once it is set. */
+        <Card className="mb-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="font-bold text-muted">
+              Yours, not any one learner&apos;s. Progress shows up on a student&apos;s task list
+              once you have set it for them.
+            </p>
+            <Button className="ml-auto" onClick={() => setAssigning(true)}>
+              Set as work
+            </Button>
+          </div>
+          {assigning && (
+            <div className="mt-4">
+              <AssignForm
+                learners={assignable}
+                defaultLearnerIds={[]}
+                fixedTarget={{ kind: 'deck', ids: [deck.id], label: deck.title }}
+                onDone={() => setAssigning(false)}
+                onCancel={() => setAssigning(false)}
+              />
+            </div>
+          )}
+        </Card>
+      ) : (
+        /* Progress summary */
+        <Card className="mb-5">
+          <div className="flex flex-wrap items-center gap-4">
+            <Stat label="Cards" value={String(stats.total)} />
+            <Stat label="Mastered" value={String(stats.mastered)} />
+            <Stat label="Still learning" value={String(stats.practiced + stats.learning)} />
+            <Stat label="Not seen" value={String(stats.total - stats.seen)} />
+            {stats.due > 0 && <Pill className="bg-sun/30 text-ink">🔁 {stats.due} due</Pill>}
+          </div>
+        </Card>
+      )}
 
-      {tooSmall ? (
+      {inLibrary ? null : tooSmall ? (
         <Card className="mb-5">
           <p className="font-bold text-amber-700">
             This deck needs at least two cards before you can study it.
@@ -179,7 +276,16 @@ export default function DeckScreen({ deckId, navigate }: { deckId: string; navig
           </Button>
         ) : (
           <>
-            <Button variant="ghost" onClick={() => navigate({ name: 'quiz-edit', deckId: deck.id })}>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                navigate(
+                  inLibrary
+                    ? { name: 'library-edit', deckId: deck.id }
+                    : { name: 'quiz-edit', deckId: deck.id },
+                )
+              }
+            >
               ✏️ Edit deck
             </Button>
             <Button variant="ghost" onClick={takeCopy} disabled={busy}>
@@ -187,13 +293,7 @@ export default function DeckScreen({ deckId, navigate }: { deckId: string; navig
             </Button>
             {confirmDelete ? (
               <>
-                <Button
-                  variant="danger"
-                  onClick={async () => {
-                    await deleteDeck(deck.id)
-                    navigate({ name: 'quiz' })
-                  }}
-                >
+                <Button variant="danger" onClick={remove}>
                   Delete for good
                 </Button>
                 <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
@@ -215,7 +315,7 @@ export default function DeckScreen({ deckId, navigate }: { deckId: string; navig
       </h3>
       <div className="space-y-2">
         {deck.cards.map((card) => (
-          <CardRow key={card.id} card={card} deckId={deck.id} />
+          <CardRow key={card.id} card={card} deckId={deck.id} showMastery={!inLibrary} />
         ))}
       </div>
     </div>
@@ -264,9 +364,18 @@ function DirectionToggle({
   )
 }
 
-function CardRow({ card, deckId }: { card: QuizCard; deckId: string }) {
+function CardRow({
+  card,
+  deckId,
+  showMastery,
+}: {
+  card: QuizCard
+  deckId: string
+  /** Off for a library deck: mastery is a learner's, and this deck is nobody's yet. */
+  showMastery: boolean
+}) {
   const { snapshot } = useProgress()
-  const mastery = masteryForCard(snapshot, deckId, card.id)
+  const mastery = showMastery ? masteryForCard(snapshot, deckId, card.id) : undefined
   const score = mastery?.mastery ?? 0
 
   const band =
@@ -290,7 +399,7 @@ function CardRow({ card, deckId }: { card: QuizCard; deckId: string }) {
         className="flex-[2] font-bold text-muted"
         figures="describe"
       />
-      <Pill className={`shrink-0 ${band.className}`}>{band.label}</Pill>
+      {showMastery && <Pill className={`shrink-0 ${band.className}`}>{band.label}</Pill>}
     </div>
   )
 }

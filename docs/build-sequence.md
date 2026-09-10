@@ -18,6 +18,7 @@
 | 9 Planner | **done** | migration 0019, `planner.ts` + `simulate:planner`, courses, the week and Today, cards with drag, tests planned backwards, linked sessions closed by evidence, trigger-written history, comments, plan and wrap flows, print, the Family line — [weekly-planner-spec.md](weekly-planner-spec.md) |
 | 10 MCP | **code done, needs config** | OAuth server, `/mcp`, twelve tools, grading and the adaptive engine moved to shared, `channel` on attempts, migration 0020, `simulate:tutor`. Needs `APP_URL` and `MCP_TOKEN_SECRET`, then the voice spike — see §3d |
 | 11 Realtime | **in progress** | One SSE channel on the gateway, an in-process bus behind a `LiveBus` interface, `learner:` and `user:` channel families with one gate each. Planner is consumer one; watching a live round is consumer two and needs the round to emit, which it does not today. No migration — nothing here is stored — [realtime-spec.md](realtime-spec.md) |
+| 12 Gimkit import | **spec** | A teacher's kit by practice or view link, or by Gimkit's own Export text; no model call, no credits; `distractors` on cards so kit choices survive; migration 0025 — [gimkit-import-spec.md](gimkit-import-spec.md) |
 
 Three proposals exist, they overlap, and each one has its own "Phase 1". This
 document is the single authority on **what gets built when**, and on the
@@ -114,6 +115,7 @@ six.
 | 0019 | `courses`, `planner_weeks`, `assessments`, `planner_items`, `planner_events` (append-only, trigger-written), `planner_comments`, `planner_prefs`, `course_id` on decks / word lists / assignments | 9 |
 | 0020 | `mcp_clients`, `mcp_grants`, `mcp_auth_codes`, `mcp_refresh_tokens`, `mcp_rounds`, `attempts.channel` | 10 |
 | 0024 | backfill: decks and word lists with no `source_id` accepted at creation — the 0017 gate had been refusing every hand-made deck | 3 |
+| 0025 | `content_sources.kind` admits `'gimkit'` | 12 |
 
 Numbers follow the stages except ingestion, which is built third and numbered
 last: rewards is the smaller and more certain change, and there is no value in

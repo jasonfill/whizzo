@@ -66,6 +66,10 @@ export function routeToPath(route: Route): string {
       return '/library'
     case 'content-new':
       return '/library/add'
+    case 'library-deck':
+      return `/library/deck/${encodeURIComponent(route.deckId)}`
+    case 'library-edit':
+      return route.deckId ? `/library/edit/${encodeURIComponent(route.deckId)}` : '/library/new'
     case 'planner':
       return withQuery(route.weekStart ? `/planner/week/${route.weekStart}` : '/planner', { view: route.view })
     case 'watch':

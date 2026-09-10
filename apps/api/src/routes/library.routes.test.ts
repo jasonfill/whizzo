@@ -137,6 +137,38 @@ describe('the grown-up library', () => {
     expect(res.statusCode).toBeLessThan(400)
   })
 
+  it('opens one deck, scoped to the owner', async () => {
+    query.mockResolvedValue({
+      rows: [{ id: deck().id, owner_user_id: CALLER, title: 'Capitals', description: '', tags: [],
+        cards: [], term_label: 'Term', definition_label: 'Definition', track: null,
+        objectives: [], source_id: null, source_title: null,
+        created_at: new Date(1700000000000), updated_at: new Date(1700000000000) }],
+      rowCount: 1,
+    })
+    const app = await buildApp()
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/library/decks/${deck().id}`,
+      headers: await auth(),
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().deck.title).toBe('Capitals')
+    const [sql, params] = query.mock.calls.find(([q]) => String(q).includes('from public.decks d'))!
+    expect(String(sql)).toContain('d.owner_user_id = $2')
+    expect(params).toEqual([deck().id, CALLER])
+  })
+
+  it('says a deck that is not yours is not found — not forbidden, not somebody else\'s', async () => {
+    query.mockResolvedValue({ rows: [], rowCount: 0 })
+    const app = await buildApp()
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/library/decks/${deck().id}`,
+      headers: await auth(),
+    })
+    expect(res.statusCode).toBe(404)
+  })
+
   it('marks a hand-made deck accepted when it is saved, and keeps that on later saves', async () => {
     const app = await buildApp()
     await app.inject({ method: 'POST', url: '/api/library/decks', headers: await auth(), payload: { decks: [deck()] } })
@@ -190,6 +222,7 @@ describe('the grown-up library', () => {
   it('needs authentication for every one of them', async () => {
     const app = await buildApp()
     for (const [method, url] of [
+      ['GET', `/api/library/decks/${deck().id}`],
       ['POST', '/api/library/decks'],
       ['POST', '/api/library/word-lists'],
       ['DELETE', `/api/library/decks/${deck().id}`],

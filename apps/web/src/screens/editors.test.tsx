@@ -20,6 +20,25 @@ vi.mock('../lib/theme/ThemeProvider', async () =>
   (await import('../test/mockProviders')).themeMock(),
 )
 
+const lib = vi.hoisted(() => ({
+  loadLibrary: vi.fn(async () => ({ decks: [] as unknown[], customLists: [] as unknown[] })),
+  getLibraryDeck: vi.fn(async (): Promise<unknown> => null),
+  saveLibraryDecks: vi.fn(async () => []),
+  saveLibraryLists: vi.fn(async () => []),
+  deleteLibraryDeck: vi.fn(async () => {}),
+  deleteLibraryList: vi.fn(async () => {}),
+}))
+vi.mock('../lib/assignments/library', () => lib)
+
+const net = vi.hoisted(() => ({
+  listAssignmentSets: vi.fn(async () => []),
+  createAssignments: vi.fn(async () => []),
+}))
+vi.mock('../lib/assignments/api', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  ...net,
+}))
+
 import { spies } from '../test/mockProviders'
 import { signIn, testState } from '../test/state'
 import { emptySnapshot, listKey } from '../lib/progress/types'
@@ -52,6 +71,8 @@ function deck(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   signIn()
   navigate.mockClear()
+  for (const fn of [...Object.values(lib), ...Object.values(net)]) fn.mockClear()
+  lib.getLibraryDeck.mockResolvedValue(null)
 })
 
 describe('a new deck', () => {
@@ -482,5 +503,134 @@ describe('filing a set into a subject', () => {
     renderEditor()
     fireEvent.change(screen.getByLabelText(/Subject/), { target: { value: 'science.biology' } })
     expect((screen.getByLabelText(/Subject/) as HTMLSelectElement).value).toBe('science.biology')
+  })
+})
+
+// The library scope. A grown-up's own deck is in no learner's snapshot, so
+// both screens read it from the library instead — and write it back there.
+// What is pinned: the deck actually opens (owning one you could not read was
+// the bug), edits land in the library rather than under whichever child is on
+// screen, and nothing that only means something for a learner is shown.
+
+describe('a library deck, opened by its owner', () => {
+  beforeEach(() => {
+    lib.getLibraryDeck.mockResolvedValue(deck({ id: 'lib-1', title: 'Rivers' }))
+    testState.snapshot = emptySnapshot()
+  })
+
+  it('reads it from the library, not from the learner on screen', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    expect(await screen.findByText('Rivers')).toBeTruthy()
+    expect(lib.getLibraryDeck).toHaveBeenCalledWith('lib-1', expect.anything())
+    expect(screen.getByText('Paris')).toBeTruthy()
+    expect(screen.getByText('Rome')).toBeTruthy()
+  })
+
+  it('shows no progress and no study modes — those are a learner\'s', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    await screen.findByText('Rivers')
+    expect(screen.queryByText('Mastered')).toBeNull()
+    expect(screen.queryByText('Ask me with')).toBeNull()
+    expect(screen.queryByText('Not seen')).toBeNull()
+    expect(screen.getByText(/Yours, not any one learner/)).toBeTruthy()
+  })
+
+  it('offers to set it as work right there', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    fireEvent.click(await screen.findByText('Set as work'))
+    expect(screen.getByText('Set some work')).toBeTruthy()
+  })
+
+  it('opens the library editor, not the learner one', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    fireEvent.click(await screen.findByText('✏️ Edit deck'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'library-edit', deckId: 'lib-1' })
+  })
+
+  it('duplicates into the library under a new id', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    fireEvent.click(await screen.findByText('📋 Duplicate'))
+    await waitFor(() => expect(lib.saveLibraryDecks).toHaveBeenCalled())
+    const saved = (lib.saveLibraryDecks.mock.calls as unknown as Array<[Array<{ id: string }>]>)[0]![0]
+    expect(saved[0]!.id).not.toBe('lib-1')
+    expect(spies.saveDeck).not.toHaveBeenCalled()
+    expect(navigate).toHaveBeenCalledWith({ name: 'library-deck', deckId: saved[0]!.id })
+  })
+
+  it('deletes from the library and goes back to it', async () => {
+    render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
+    fireEvent.click(await screen.findByText('Delete'))
+    fireEvent.click(screen.getByText('Delete for good'))
+    await waitFor(() => expect(lib.deleteLibraryDeck).toHaveBeenCalledWith('lib-1'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'library' })
+  })
+
+  it('says so when the deck is no longer in the library', async () => {
+    lib.getLibraryDeck.mockResolvedValue(null)
+    render(<DeckScreen deckId="gone" scope="library" navigate={navigate} />)
+    expect(await screen.findByText('Deck not found')).toBeTruthy()
+    fireEvent.click(screen.getByText('← Library'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'library' })
+  })
+})
+
+describe('editing a library deck', () => {
+  beforeEach(() => {
+    lib.getLibraryDeck.mockResolvedValue(deck({ id: 'lib-1', title: 'Rivers' }))
+    testState.snapshot = emptySnapshot()
+  })
+
+  it('loads the deck from the library and opens on its rows', async () => {
+    render(<DeckEditor deckId="lib-1" scope="library" navigate={navigate} />)
+    expect(await screen.findByText('Edit deck ✏️')).toBeTruthy()
+    expect((screen.getByPlaceholderText(/Water Cycle/) as HTMLInputElement).value).toBe('Rivers')
+    expect(screen.queryByText('Paste a list 📥')).toBeNull()
+  })
+
+  it('saves back to the library, never to the learner on screen', async () => {
+    render(<DeckEditor deckId="lib-1" scope="library" navigate={navigate} />)
+    await screen.findByText('Edit deck ✏️')
+    fireEvent.change(screen.getByPlaceholderText(/Water Cycle/), { target: { value: 'Big rivers' } })
+    fireEvent.click(screen.getByText(/^Save deck/))
+    await waitFor(() => expect(lib.saveLibraryDecks).toHaveBeenCalled())
+    const saved = (lib.saveLibraryDecks.mock.calls as unknown as Array<[Array<{ id: string; title: string }>]>)[0]![0]
+    expect(saved[0]).toMatchObject({ id: 'lib-1', title: 'Big rivers' })
+    expect(spies.saveDeck).not.toHaveBeenCalled()
+    expect(navigate).toHaveBeenCalledWith({ name: 'library-deck', deckId: 'lib-1' })
+  })
+
+  it('backs out to the deck it was editing', async () => {
+    render(<DeckEditor deckId="lib-1" scope="library" navigate={navigate} />)
+    await screen.findByText('Edit deck ✏️')
+    fireEvent.click(screen.getByText('Cancel'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'library-deck', deckId: 'lib-1' })
+  })
+
+  it('does not apply the per-learner deck limit to a library deck', async () => {
+    testState.snapshot = {
+      ...emptySnapshot(),
+      decks: Array.from({ length: 50 }, (_, i) => deck({ id: `d${i}` })),
+    }
+    render(<DeckEditor scope="library" navigate={navigate} />)
+    expect(screen.getByText('New deck 🃏')).toBeTruthy()
+    expect(screen.queryByText(/decks for this learner are used/)).toBeNull()
+  })
+
+  it('makes a new deck straight into the library', async () => {
+    render(<DeckEditor scope="library" navigate={navigate} />)
+    const area = document.querySelector('textarea')!
+    fireEvent.change(area, { target: { value: 'Nile\tEgypt\nSeine\tFrance' } })
+    fireEvent.click(screen.getByText(/Use these/))
+    fireEvent.change(screen.getByPlaceholderText(/Water Cycle/), { target: { value: 'Rivers' } })
+    fireEvent.click(screen.getByText(/^Save deck/))
+    await waitFor(() => expect(lib.saveLibraryDecks).toHaveBeenCalled())
+    expect(spies.saveDeck).not.toHaveBeenCalled()
+    expect(lib.getLibraryDeck).not.toHaveBeenCalled()
+  })
+
+  it('says so when the deck to edit is gone', async () => {
+    lib.getLibraryDeck.mockResolvedValue(null)
+    render(<DeckEditor deckId="gone" scope="library" navigate={navigate} />)
+    expect(await screen.findByText('Deck not found')).toBeTruthy()
   })
 })

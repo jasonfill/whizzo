@@ -1,6 +1,6 @@
 # Specs
 
-Eight documents. This page says which one is authoritative for what, because
+Nine documents. This page says which one is authoritative for what, because
 they reference each other and the wrong one is easy to follow.
 
 **Start with [build-sequence.md](build-sequence.md).** It is the single
@@ -17,6 +17,7 @@ the other specs.
 | [learning-activities-spec.md](learning-activities-spec.md) | proposal | What happens to content once it is here: the mastery ladder, the activity catalog, engagement, rewards, the Mastery Path. |
 | [weekly-planner-spec.md](weekly-planner-spec.md) | **built** | The learner's week: courses as enrollments, tasks, tests planned backwards into study sessions with a purpose, priorities/wins/goals, and how grown-ups collaborate on it. |
 | [mcp-tutor-spec.md](mcp-tutor-spec.md) | **built, needs config** | The app as tools for Claude and ChatGPT: the OAuth server, the tool catalog, the answer-withholding rule, how a tutor round becomes verified evidence, and what is true about the two clients' voice modes. |
+| [gimkit-import-spec.md](gimkit-import-spec.md) | **spec** | Importing a teacher's Gimkit kit by link or by Gimkit's own Export text: what Gimkit exposes today, the terms-and-robots stance, the translation of kit questions into cards, `distractors` on cards, and why the result lands accepted rather than as a draft. |
 
 ## Reading order
 

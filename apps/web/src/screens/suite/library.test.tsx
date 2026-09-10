@@ -28,6 +28,7 @@ vi.mock('../../lib/theme/ThemeProvider', async () =>
 
 const lib = vi.hoisted(() => ({
   loadLibrary: vi.fn(async () => ({ decks: [] as unknown[], customLists: [] as unknown[] })),
+  getLibraryDeck: vi.fn(async () => null),
   saveLibraryDecks: vi.fn(async () => []),
   saveLibraryLists: vi.fn(async () => []),
   deleteLibraryDeck: vi.fn(async () => {}),
@@ -163,6 +164,26 @@ describe('a library with material in it', () => {
     fireEvent.click(await screen.findByText('Set as work'))
     fireEvent.click(screen.getByText('Never mind'))
     expect(screen.queryByText('Set some work')).toBeNull()
+  })
+
+  it('opens a deck from its title — owning one you could not read was the gap', async () => {
+    render(<LibraryScreen navigate={navigate} />)
+    fireEvent.click(await screen.findByText('Capitals'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'library-deck', deckId: 'd1' })
+  })
+
+  it('opens the editor on a deck', async () => {
+    render(<LibraryScreen navigate={navigate} />)
+    await screen.findByText('Capitals')
+    const deckCard = screen.getByText('Capitals').closest('li')!
+    fireEvent.click(within(deckCard).getByText('✏️ Edit'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'library-edit', deckId: 'd1' })
+  })
+
+  it('starts a new deck straight into the library', async () => {
+    render(<LibraryScreen navigate={navigate} />)
+    fireEvent.click(await screen.findByText('➕ New deck'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'library-edit' })
   })
 
   it('deletes a deck and reloads', async () => {

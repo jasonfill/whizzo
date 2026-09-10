@@ -5,10 +5,21 @@
 // and readable by a student only once it has been set as work.
 
 import type { CustomWordList, LibraryResponse, QuizDeck } from '@whizzo/shared'
-import { api } from '../api/client'
+import { ApiError, api } from '../api/client'
 
 export async function loadLibrary(signal?: AbortSignal): Promise<LibraryResponse> {
   return api.get<LibraryResponse>('/library', signal)
+}
+
+/** One deck from your library, or null when it is not there any more. */
+export async function getLibraryDeck(deckId: string, signal?: AbortSignal): Promise<QuizDeck | null> {
+  try {
+    const res = await api.get<{ deck: QuizDeck }>(`/library/decks/${deckId}`, signal)
+    return res.deck
+  } catch (err) {
+    if (err instanceof ApiError && err.isMissing) return null
+    throw err
+  }
 }
 
 /** Save decks into your library. Ids are client-generated, so this is an upsert. */

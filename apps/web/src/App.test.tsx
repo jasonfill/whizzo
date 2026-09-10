@@ -32,6 +32,7 @@ vi.mock('./lib/assignments/api', async (orig) => ({
 }))
 vi.mock('./lib/assignments/library', () => ({
   loadLibrary: vi.fn(async () => ({ decks: [], customLists: [] })),
+  getLibraryDeck: vi.fn(async () => null),
   saveLibraryDecks: vi.fn(async () => []),
   saveLibraryLists: vi.fn(async () => []),
   deleteLibraryDeck: vi.fn(async () => {}),
@@ -303,6 +304,9 @@ describe('the address bar', () => {
     { name: 'custom-lists' },
     { name: 'tasks' },
     { name: 'library' },
+    { name: 'library-deck', deckId: 'd1' },
+    { name: 'library-edit' },
+    { name: 'library-edit', deckId: 'd1' },
     { name: 'theme' },
     { name: 'world' },
     { name: 'settings' },

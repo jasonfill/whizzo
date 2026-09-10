@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AREAS, tracksInArea } from '@whizzo/shared'
 import RichField from '../../components/rich/RichField'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import { Button, Card, Pill } from '../../components/ui'
+import { getLibraryDeck, saveLibraryDecks } from '../../lib/assignments/library'
 import { useCoverage } from '../../lib/billing/coverage'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import type { QuizCard, QuizDeck } from '../../lib/progress/types'
@@ -15,6 +16,7 @@ import {
   type CardSeparator,
   type TermSeparator,
 } from '../../lib/quiz/decks'
+import type { DeckScope } from '../../lib/quiz/scope'
 import type { Navigate } from '../../routes'
 
 /**
@@ -22,25 +24,71 @@ import type { Navigate } from '../../routes'
  * deck: the one pasting forty rows out of a study guide, and the one typing
  * six cards for tomorrow's test. Paste-import handles the first; the row
  * editor handles the second, and both write the same deck.
+ *
+ * The same editor serves a learner's deck and a library deck. Only where it
+ * reads and writes differs: a library deck is fetched from and saved to the
+ * grown-up's library, and the per-learner deck limit does not apply to it.
  */
 export default function DeckEditor({
   deckId,
+  scope = 'learner',
   navigate,
 }: {
   deckId?: string
+  scope?: DeckScope
   navigate: Navigate
 }) {
-    const { snapshot, saveDeck } = useProgress()
+  const { snapshot, saveDeck } = useProgress()
   const coverage = useCoverage()
+  const inLibrary = scope === 'library'
 
-  const existing = deckId ? snapshot.decks.find((d) => d.id === deckId) : undefined
+  const existing = deckId && !inLibrary ? snapshot.decks.find((d) => d.id === deckId) : undefined
   const [draft, setDraft] = useState<QuizDeck>(() => existing ?? emptyDeck())
   const [showImport, setShowImport] = useState(!existing)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const isNew = !existing
-  const overDeckLimit = isNew && snapshot.decks.length >= coverage.deckLimit
+  // A library deck being edited arrives from the API. Until it does there is
+  // nothing to type into, and if it never does the screen says so rather than
+  // offering to "edit" an empty deck under the old id.
+  const [loading, setLoading] = useState(inLibrary && !!deckId)
+  const [missing, setMissing] = useState(false)
+  useEffect(() => {
+    if (!inLibrary || !deckId) return
+    const controller = new AbortController()
+    getLibraryDeck(deckId, controller.signal)
+      .then((deck) => {
+        if (controller.signal.aborted) return
+        if (deck) {
+          setDraft(deck)
+          setShowImport(false)
+        } else {
+          setMissing(true)
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setMissing(true)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+    return () => controller.abort()
+  }, [deckId, inLibrary])
+
+  const isNew = inLibrary ? !deckId : !existing
+  const overDeckLimit = !inLibrary && isNew && snapshot.decks.length >= coverage.deckLimit
+
+  /** Where leaving lands: the deck if there is one, else the list it came from. */
+  const back = (): void =>
+    navigate(
+      inLibrary
+        ? deckId
+          ? { name: 'library-deck', deckId }
+          : { name: 'library' }
+        : deckId
+          ? { name: 'quiz-deck', deckId }
+          : { name: 'quiz' },
+    )
 
   const update = (patch: Partial<QuizDeck>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -74,8 +122,13 @@ export default function DeckEditor({
     setError(null)
     try {
       const normalized = normalizeDeck(draft)
-      await saveDeck(normalized)
-      navigate({ name: 'quiz-deck', deckId: normalized.id })
+      if (inLibrary) {
+        await saveLibraryDecks([normalized])
+        navigate({ name: 'library-deck', deckId: normalized.id })
+      } else {
+        await saveDeck(normalized)
+        navigate({ name: 'quiz-deck', deckId: normalized.id })
+      }
     } catch (err) {
       console.warn('[cat-academy] deck save failed', err)
       setError('That did not save. Check your connection and try again.')
@@ -84,14 +137,33 @@ export default function DeckEditor({
     }
   }
 
+  if (loading || missing) {
+    return (
+      <div className="mx-auto w-full max-w-3xl py-4">
+        <ScreenHeader
+          title={loading ? 'Opening…' : 'Deck not found'}
+          onBack={() => navigate({ name: 'library' })}
+          backLabel="← Library"
+        />
+        <Card>
+          <p className="font-bold text-muted">
+            {loading ? 'Loading…' : 'That deck is not in your library any more.'}
+          </p>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl py-4">
       <ScreenHeader
         title={isNew ? 'New deck 🃏' : 'Edit deck ✏️'}
-        subtitle="Two sides to every card: what you are asked, and what you have to remember."
-        onBack={() =>
-          navigate(deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' })
+        subtitle={
+          inLibrary
+            ? 'Yours to set for any learner you look after. Two sides to every card.'
+            : 'Two sides to every card: what you are asked, and what you have to remember.'
         }
+        onBack={back}
       />
 
       {overDeckLimit && (
@@ -269,10 +341,7 @@ export default function DeckEditor({
         <Button onClick={save} disabled={!ready || busy || overDeckLimit}>
           {busy ? 'Saving…' : `Save deck (${draft.cards.filter(isFilled).length} cards)`}
         </Button>
-        <Button
-          variant="ghost"
-          onClick={() => navigate(deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' })}
-        >
+        <Button variant="ghost" onClick={back}>
           Cancel
         </Button>
       </div>

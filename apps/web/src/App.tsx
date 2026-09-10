@@ -40,6 +40,7 @@ import PrivacyScreen from './screens/marketing/PrivacyScreen'
 import PracticeScreen from './screens/PracticeScreen'
 import DeckEditor from './screens/quiz/DeckEditor'
 import DeckScreen from './screens/quiz/DeckScreen'
+import type { DeckScope } from './lib/quiz/scope'
 import QuizHome from './screens/quiz/QuizHome'
 import QuizPlay from './screens/quiz/QuizPlay'
 import SettingsScreen from './screens/SettingsScreen'
@@ -262,6 +263,9 @@ function Router() {
       <Route path="/tasks" element={<TasksScreen navigate={navigate} />} />
       <Route path="/library" element={<LibraryScreen navigate={navigate} />} />
       <Route path="/library/add" element={<ContentScreen navigate={navigate} />} />
+      <Route path="/library/new" element={<DeckEditor scope="library" navigate={navigate} />} />
+      <Route path="/library/deck/:deckId" element={<Deck scope="library" navigate={navigate} />} />
+      <Route path="/library/edit/:deckId" element={<EditDeck scope="library" navigate={navigate} />} />
       <Route path="/planner" element={<Planner navigate={navigate} />} />
       <Route path="/planner/week/:weekStart" element={<Planner navigate={navigate} />} />
       <Route path="/watch/:learnerId" element={<Watch navigate={navigate} />} />
@@ -333,15 +337,15 @@ function Lesson({ game, navigate }: { game: GameApi; navigate: Navigate }) {
   return <LessonScreen game={game} lessonId={id} navigate={navigate} />
 }
 
-function Deck({ navigate }: { navigate: Navigate }) {
+function Deck({ scope, navigate }: { scope?: DeckScope; navigate: Navigate }) {
   const { deckId } = useParams()
-  if (!deckId) return <Redirect to="/quiz" replace />
-  return <DeckScreen deckId={deckId} navigate={navigate} />
+  if (!deckId) return <Redirect to={scope === 'library' ? '/library' : '/quiz'} replace />
+  return <DeckScreen deckId={deckId} scope={scope} navigate={navigate} />
 }
 
-function EditDeck({ navigate }: { navigate: Navigate }) {
+function EditDeck({ scope, navigate }: { scope?: DeckScope; navigate: Navigate }) {
   const { deckId } = useParams()
-  return <DeckEditor deckId={deckId} navigate={navigate} />
+  return <DeckEditor deckId={deckId} scope={scope} navigate={navigate} />
 }
 
 function SpellRound({ navigate }: { navigate: Navigate }) {

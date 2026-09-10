@@ -149,7 +149,16 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
       )}
 
       <Card className="mb-4">
-        <h2 className="mb-1 text-xl font-extrabold text-ink">Your decks ({decks.length})</h2>
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-extrabold text-ink">Your decks ({decks.length})</h2>
+          <Button
+            variant="secondary"
+            className="ml-auto"
+            onClick={() => navigate({ name: 'library-edit' })}
+          >
+            ➕ New deck
+          </Button>
+        </div>
         <p className="mb-3 font-bold text-muted">
           Yours, not any one learner&apos;s. A student can only open one after you have set it for
           them.
@@ -158,7 +167,7 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
           <p className="font-bold text-stone">Loading…</p>
         ) : decks.length === 0 ? (
           <p className="font-bold text-stone">
-            Nothing here yet. Copy one in from below, or make a deck and add it.
+            Nothing here yet. Copy one in from below, hand over a document, or make a deck.
           </p>
         ) : (
           <div className="space-y-5">
@@ -199,7 +208,15 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
                       {group.sourceId && (
                         <span className="font-mono text-xs font-bold text-faint">{i + 1}</span>
                       )}
-                      <span className="font-extrabold text-ink">{deck.title}</span>
+                      {/* The title is the door in. Owning a deck you could
+                          not open was the library's one real gap. */}
+                      <button
+                        type="button"
+                        onClick={() => navigate({ name: 'library-deck', deckId: deck.id })}
+                        className="text-left font-extrabold text-ink underline-offset-2 hover:underline"
+                      >
+                        {deck.title}
+                      </button>
                       <Pill className="bg-wash text-xs text-muted">
                         {deck.cards.length} cards
                       </Pill>
@@ -210,6 +227,12 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
                           }
                         >
                           Set as work
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => navigate({ name: 'library-edit', deckId: deck.id })}
+                        >
+                          ✏️ Edit
                         </Button>
                         <Button
                           variant="ghost"
