@@ -604,6 +604,19 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
     return library
   })
 
+  /**
+   * A deck a person saves is reviewed by the person saving it. Ingestion's
+   * drafts (`source_id` set) stay drafts until the review screen accepts
+   * them; everything else is accepted on its first save, and accepted again
+   * on the next one if something — an assistant's edit through the tutor
+   * connection — put it back into review. The assignment gate (migration
+   * 0017) reads only `accepted_at`, so without this a hand-made deck could
+   * never be set as work.
+   */
+  const ACCEPT_ON_SAVE = `accepted_at = case
+               when public.decks.source_id is null then coalesce(public.decks.accepted_at, now())
+               else public.decks.accepted_at end`
+
   app.post('/library/decks', async (request, reply) => {
     const caller = callerOf(request)
     const { decks } = parse(
@@ -617,8 +630,8 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
         const { rows } = await db.query(
           `insert into public.decks
              (id, owner_user_id, title, description, tags, cards, term_label,
-              definition_label, track, objectives, updated_at)
-           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now())
+              definition_label, track, objectives, accepted_at, updated_at)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now(), now())
            on conflict (id) do update set
              title = excluded.title,
              description = excluded.description,
@@ -628,6 +641,7 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
              definition_label = excluded.definition_label,
              track = excluded.track,
              objectives = excluded.objectives,
+             ${ACCEPT_ON_SAVE},
              updated_at = now()
            returning *`,
           [deck.id, caller.id, deck.title, deck.description ?? '', deck.tags ?? [],
@@ -767,8 +781,8 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
         const { rows } = await db.query(
           `insert into public.decks
              (id, learner_id, title, description, tags, cards, term_label,
-              definition_label, created_by, track, objectives, course_id, updated_at)
-           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
+              definition_label, created_by, track, objectives, course_id, accepted_at, updated_at)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now(), now())
            on conflict (id) do update set
              title = excluded.title,
              description = excluded.description,
@@ -779,6 +793,7 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
              track = excluded.track,
              objectives = excluded.objectives,
              course_id = excluded.course_id,
+             ${ACCEPT_ON_SAVE},
              updated_at = now()
            returning *`,
           [deck.id, id, deck.title, deck.description, deck.tags,

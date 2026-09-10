@@ -105,6 +105,26 @@ beforeEach(() => {
   withUser.mockClear()
 })
 
+/** The one deck upsert a save made. */
+function deckUpsert(): string {
+  const call = query.mock.calls.find(([sql]) => String(sql).includes('insert into public.decks'))
+  expect(call, 'expected a deck upsert').toBeDefined()
+  return String(call![0])
+}
+
+/**
+ * A deck a person saves is reviewed by that person: accepted on the first
+ * save, left alone on later ones, and accepted again if something put it
+ * back into review — unless ingestion made it, in which case only the review
+ * screen accepts it. The assignment gate reads only `accepted_at`, so a deck
+ * saved without this could never be set as work.
+ */
+function expectAcceptedOnSave(sql: string) {
+  expect(sql).toMatch(/accepted_at, updated_at\)\s+values \([^)]*now\(\), now\(\)\)/)
+  expect(sql).toContain('when public.decks.source_id is null then coalesce(public.decks.accepted_at, now())')
+  expect(sql).toContain('else public.decks.accepted_at end')
+}
+
 describe('the grown-up library', () => {
   it('saves decks', async () => {
     const app = await buildApp()
@@ -115,6 +135,12 @@ describe('the grown-up library', () => {
       payload: { decks: [deck()] },
     })
     expect(res.statusCode).toBeLessThan(400)
+  })
+
+  it('marks a hand-made deck accepted when it is saved, and keeps that on later saves', async () => {
+    const app = await buildApp()
+    await app.inject({ method: 'POST', url: '/api/library/decks', headers: await auth(), payload: { decks: [deck()] } })
+    expectAcceptedOnSave(deckUpsert())
   })
 
   it('saves word lists', async () => {
@@ -198,6 +224,12 @@ describe('a learner’s own material', () => {
       payload: { decks: [deck()] },
     })
     expect(res.statusCode).toBeLessThan(400)
+  })
+
+  it("marks a learner's own deck accepted when it is saved, the same way", async () => {
+    const app = await buildApp()
+    await app.inject({ method: 'POST', url: `/api/learners/${LEARNER}/decks`, headers: await auth(), payload: { decks: [deck()] } })
+    expectAcceptedOnSave(deckUpsert())
   })
 
   it('deletes one of their lists', async () => {

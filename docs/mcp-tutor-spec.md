@@ -585,7 +585,10 @@ clears `accepted_at` and adds the same `generated` tag `create_deck` stamps,
 whoever made the deck, so a reviewed, assigned deck cannot be quietly
 rewritten with unreviewed content — `accepted_at is null` is the one
 predicate the review gate rests on (migration 0017), and this write honors
-it. The spoken line says so when the deck had been reviewed.
+it. The spoken line says so when the deck had been reviewed. A grown-up
+accepts it again the way any hand-made deck is accepted: by opening it in
+the app and saving it (ingestion's drafts still go through the review
+screen).
 
 It reaches exactly two kinds of deck: one in the **connecting grown-up's
 library** and a **learner's own** deck on the connection — the learners

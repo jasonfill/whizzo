@@ -616,6 +616,13 @@ one `is not null`. RLS mirrors `decks` exactly, including the
 `content_assigned_to_visible_learner()` path from 0011: a source is readable by
 whoever can read the content it produced.
 
+Because the predicate knows nothing about who wrote the cards, a set with no
+`source_id` — typed by a person, or filed into the library by an assistant —
+is **accepted when a person saves it** (the deck upserts stamp `accepted_at`
+on insert and re-stamp it on a later save if something cleared it; migration
+0024 backfilled the rows from before that). Only ingestion's drafts wait for
+the review screen. Without this the gate refused every hand-made deck.
+
 `content_sources.sha256` exists so a second upload of the same file is
 recognized and offered the existing result rather than billed again.
 

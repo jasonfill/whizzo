@@ -113,6 +113,7 @@ six.
 | 0018 | Stripe: customer and subscription ids, webhook bookkeeping | 0.6 |
 | 0019 | `courses`, `planner_weeks`, `assessments`, `planner_items`, `planner_events` (append-only, trigger-written), `planner_comments`, `planner_prefs`, `course_id` on decks / word lists / assignments | 9 |
 | 0020 | `mcp_clients`, `mcp_grants`, `mcp_auth_codes`, `mcp_refresh_tokens`, `mcp_rounds`, `attempts.channel` | 10 |
+| 0024 | backfill: decks and word lists with no `source_id` accepted at creation — the 0017 gate had been refusing every hand-made deck | 3 |
 
 Numbers follow the stages except ingestion, which is built third and numbered
 last: rewards is the smaller and more certain change, and there is no value in
