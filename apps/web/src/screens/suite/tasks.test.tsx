@@ -476,7 +476,8 @@ describe('the form for setting work', () => {
     fireEvent.change(targetSelect, { target: { value: option!.value } })
     fireEvent.click(screen.getByText('Set this task'))
     await waitFor(() => expect(net.createAssignments).toHaveBeenCalled())
-    expect(net.createAssignments.mock.calls[0]![0]).toEqual([learners[0]!.id])
+    const [learnerIds] = net.createAssignments.mock.calls[0] as unknown as [string[]]
+    expect(learnerIds).toEqual([learners[0]!.id])
   })
 
   it('checks the score to beat itself rather than relaying a field path', async () => {
