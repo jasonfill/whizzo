@@ -23,6 +23,21 @@ import type { Direction, QuestionKind } from './questions'
 
 export type StudyMode = 'flashcards' | 'learn' | 'choice' | 'test' | 'match' | 'review' | 'recall'
 
+/**
+ * Every mode a round can be played in. `MODES` below is the menu a deck
+ * offers; `review` is not on it because it draws from every deck at once,
+ * but it is still a real mode a link may name.
+ */
+export const STUDY_MODES: readonly StudyMode[] = [
+  'flashcards',
+  'learn',
+  'choice',
+  'test',
+  'match',
+  'review',
+  'recall',
+]
+
 /** 'mixed' alternates, which stops a learner memorizing position rather than meaning. */
 export type DirectionSetting = Direction | 'mixed'
 

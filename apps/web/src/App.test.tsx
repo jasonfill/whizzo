@@ -258,6 +258,15 @@ describe('the address bar', () => {
     await waitFor(() => expect(document.body.textContent).toMatch(/of 5\b/))
   })
 
+  it('opens the cross-deck review round, which no single deck offers', async () => {
+    startAt('/quiz/play/review?size=6')
+    render(<App />)
+    // Review is not on a deck's mode menu, so the parser must know it by
+    // name or the link bounces straight back to /quiz.
+    await waitFor(() => expect(screen.queryByText('My decks')).toBeNull())
+    expect(window.location.pathname).toBe('/quiz/play/review')
+  })
+
   it('goes back to where you came from', async () => {
     render(<App />)
     fireEvent.click(await screen.findByText('⚙️ Settings'))

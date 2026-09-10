@@ -10,7 +10,7 @@
 // shared link without them still lands somewhere sensible.
 
 import type { AudienceId, Route } from './routes'
-import { MODES, type DirectionSetting, type StudyMode } from './lib/quiz/session'
+import { STUDY_MODES, type DirectionSetting, type StudyMode } from './lib/quiz/session'
 import { ACTIVITIES, type ActivityId } from './lib/spelling/activities'
 import type { SessionMode } from './lib/spelling/session'
 
@@ -158,7 +158,7 @@ export function parseSpellMode(value: string | undefined): SessionMode | null {
 }
 
 export function parseStudyMode(value: string | undefined): StudyMode | null {
-  return MODES.find((m) => m.id === value)?.id ?? null
+  return STUDY_MODES.find((m) => m === value) ?? null
 }
 
 export function parseDirection(value: string | null): DirectionSetting | undefined {
