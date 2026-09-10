@@ -243,6 +243,45 @@ describe('QuizPlay and QuizResults', () => {
     expect(document.body.textContent).toBeTruthy()
   })
 
+  it('fetches the material once when the deck named is not here, then says so', async () => {
+    // A deck set as work after the snapshot loaded is exactly this case, and
+    // it used to read as a deck with no cards in it.
+    testState.snapshot = emptySnapshot()
+    render(<QuizPlay mode="learn" deckId="assigned-1" navigate={navigate} />)
+    await waitFor(() => expect(spies.reloadMaterial).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText(/That deck is not here/)).toBeInTheDocument()
+    expect(screen.queryByText(/no cards to study/)).toBeNull()
+  })
+
+  it('starts the round once the deck arrives', async () => {
+    testState.snapshot = emptySnapshot()
+    const view = render(<QuizPlay mode="flashcards" deckId="assigned-1" navigate={navigate} />)
+    await screen.findByText(/That deck is not here/)
+    testState.snapshot = {
+      ...emptySnapshot(),
+      decks: [
+        {
+          id: 'assigned-1',
+          title: 'Rivers',
+          description: '',
+          tags: [],
+          cards: [
+            { id: 'c1', term: 'Nile', definition: 'Egypt', hint: null, difficulty: 3 },
+            { id: 'c2', term: 'Seine', definition: 'France', hint: null, difficulty: 3 },
+          ],
+          source: 'user',
+          termLabel: 'Term',
+          definitionLabel: 'Definition',
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      ],
+    }
+    view.rerender(<QuizPlay mode="flashcards" deckId="assigned-1" navigate={navigate} />)
+    await waitFor(() => expect(screen.queryByText(/That deck is not here/)).toBeNull())
+    expect(screen.queryByText(/no cards to study/)).toBeNull()
+  })
+
   it('reports a finished round', () => {
     const summary = {
       mode: 'test',

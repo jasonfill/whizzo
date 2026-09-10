@@ -47,6 +47,20 @@ interface ProgressContextValue {
   reset: () => Promise<void>
   /** Every answer given in one round, oldest first. Fetched on demand. */
   attemptsForSession: (sessionId: string) => Promise<Attempt[]>
+  /**
+   * Fetch the learner's material again — decks and word lists — leaving
+   * their progress alone.
+   *
+   * The snapshot loads once per learner, but the material in it can change
+   * under a session: a grown-up sets a library deck as work and the task
+   * appears on the child's list at the next look (assignments are fetched
+   * fresh) while the deck it names is not in the snapshot until the next
+   * sign-in. Only material is replaced, because a round's progress is written
+   * optimistically and a wholesale reload could drop a write still in flight.
+   */
+  reloadMaterial: () => Promise<void>
+  /** True while `reloadMaterial` is fetching, so a screen can wait rather than say "nothing here". */
+  materialLoading: boolean
 }
 
 const ProgressContext = createContext<ProgressContextValue | null>(null)
@@ -80,6 +94,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const { active, status: learnerStatus } = useLearners()
   const [snapshot, setSnapshot] = useState<ProgressSnapshot>(emptySnapshot)
   const [sync, setSync] = useState<SyncState>('loading')
+  const [materialLoading, setMaterialLoading] = useState(false)
   const repoRef = useRef<ProgressRepo>(new LocalProgressRepo())
 
   const mode = repoRef.current.kind
@@ -232,6 +247,25 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     setSnapshot(emptySnapshot())
   }, [])
 
+  const reloadMaterial = useCallback(async () => {
+    const repo = repoRef.current
+    // A guest's material is only ever written from this device.
+    if (!(repo instanceof ApiProgressRepo)) return
+    setMaterialLoading(true)
+    try {
+      const fresh = await repo.load()
+      // Still the same learner's store? A switch mid-fetch means this reply
+      // belongs to somebody else's snapshot.
+      if (repoRef.current !== repo) return
+      setSnapshot((prev) => ({ ...prev, decks: fresh.decks, customLists: fresh.customLists }))
+    } catch (err) {
+      // The old material stays; the next look asks again.
+      console.warn('[cat-academy] material reload failed', err)
+    } finally {
+      setMaterialLoading(false)
+    }
+  }, [])
+
   const attemptsForSession = useCallback(
     (sessionId: string) => repoRef.current.attemptsForSession(sessionId),
     [],
@@ -251,6 +285,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       deleteDeck,
       reset,
       attemptsForSession,
+      reloadMaterial,
+      materialLoading,
     }),
     [
       snapshot,
@@ -264,6 +300,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       deleteDeck,
       reset,
       attemptsForSession,
+      reloadMaterial,
+      materialLoading,
     ],
   )
 

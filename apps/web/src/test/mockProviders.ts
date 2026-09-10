@@ -19,6 +19,7 @@ export const spies = {
   deleteDeck: vi.fn(async () => {}),
   reset: vi.fn(async () => {}),
   attemptsForSession: vi.fn(async () => [] as any[]),
+  reloadMaterial: vi.fn(async () => {}),
 
   select: vi.fn(),
   create: vi.fn(async () => ({}) as any),
@@ -100,6 +101,8 @@ export async function progressMock() {
       deleteDeck: spies.deleteDeck,
       reset: spies.reset,
       attemptsForSession: spies.attemptsForSession,
+      reloadMaterial: spies.reloadMaterial,
+      materialLoading: false,
     }),
     ProgressProvider: ({ children }: any) => children,
   }

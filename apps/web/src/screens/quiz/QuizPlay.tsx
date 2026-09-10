@@ -47,7 +47,7 @@ function defaultSize(mode: StudyMode, roundSize: number): number | undefined {
 }
 
 export default function QuizPlay({ mode, deckId, size, direction, navigate }: Props) {
-  const { snapshot } = useProgress()
+  const { snapshot, reloadMaterial, materialLoading } = useProgress()
   const { roundSize } = useBand()
   const session = useQuizSession()
   const [summary, setSummary] = useState<QuizSummary | null>(null)
@@ -57,12 +57,25 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
   const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
   const deck = deckId ? findDeck(decks, deckId) : undefined
 
+  // A deck named by the route but not in the snapshot is usually one set as
+  // work since the snapshot loaded, so the material is asked for once before
+  // this is called a deck with nothing in it.
+  const deckMissing = !!deckId && !deck
+  const [asked, setAsked] = useState(false)
+  useEffect(() => {
+    if (!deckMissing || asked) return
+    setAsked(true)
+    void reloadMaterial()
+  }, [deckMissing, asked, reloadMaterial])
+
   // The plan is built from the snapshot as it was when the round began. Starting
   // it in an effect keyed only on the round number means a progress write
-  // landing mid-round cannot reshuffle the cards under the learner.
+  // landing mid-round cannot reshuffle the cards under the learner. A deck
+  // still on its way holds the start until it lands.
   const { start } = session
   const startedRef = useRef(-1)
   useEffect(() => {
+    if (deckMissing) return
     if (startedRef.current === round) return
     startedRef.current = round
     start({
@@ -73,7 +86,7 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
       direction,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [round])
+  }, [round, deckMissing])
 
   const def = modeDef(mode)
   const title = mode === 'review' ? 'Review' : (deck?.title ?? 'Study')
@@ -134,6 +147,26 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
     return (
       <div className="mx-auto w-full max-w-2xl py-10 text-center">
         <p className="text-lg font-bold text-muted">Saving your round…</p>
+      </div>
+    )
+  }
+
+  if (deckMissing) {
+    const waiting = materialLoading || !asked
+    return (
+      <div className="mx-auto w-full max-w-2xl py-4">
+        <ScreenHeader
+          title={`${def.emoji} ${def.name}`}
+          onBack={() => navigate({ name: 'quiz' })}
+        />
+        <Card>
+          <p className="mb-3 font-bold text-muted">
+            {waiting
+              ? 'Fetching the deck…'
+              : 'That deck is not here. It may have been deleted, or taken back by whoever set it.'}
+          </p>
+          {!waiting && <Button onClick={() => navigate({ name: 'quiz' })}>Back to decks</Button>}
+        </Card>
       </div>
     )
   }

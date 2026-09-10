@@ -108,6 +108,8 @@ function Probe() {
         commit
       </button>
       <button onClick={() => void p.reset()}>reset</button>
+      <button onClick={() => void p.reloadMaterial()}>reload-material</button>
+      <span data-testid="material-loading">{String(p.materialLoading)}</span>
       <button onClick={() => void p.attemptsForSession('s1')}>attempts</button>
     </div>
   )
@@ -365,6 +367,52 @@ describe('material a learner owns', () => {
       await click('save-deck')
       expect(screen.getByTestId('decks')).toHaveTextContent('deck-1')
     })
+  })
+})
+
+describe('fetching material again', () => {
+  // A library deck set as work reaches the learner through the assignment,
+  // and the snapshot — which the round is built from — loaded before that.
+  it('replaces decks and lists, and leaves progress alone', async () => {
+    authStatus = 'signed-in'
+    learnerStatus = 'ready'
+    active = learner('l1')
+    cloudLoad.mockResolvedValueOnce(withPractice(12))
+    renderProvider()
+    await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent('cloud'))
+    expect(screen.getByTestId('decks')).toHaveTextContent('')
+
+    cloudLoad.mockResolvedValueOnce({
+      ...emptySnapshot(),
+      decks: [{ id: 'assigned-1' } as never],
+      customLists: [{ id: 'list-9' } as never],
+    })
+    await click('reload-material')
+    await waitFor(() => expect(screen.getByTestId('decks')).toHaveTextContent('assigned-1'))
+    expect(screen.getByTestId('lists')).toHaveTextContent('list-9')
+    // The second load carried no practice; the twelve attempts survive it.
+    expect(screen.getByTestId('attempts')).toHaveTextContent('12')
+    expect(screen.getByTestId('material-loading')).toHaveTextContent('false')
+  })
+
+  it('does nothing for a guest, whose material is only ever written here', async () => {
+    renderProvider()
+    await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent('local'))
+    await click('reload-material')
+    expect(cloudLoad).not.toHaveBeenCalled()
+  })
+
+  it('keeps what it had when the fetch fails', async () => {
+    authStatus = 'signed-in'
+    learnerStatus = 'ready'
+    active = learner('l1')
+    cloudLoad.mockResolvedValueOnce({ ...emptySnapshot(), decks: [{ id: 'old' } as never] })
+    renderProvider()
+    await waitFor(() => expect(screen.getByTestId('decks')).toHaveTextContent('old'))
+    cloudLoad.mockRejectedValueOnce(new Error('offline'))
+    await click('reload-material')
+    await waitFor(() => expect(screen.getByTestId('material-loading')).toHaveTextContent('false'))
+    expect(screen.getByTestId('decks')).toHaveTextContent('old')
   })
 })
 
