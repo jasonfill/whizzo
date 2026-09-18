@@ -232,12 +232,21 @@ describe('SuiteHome — the child’s screen', () => {
     render(<SuiteHome game={aGame()} navigate={navigate} />)
     expect(screen.getByText('Spelling')).toBeInTheDocument()
     expect(screen.getByText('Typing')).toBeInTheDocument()
-    expect(screen.getByText('Quiz')).toBeInTheDocument()
+    expect(screen.getByText('Flashcards')).toBeInTheDocument()
   })
 
-  it('uses the theme’s own verb on the main call to action', () => {
+  it('names the next thing to do on the main call to action, not a themed verb', async () => {
     render(<SuiteHome game={aGame()} navigate={navigate} />)
-    expect(screen.getByText(new RegExp(testState.theme.verb, 'i'))).toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(testState.theme.verb, 'i'))).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Practice spelling|Find my spelling level|Practice \d+ words|Review \d+ cards/ }))
+    expect(navigate).toHaveBeenCalledWith(expect.objectContaining({ name: 'spell-play' }))
+  })
+
+  it('starts the task somebody set before anything else', async () => {
+    testState.assignments = [anAssignment({ title: 'Homework' })]
+    render(<SuiteHome game={aGame()} navigate={navigate} />)
+    await userEvent.click(screen.getByRole('button', { name: /Start: Homework/ }))
+    expect(navigate).toHaveBeenCalled()
   })
 
   it('shows work that has been set before the free choice of subjects', () => {
@@ -246,9 +255,9 @@ describe('SuiteHome — the child’s screen', () => {
     expect(screen.getByText('Homework')).toBeInTheDocument()
   })
 
-  it('offers the world picker', async () => {
+  it('offers the theme picker', async () => {
     render(<SuiteHome game={aGame()} navigate={navigate} />)
-    await userEvent.click(screen.getByRole('button', { name: new RegExp(testState.theme.name) }))
+    await userEvent.click(screen.getByRole('button', { name: /🎨 Theme/ }))
     expect(navigate).toHaveBeenCalledWith({ name: 'theme' })
   })
 
@@ -263,43 +272,43 @@ describe('SuiteHome — the child’s screen', () => {
 
 describe('ProgressScreen — the parent’s report', () => {
   it('says nothing is here yet rather than drawing an empty table', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/Nothing here yet/i)).toBeInTheDocument()
   })
 
   it('keeps the trust card, which explains what moves the level', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText('How the level is worked out')).toBeInTheDocument()
     expect(screen.getByText(/no hints, move the level/i)).toBeInTheDocument()
   })
 
   it('reports no graded work rather than an accuracy of zero', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/No graded rounds yet/i)).toBeInTheDocument()
   })
 
   it('names a practice round as one, in the learner’s own words', () => {
     testState.snapshot = { ...emptySnapshot(), sessions: [session({ isTest: false })] }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/Practice only · doesn’t affect level/)).toBeInTheDocument()
   })
 
-  it('shows the child’s world and says it changes nothing here', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
-    expect(screen.getByText(/Their world/i)).toBeInTheDocument()
+  it('shows the child’s theme and says it changes nothing here', () => {
+    render(<ProgressScreen navigate={navigate} />)
+    expect(screen.getByText(/’s theme|Their theme/)).toBeInTheDocument()
     expect(screen.getByText(/Nothing on this page changes with it/i)).toBeInTheDocument()
   })
 
-  it('offers all ten worlds to set, none of them disabled', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
-    const card = screen.getByText(/Their world/i).closest('div')!.parentElement!
+  it('offers all ten themes to set, none of them disabled', () => {
+    render(<ProgressScreen navigate={navigate} />)
+    const card = screen.getByText(/’s theme|Their theme/).closest('div')!.parentElement!
     const buttons = within(card).getAllByRole('button')
     expect(buttons.length).toBeGreaterThanOrEqual(10)
     for (const b of buttons) expect(b).not.toBeDisabled()
   })
 
   it('carries no theme accent, even while setting a theme', () => {
-    const { container } = render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    const { container } = render(<ProgressScreen navigate={navigate} />)
     assertThemeFree(container)
   })
 
@@ -329,7 +338,7 @@ describe('ProgressScreen — the parent’s report', () => {
         ]),
       ) as never,
     }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/Showing 4 of/)).toBeInTheDocument()
   })
 
@@ -359,12 +368,12 @@ describe('ProgressScreen — the parent’s report', () => {
         ]),
       ) as never,
     }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.queryByText(/Showing 4 of/)).not.toBeInTheDocument()
   })
 
   it('reads the activity chart back as a sentence, not another number', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/No practice in the last three weeks/i)).toBeInTheDocument()
   })
 })
@@ -410,7 +419,7 @@ describe('every grown-up screen', () => {
       sessions: Array.from({ length: 40 }, () => session()),
     }
     testState.skills = { spelling: skill('spelling', { levelIndex: 3, totalAttempts: 200 }) }
-    const { container } = render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    const { container } = render(<ProgressScreen navigate={navigate} />)
     expect(container.textContent).toBeTruthy()
   })
 })

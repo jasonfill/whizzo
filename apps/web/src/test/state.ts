@@ -88,6 +88,8 @@ export function aLearner(over: Partial<Learner> = {}): Learner {
     authUserId: null,
     createdAt: 0,
     theme: 'cats',
+    starterDecks: [],
+    settings: {},
     ...over,
   } as Learner
 }

@@ -1,11 +1,13 @@
-import { useState } from 'react'
 import Mascot, { MASCOT_MUTED } from '../components/Mascot'
 import ScreenHeader from '../components/suite/ScreenHeader'
 import { Button, Card } from '../components/ui'
 import { TOTAL_LESSONS } from '../data/lessons'
 import type { GameApi } from '../hooks/useGameState'
 import type { Navigate } from '../routes'
+import { useProgress } from '../lib/progress/ProgressProvider'
 import { useTheme } from '../lib/theme/ThemeProvider'
+import { earnedFor } from '../lib/theme/rewards'
+import { lessonsDone } from '../lib/typing/progress'
 
 interface Props {
   game: GameApi
@@ -14,11 +16,12 @@ interface Props {
 
 export default function TypingHome({ game, navigate }: Props) {
   const { theme } = useTheme()
-  const { state, setPlayerName } = game
-  const [name, setName] = useState(state.playerName)
+  const { snapshot } = useProgress()
+  const { state } = game
 
-  const commitName = () => setPlayerName(name.trim())
-  const doneLessons = Object.values(state.lessons).filter((l) => l.plays > 0).length
+  const done = lessonsDone(state.lessons)
+  // The same number as home, the collection screen and every results card.
+  const collected = earnedFor(snapshot, theme).owned
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 py-4">
@@ -26,7 +29,7 @@ export default function TypingHome({ game, navigate }: Props) {
         <ScreenHeader
           title="Typing ⌨️"
           subtitle={`Learn to type and collect ${theme.unit}.`}
-          onBack={() => navigate({ name: 'home' })}
+          back={{ name: 'home' }}
           backLabel="← Home"
         />
       </div>
@@ -37,28 +40,8 @@ export default function TypingHome({ game, navigate }: Props) {
       </div>
 
       <Card className="w-full max-w-md">
-        <label className="mb-1 block text-sm font-bold text-muted">
-          What should we call you?
-        </label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={commitName}
-          onKeyDown={(e) => e.key === 'Enter' && commitName()}
-          placeholder="Type your name..."
-          maxLength={16}
-          className="mb-4 w-full rounded-xl border-2 border-edge px-4 py-3 text-lg font-bold text-ink focus:border-ink focus:outline-none"
-        />
-
         <div className="grid grid-cols-1 gap-3">
-          <Button
-            onClick={() => {
-              commitName()
-              navigate({ name: 'map' })
-            }}
-          >
-            🎓 Start Learning
-          </Button>
+          <Button onClick={() => navigate({ name: 'map' })}>🎓 Lessons</Button>
           <div className="grid grid-cols-2 gap-3">
             <Button variant="secondary" onClick={() => navigate({ name: 'rain' })}>
               🌧️ Word Rain
@@ -69,7 +52,7 @@ export default function TypingHome({ game, navigate }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Button variant="ghost" onClick={() => navigate({ name: 'trophies' })}>
-              🏆 Trophy Room
+              🏅 Badges
             </Button>
             <Button variant="ghost" onClick={() => navigate({ name: 'settings' })}>
               ⚙️ Settings
@@ -80,8 +63,8 @@ export default function TypingHome({ game, navigate }: Props) {
 
       <div className="flex gap-6 text-center">
         <Stat big={`${state.totalStars}`} label="⭐ Stars" />
-        <Stat big={`${doneLessons}/${TOTAL_LESSONS}`} label="Lessons" />
-        <Stat big={`${state.collectedCats.length}`} label={theme.unit} />
+        <Stat big={`${done}/${TOTAL_LESSONS}`} label="Lessons done" />
+        <Stat big={`${collected}`} label={theme.unit} />
       </div>
     </div>
   )

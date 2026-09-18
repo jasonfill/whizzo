@@ -41,7 +41,7 @@ import {
 } from '@whizzo/shared'
 import { richToPlain } from '@whizzo/shared/rich'
 import { withAdmin } from '../db.js'
-import { decksFor, masteryFor, skillsFor } from '../progressRead.js'
+import { masteryFor, skillsFor, tutorDecksFor } from '../progressRead.js'
 import { writeProgressChange } from '../progressWrite.js'
 import {
   asUser,
@@ -255,7 +255,7 @@ export async function startRound(
   // Everything that can be refused without touching mastery is refused
   // first, so a mistyped deck id does not cost the child the round they are
   // in the middle of.
-  const decks = await asUser(grant, (db) => decksFor(db, learner.learner.id))
+  const decks = await asUser(grant, (db) => tutorDecksFor(db, learner.learner.id))
   const deck = params.deckId ? decks.find((d) => d.id === params.deckId) : null
   if (params.deckId && !deck) throw new ToolRefused('No deck with that id is available to this learner.')
   if (deck && !deck.cards.length) throw new ToolRefused(`"${deck.title}" has no cards yet.`)
@@ -317,8 +317,9 @@ export async function startRound(
 
   if (params.mode === 'study') {
     // Study is exposure, not evidence. The cards are recorded as met — a
-    // flashcard flip — and nothing else: no session, no task closes, no
-    // reward, no line on the daily strip.
+    // flashcard flip — and the round is written as a practice-only session
+    // with nothing checked, so a grown-up can see it happened. It closes no
+    // task and earns no reward: there is no answer in it to judge.
     const cards = planned.map(studyCardFor)
     const answers: RoundAnswer[] = planned.map((p, i) => ({
       question: questionFor(p, [], i + 1, planned.length),
@@ -605,7 +606,7 @@ async function closeRound(grant: Grant, learner: LearnerInContext, round: RoundR
   const study = round.mode === 'study'
 
   const { decks, mastery, skills } = await asUser(grant, async (db) => ({
-    decks: await decksFor(db, learnerId),
+    decks: await tutorDecksFor(db, learnerId),
     mastery: await masteryFor(db, learnerId),
     skills: await skillsFor(db, learnerId),
   }))
@@ -680,9 +681,13 @@ async function closeRound(grant: Grant, learner: LearnerInContext, round: RoundR
     if (!whole.placed) whole = { ...whole, placed: true }
   }
 
-  // Whether the round was seen through to its last card. An early end or an
-  // idle close still writes the answers; it does not finish a task.
-  const complete = round.plan.queue.length === 0 && round.answers.length > 0
+  // Whether the round was seen through to its last question. An early end or
+  // an idle close still writes the answers; it does not finish a task. A study
+  // round asks nothing, so it is never complete in this sense: `complete` is
+  // what lets a tutor round stand in for a Learn task
+  // (`complete_matching_assignments`, migration 0020), and a round with no
+  // answers in it must not.
+  const complete = !study && round.plan.queue.length === 0 && round.answers.length > 0
   const durationMs = Math.max(0, Math.min(endedAt - startedAt, 3 * 60 * 60 * 1000))
   const session: SessionRecord = {
     // The round's own id, so closing the same round twice — a retry after a
@@ -692,11 +697,15 @@ async function closeRound(grant: Grant, learner: LearnerInContext, round: RoundR
     subject: 'quiz',
     activity: 'tutor',
     listId: round.deck_id,
-    isTest: true,
-    itemsTotal: summary.asked,
-    itemsCorrect: summary.correct,
-    accuracy: summary.accuracy,
-    score: summary.correct * 10,
+    // A study round is practice only: nothing was asked, so nothing was
+    // checked and nothing was got right. The server re-derives these from the
+    // attempts and reaches the same numbers; they are stated here so the
+    // payload says what it means.
+    isTest: !study,
+    itemsTotal: study ? attempts.length : summary.asked,
+    itemsCorrect: study ? 0 : summary.correct,
+    accuracy: study ? 0 : summary.accuracy,
+    score: study ? 0 : summary.correct * 10,
     wpm: null,
     durationMs,
     abilityBefore,
@@ -704,22 +713,29 @@ async function closeRound(grant: Grant, learner: LearnerInContext, round: RoundR
     meta: { channel: 'mcp', client: grant.clientLabel, clientName: round.plan.clientName, roundId: round.id, mode: round.mode, complete },
     startedAt,
     endedAt,
+    verifiedItemsTotal: study ? 0 : undefined,
+    verifiedItemsCorrect: study ? 0 : undefined,
     track: round.deck_id ? (trackOf.get(round.deck_id) ?? null) : null,
   }
 
   let taskClosed = false
   if (attempts.length) {
     await asUser(grant, async (db) => {
-      if (!study) {
-        const { rows: already } = await db.query('select 1 from public.sessions where id = $1', [session.id])
-        if (already.length) return
-      }
+      const { rows: already } = await db.query('select 1 from public.sessions where id = $1', [session.id])
+      if (already.length) return
       await writeProgressChange(
         db,
         learnerId,
         study
-          ? // Exposure only: the cards are met, and that is all that is claimed.
-            { mastery: summary.mastery, attempts }
+          ? // Exposure only: the cards are met, the round is on the record as
+            // practice with nothing checked, and its minutes are on the daily
+            // strip. No ability, no streak — nothing was answered.
+            {
+              mastery: summary.mastery,
+              session,
+              attempts,
+              daily: { subject: 'quiz', seconds: Math.round(durationMs / 1000), items: attempts.length, correct: 0 },
+            }
           : {
               skill: graded ? whole : undefined,
               skills: pools.size ? [...pools.values()] : undefined,
@@ -741,7 +757,7 @@ async function closeRound(grant: Grant, learner: LearnerInContext, round: RoundR
   }
 
   round.ended_at = new Date(endedAt)
-  round.session_id = !study && attempts.length ? session.id : null
+  round.session_id = attempts.length ? session.id : null
   round.plan.current = null
   await saveRound(round)
 

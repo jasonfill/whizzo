@@ -101,7 +101,7 @@ export function routeToPath(route: Route): string {
     case 'rain':
       return '/typing/rain'
     case 'trophies':
-      return '/typing/trophies'
+      return '/badges'
 
     // Spelling
     case 'spelling':

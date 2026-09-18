@@ -61,7 +61,7 @@ vi.mock('./lib/spelling/speech', () => ({
 import App from './App'
 import { routeToPath } from './paths'
 import type { Route } from './routes'
-import { signIn, testState } from './test/state'
+import { aLearner, signIn, testState } from './test/state'
 
 beforeEach(() => {
   signIn()
@@ -80,7 +80,7 @@ function signedOut(): void {
 describe('the first screen', () => {
   it('is the child’s home when there is a learner', async () => {
     render(<App />)
-    expect(await screen.findByText('🎨 Cats')).toBeTruthy()
+    expect(await screen.findByText('🎨 Theme')).toBeTruthy()
   })
 
   it('sends a grown-up who owns nobody to set someone up', async () => {
@@ -115,9 +115,9 @@ describe('every route reachable from the home screen', () => {
   // is checked for something recognizable.
   const doors: Array<[string, RegExp]> = [
     ['📊 Progress', /Progress|History|nothing/i],
-    ['🏆 Trophies', /Troph|collect|achiev/i],
-    ['✏️ My lists', /word lists/i],
-    ['🃏 My decks', /deck/i],
+    ['🏅 Badges', /Badge|collect|score/i],
+    ['✏️ My word lists', /word lists/i],
+    ['📚 Library', /Library/i],
     ['⚙️ Settings', /Settings|Sound|name/i],
     ['👨‍👩‍👧 Family', /Family/i],
     ['✅ Tasks', /Tasks/i],
@@ -135,7 +135,7 @@ describe('every route reachable from the home screen', () => {
     for (const [label, expected] of [
       ['Spelling', /Spelling/i],
       ['Typing', /Typing|lesson/i],
-      ['Quiz', /deck|Quiz/i],
+      ['Flashcards', /deck|Flashcards/i],
     ] as const) {
       const view = render(<App />)
       fireEvent.click(view.getAllByText(label)[0]!.closest('button')!)
@@ -149,7 +149,7 @@ describe('every route reachable from the home screen', () => {
 
   it('opens the world the theme names, and the picker for changing it', async () => {
     render(<App />)
-    fireEvent.click(await screen.findByText('🎨 Cats'))
+    fireEvent.click(await screen.findByText('🎨 Theme'))
     await waitFor(() => expect(document.body.textContent!.length).toBeGreaterThan(0))
   })
 
@@ -186,7 +186,7 @@ describe('the door', () => {
     signedOut()
     render(<App />)
     await screen.findByText('Practice that knows what your child can actually do.')
-    for (const label of ['🎨 Cats', '📊 Progress', '🏆 Trophies', '✅ Tasks']) {
+    for (const label of ['🎨 Theme', '📊 Progress', '🏅 Badges', '✅ Tasks']) {
       expect(screen.queryByText(label)).toBeNull()
     }
   })
@@ -205,7 +205,7 @@ describe('the door', () => {
 
   it('shows the app the moment they are signed in', async () => {
     render(<App />)
-    expect(await screen.findByText('🎨 Cats')).toBeTruthy()
+    expect(await screen.findByText('🎨 Theme')).toBeTruthy()
     expect(screen.queryByText('Practice that knows what your child can actually do.')).toBeNull()
   })
 
@@ -221,7 +221,7 @@ describe('the door', () => {
     signedOut()
     testState.configured = false
     render(<App />)
-    expect(await screen.findByText('🎨 Cats')).toBeTruthy()
+    expect(await screen.findByText('🎨 Theme')).toBeTruthy()
   })
 })
 
@@ -241,17 +241,20 @@ describe('the address bar', () => {
     startAt('/quiz')
     render(<App />)
     // The quiz home, not the child's home.
-    await waitFor(() => expect(screen.queryByText('🎨 Cats')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('🎨 Theme')).toBeNull())
     expect(window.location.pathname).toBe('/quiz')
   })
 
   it('identifies what a screen is about in the path', async () => {
+    // A starter deck is a catalog entry until added; this learner has added it.
+    signIn(aLearner({ starterDecks: ['starter-capitals'] }))
     startAt('/quiz/deck/starter-capitals')
     render(<App />)
     expect(await screen.findByText('US State Capitals')).toBeTruthy()
   })
 
   it('carries a round’s settings in the query string', async () => {
+    signIn(aLearner({ starterDecks: ['starter-capitals'] }))
     startAt('/quiz/play/flashcards?deck=starter-capitals&direction=mixed&size=5')
     render(<App />)
     // Five of the fifty, because the URL said five.
@@ -274,13 +277,13 @@ describe('the address bar', () => {
 
     window.history.back()
     await waitFor(() => expect(window.location.pathname).toBe('/'))
-    expect(await screen.findByText('🎨 Cats')).toBeTruthy()
+    expect(await screen.findByText('🎨 Theme')).toBeTruthy()
   })
 
   it('sends a path that names no screen home rather than showing nothing', async () => {
     startAt('/not-a-screen')
     render(<App />)
-    expect(await screen.findByText('🎨 Cats')).toBeTruthy()
+    expect(await screen.findByText('🎨 Theme')).toBeTruthy()
     await waitFor(() => expect(window.location.pathname).toBe('/'))
   })
 

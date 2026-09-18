@@ -12,8 +12,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { aGame, spies } from '../test/mockProviders'
 import { aLearner, signIn, skill, testState } from '../test/state'
 import { emptySnapshot } from '../lib/progress/types'
+import { slotLabels } from '../lib/themes'
 
 vi.mock('../auth/AuthProvider', async () => (await import('../test/mockProviders')).authMock())
+vi.mock('../hooks/useBack', async () => (await import('../test/mockProviders')).backMock())
 vi.mock('../lib/learners/LearnerProvider', async () =>
   (await import('../test/mockProviders')).learnersMock(),
 )
@@ -60,7 +62,7 @@ beforeEach(() => {
 describe('SpellingPlay — a round in progress', () => {
   function play(activity: 'test' | 'listen-spell' | 'missing-letters' = 'missing-letters') {
     return render(
-      <SpellingPlay activity={activity} mode="adaptive" size={6} navigate={navigate} />,
+      <SpellingPlay activity={activity} mode="adaptive" size={6} />,
     )
   }
 
@@ -107,7 +109,7 @@ describe('SpellingPlay — a round in progress', () => {
   it('says the mascot is the only themed thing on the screen', () => {
     play()
     expect(
-      screen.getByText(/The mascot is the only part of this screen your world changes/),
+      screen.getByText(/The mascot is the only part of this screen your theme changes/),
     ).toBeInTheDocument()
   })
 
@@ -176,7 +178,7 @@ describe('SpellingResults — what a round is worth', () => {
   }
 
   it('explains the stars in terms of the prediction it graded against', () => {
-    render(<SpellingResults summary={summary()} navigate={navigate} onAgain={() => {}} />)
+    render(<SpellingResults summary={summary()} onAgain={() => {}} />)
     expect(screen.getByText(/beat what we predicted for this set by 10 points/)).toBeInTheDocument()
   })
 
@@ -184,7 +186,6 @@ describe('SpellingResults — what a round is worth', () => {
     render(
       <SpellingResults
         summary={summary({ accuracy: 50, itemsCorrect: 5, stars: 1 })}
-        navigate={navigate}
         onAgain={() => {}}
       />,
     )
@@ -192,7 +193,7 @@ describe('SpellingResults — what a round is worth', () => {
   })
 
   it('promises that only graded work earns a collectible', () => {
-    render(<SpellingResults summary={summary()} navigate={navigate} onAgain={() => {}} />)
+    render(<SpellingResults summary={summary()} onAgain={() => {}} />)
     expect(
       screen.getByText(new RegExp(`A hinted word can’t buy a ${testState.theme.unitOne}`)),
     ).toBeInTheDocument()
@@ -202,7 +203,6 @@ describe('SpellingResults — what a round is worth', () => {
     render(
       <SpellingResults
         summary={summary({ activity: 'missing-letters', accuracy: 100, itemsCorrect: 10 })}
-        navigate={navigate}
         onAgain={() => {}}
       />,
     )
@@ -216,7 +216,6 @@ describe('SpellingResults — what a round is worth', () => {
     render(
       <SpellingResults
         summary={summary({ accuracy: 20, itemsCorrect: 2, stars: 1 })}
-        navigate={navigate}
         onAgain={() => {}}
       />,
     )
@@ -226,12 +225,32 @@ describe('SpellingResults — what a round is worth', () => {
   })
 
   it('cheers only where something was actually earned', () => {
-    render(<SpellingResults summary={summary()} navigate={navigate} onAgain={() => {}} />)
-    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('cheer')
+    render(<SpellingResults summary={summary()} onAgain={() => {}} />)
+    const labels = screen.getAllByRole('img').map((img) => img.getAttribute('aria-label') ?? '')
+    expect(labels.some((l) => l.includes('cheer'))).toBe(true)
+  })
+
+  it('names the collectible in the theme’s own word, and says why it was earned', () => {
+    // The same rule and the same slot the collection wall uses: nothing is
+    // in the snapshot, so this round fills the first slot.
+    render(<SpellingResults summary={summary()} onAgain={() => {}} />)
+    expect(screen.getByText(`New ${testState.theme.unitOne}!`)).toBeInTheDocument()
+    expect(screen.getByText(slotLabels(testState.theme)[0]!)).toBeInTheDocument()
+    expect(screen.getByText(testState.theme.because)).toBeInTheDocument()
+  })
+
+  it('calls a badge a badge', () => {
+    render(
+      <SpellingResults
+        summary={summary({ newAchievements: [{ id: 'b', name: 'First Test', emoji: '🏅', description: '' }] })}
+        onAgain={() => {}}
+      />,
+    )
+    expect(screen.getByText(/New badge!/)).toBeInTheDocument()
   })
 
   it('says only unaided answers move the level', () => {
-    render(<SpellingResults summary={summary()} navigate={navigate} onAgain={() => {}} />)
+    render(<SpellingResults summary={summary()} onAgain={() => {}} />)
     expect(screen.getByText(/no hints, change your level/i)).toBeInTheDocument()
   })
 })
@@ -303,7 +322,7 @@ describe('QuizPlay and QuizResults', () => {
       newAchievements: [],
     } as never
     render(
-      <QuizResults summary={summary} onAgain={() => {}} onDeck={() => {}} onHome={() => {}} />,
+      <QuizResults summary={summary} onAgain={() => {}} onDone={() => {}} onHome={() => {}} />,
     )
     expect(screen.getByText(/80/)).toBeInTheDocument()
   })
@@ -329,14 +348,15 @@ describe('QuizPlay and QuizResults', () => {
       newAchievements: [],
     } as never
     render(
-      <QuizResults summary={summary} onAgain={() => {}} onDeck={() => {}} onHome={() => {}} />,
+      <QuizResults summary={summary} onAgain={() => {}} onDone={() => {}} onHome={() => {}} />,
     )
     expect(screen.getByText(/first time/i)).toBeInTheDocument()
   })
 })
 
 describe('DeckScreen', () => {
-  it('renders a starter deck', () => {
+  it('renders a starter deck the learner has added', () => {
+    signIn(aLearner({ starterDecks: ['starter-capitals'] }))
     render(<DeckScreen deckId="starter-capitals" navigate={navigate} />)
     expect(document.body.textContent).toBeTruthy()
   })

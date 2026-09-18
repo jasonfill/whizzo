@@ -224,7 +224,7 @@ export const quizDeckSchema = z.object({
   // Bounded deliberately: a deck is read and written whole, so an unbounded
   // card array is an unbounded request body.
   cards: z.array(quizCardSchema).max(500),
-  source: z.enum(['user', 'starter']).default('user'),
+  source: z.enum(['user', 'starter', 'assigned']).default('user'),
   termLabel: z.string().max(40).default('Term'),
   definitionLabel: z.string().max(40).default('Definition'),
   createdAt: epochMs.optional(),

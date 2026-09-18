@@ -10,6 +10,8 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('../../hooks/useBack', async () => (await import('../../test/mockProviders')).backMock())
+
 vi.mock('../../auth/AuthProvider', async () => (await import('../../test/mockProviders')).authMock())
 vi.mock('../../lib/progress/ProgressProvider', async () =>
   (await import('../../test/mockProviders')).progressMock(),

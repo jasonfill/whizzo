@@ -82,7 +82,7 @@ export default function CustomListsScreen({ navigate }: { navigate: Navigate }) 
       <ScreenHeader
         title="My word lists ✏️"
         subtitle="Paste this week's class list and practice it with every activity."
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
       />
 
       {editing ? (

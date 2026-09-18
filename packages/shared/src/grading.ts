@@ -302,4 +302,41 @@ export function buildQuestion(
   return base
 }
 
+/**
+ * The same question, asked again with its options in a new order.
+ *
+ * A card that comes back later in the round used to come back with the right
+ * answer in the same slot, and a learner who has just watched it light up
+ * green remembers where it was rather than what it said. So the options are
+ * dealt again, and the answer is guaranteed to land somewhere else whenever
+ * there is somewhere else for it to go. Questions with nothing to reorder
+ * come back unchanged.
+ */
+export function reshuffleQuestion(question: Question, rng: () => number = Math.random): Question {
+  if (question.kind === 'multiple-choice' && question.choices) {
+    const isAnswer = (option: string) => option === question.answer
+    return { ...question, choices: dealAgain(question.choices, isAnswer, rng) }
+  }
+  if (question.kind === 'word-bank' && question.bank) {
+    // The bank holds the readable text of each answer, not its source.
+    const target = richToPlain(question.answer).trim()
+    const isAnswer = (option: string) => richToPlain(option).trim() === target
+    return { ...question, bank: dealAgain(question.bank, isAnswer, rng) }
+  }
+  return question
+}
+
+function dealAgain(options: string[], isAnswer: (o: string) => boolean, rng: () => number): string[] {
+  const before = options.findIndex(isAnswer)
+  const next = shuffle(options, rng)
+  if (options.length < 2 || before < 0) return next
+  const after = next.findIndex(isAnswer)
+  if (after !== before) return next
+  // Same slot as last time: swap the answer into any other one.
+  let slot = Math.floor(rng() * (options.length - 1))
+  if (slot >= before) slot += 1
+  ;[next[after], next[slot]] = [next[slot], next[after]]
+  return next
+}
+
 export { shuffle }

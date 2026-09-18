@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('../../auth/AuthProvider', async () =>
   (await import('../../test/mockProviders')).authMock(),
 )
+vi.mock('../../hooks/useBack', async () => (await import('../../test/mockProviders')).backMock())
 vi.mock('../../lib/learners/LearnerProvider', async () =>
   (await import('../../test/mockProviders')).learnersMock(),
 )
@@ -26,7 +27,7 @@ vi.mock('../../lib/theme/ThemeProvider', async () =>
 import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { masteryKey } from '../../lib/progress/types'
 import { spies } from '../../test/mockProviders'
-import { signIn, testState } from '../../test/state'
+import { aLearner, signIn, testState } from '../../test/state'
 import QuizPlay from './QuizPlay'
 
 const navigate = spies.navigate
@@ -58,7 +59,7 @@ function halfKnown() {
 }
 
 beforeEach(() => {
-  signIn()
+  signIn(aLearner({ starterDecks: [DECK.id] }))
   navigate.mockClear()
   halfKnown()
 })

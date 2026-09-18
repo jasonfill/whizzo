@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Button, Card } from '../../components/ui'
 import { CURRICULUM } from '../../data/lessons'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { GRADES } from '../../data/spelling'
 import { ApiError } from '../../lib/api/client'
 import { createAssignments, type AssignmentDraft } from '../../lib/assignments/api'
 import { ASSIGNABLE, type AssignableActivity } from '../../lib/assignments/routing'
-import { useProgress } from '../../lib/progress/ProgressProvider'
-import { allDecks, isDraftDeck } from '../../lib/quiz/decks'
+import { isDraftDeck } from '../../lib/quiz/decks'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
 
 /**
  * Setting one piece of work.
@@ -44,7 +43,6 @@ export default function AssignForm({
   onDone: () => void | Promise<void>
   onCancel: () => void
 }) {
-  const { snapshot } = useProgress()
   const [choice, setChoice] = useState<AssignableActivity>(
     fixedTarget
       ? (ASSIGNABLE.find(
@@ -85,7 +83,7 @@ export default function AssignForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
+  const decks = useLearnerDecks()
 
   const targets = useMemo(() => {
     // A draft would be refused by the database, so it is not offered.
@@ -111,7 +109,7 @@ export default function AssignForm({
 
   const submit = async () => {
     if (targetIds.length === 0) {
-      setError('Pick what the work is on.')
+      setError('Pick what the task is on.')
       return
     }
     if (selected.length === 0) {
@@ -160,7 +158,7 @@ export default function AssignForm({
 
   return (
     <Card>
-      <h2 className="mb-3 text-xl font-extrabold text-ink">Set some work</h2>
+      <h2 className="mb-3 text-xl font-extrabold text-ink">Set a task</h2>
 
       {/* Who it is for comes first: the same work usually goes to more than one
           child, and deciding that after writing the task is backwards. */}
@@ -385,7 +383,7 @@ export default function AssignForm({
 }
 
 const SUBJECT_LABEL: Record<string, string> = {
-  quiz: 'Quiz',
+  quiz: 'Flashcards',
   spelling: 'Spelling',
   typing: 'Typing',
 }
@@ -407,7 +405,7 @@ function explainRefusal(err: unknown): string {
     switch (err.code) {
       case 'forbidden':
         return (
-          `${prefix} Setting work is for the grown-up who owns the profile, or a ` +
+          `${prefix} Setting tasks is for the grown-up who owns the profile, or a ` +
           'guardian they have trusted with content.'
         )
       case 'not_found':

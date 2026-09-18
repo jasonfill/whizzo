@@ -29,12 +29,12 @@ export default function SpellingLists({ navigate }: { navigate: Navigate }) {
   return (
     <div className="mx-auto w-full max-w-4xl py-4">
       <ScreenHeader
-        title="Word Lists 📚"
+        title="Spelling lists 📚"
         subtitle="Pick any list to study — nothing here is locked."
-        onBack={() => navigate({ name: 'spelling' })}
+        back={{ name: 'spelling' }}
         right={
           <Button variant="secondary" onClick={() => navigate({ name: 'custom-lists' })}>
-            ✏️ My lists
+            ✏️ My word lists
           </Button>
         }
       />

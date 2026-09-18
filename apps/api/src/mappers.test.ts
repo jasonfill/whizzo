@@ -35,6 +35,32 @@ describe('toLearner', () => {
     })
   })
 
+  it('reads the starter decks a learner has added, and none when the row predates the column', () => {
+    expect(toLearner({ ...row, starter_decks: ['starter-capitals', 'starter-space'] }).starterDecks).toEqual([
+      'starter-capitals',
+      'starter-space',
+    ])
+    expect(toLearner({ ...row, starter_decks: undefined }).starterDecks).toEqual([])
+    expect(toLearner({ ...row, starter_decks: null }).starterDecks).toEqual([])
+  })
+
+  it('carries the caller’s own link to the learner, and nothing when the query did not ask', () => {
+    expect(toLearner({ ...row, viewer_role: 'teacher' }).viewerRole).toBe('teacher')
+    expect(toLearner({ ...row, viewer_role: 'owner' }).viewerRole).toBe('owner')
+    expect('viewerRole' in toLearner(row)).toBe(false)
+  })
+
+  it('reads the settings object, and an empty one when the row predates the column', () => {
+    expect(toLearner({ ...row, settings: { sound: false, flashcardLayout: 'slide' } }).settings).toEqual({
+      sound: false,
+      flashcardLayout: 'slide',
+    })
+    expect(toLearner({ ...row, settings: undefined }).settings).toEqual({})
+    expect(toLearner({ ...row, settings: null }).settings).toEqual({})
+    // Anything that is not an object is treated as nothing set, never a crash.
+    expect(toLearner({ ...row, settings: [1, 2] }).settings).toEqual({})
+  })
+
   it('reads a learner whose row predates the theme column as having none', () => {
     // The migration is additive, so rows written before it have no column at
     // all. Null here means "the client default", never a broken screen.
@@ -241,6 +267,16 @@ describe('toDeck', () => {
     // needs the same bit to explain a refusal before it happens.
     expect(toDeck(row()).acceptedAt).toBeNull()
     expect(toDeck(row({ accepted_at: new Date(5000) })).acceptedAt).toBe(5000)
+  })
+
+  it('says how the deck reached the learner', () => {
+    // Ownership is learner_id xor owner_user_id. A library deck in a learner's
+    // list got there by being set as a task, and the client must not offer
+    // Edit or Delete on it; the same row read from the owner's library is
+    // theirs.
+    expect(toDeck(row({ learner_id: 'l1' })).source).toBe('user')
+    expect(toDeck(row({ owner_user_id: 'u1' })).source).toBe('assigned')
+    expect(toDeck(row({ owner_user_id: 'u1' }), 'library').source).toBe('user')
   })
 
   it('keeps the id when only the title was not joined', () => {

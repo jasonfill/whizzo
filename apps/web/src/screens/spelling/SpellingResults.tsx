@@ -8,14 +8,14 @@ import { activity as activityDef } from '../../lib/spelling/activities'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { useTheme } from '../../lib/theme/ThemeProvider'
 import { useBand } from '../../lib/band/useBand'
-import { earnedFor } from '../../lib/theme/rewards'
-import { slotLabels } from '../../lib/themes'
+import { findRound, roundCollectible } from '../../lib/theme/rewards'
+import Collectible from '../../components/Collectible'
+import type { SessionRecord } from '../../lib/progress/types'
 import { speak } from '../../lib/spelling/speech'
-import type { Navigate } from '../../routes'
+import { useBack } from '../../hooks/useBack'
 
 interface Props {
   summary: SessionSummary
-  navigate: Navigate
   onAgain: () => void
 }
 
@@ -29,8 +29,11 @@ function encouragement(accuracy: number, predicted: number): string {
   return 'These were hard ones. We will bring them back easier next time.'
 }
 
-export default function SpellingResults({ summary, navigate, onAgain }: Props) {
+export default function SpellingResults({ summary, onAgain }: Props) {
   const { celebrates } = useBand()
+  // Done goes back to wherever the round was started from — the spelling
+  // screen, a list, or a task — and to spelling only on a cold link.
+  const done = useBack({ name: 'spelling' })
   const def = activityDef(summary.activity)
   const missed = summary.results.filter((r) => !r.correct)
   const abilityDelta = summary.abilityAfter - summary.abilityBefore
@@ -39,11 +42,12 @@ export default function SpellingResults({ summary, navigate, onAgain }: Props) {
   const { theme } = useTheme()
   const { snapshot } = useProgress()
   const beatBy = summary.accuracy - summary.predictedAccuracy
-  // The same fixed rule every theme runs on: a graded round that clears its
-  // prediction, or a promotion. Nothing here varies by theme except the noun.
-  const earnedReward = def.isTest && (beatBy >= 0 || levelledUp)
-  const earned = earnedFor(snapshot, theme)
-  const rewardName = slotLabels(theme)[Math.max(0, earned.owned - 1)] ?? theme.unitOne
+  // One rule, shared with the collection wall and every other results screen:
+  // `earnsCollectible` on the stored round. The play hook commits the round
+  // before showing this, so the snapshot normally has it; when it does not,
+  // the summary is enough to build the same record (spelling is app-checked).
+  const thisRound = findRound(snapshot, probeOf(summary)) ?? recordOf(summary, def.isTest)
+  const { earned: earnedReward, slot, name: rewardName } = roundCollectible(snapshot, theme, thisRound)
 
   useEffect(() => {
     if (levelledUp || summary.accuracy === 100) sfx.win()
@@ -91,10 +95,9 @@ export default function SpellingResults({ summary, navigate, onAgain }: Props) {
               <Mascot mood="cheer" size={108} />
             </div>
           )}
-          <div className="mt-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-faint">
-            New {theme.unit}
-          </div>
-          <div className="font-display text-2xl font-extrabold text-ink">{rewardName}</div>
+          <div className="mt-2 font-display text-2xl font-extrabold text-ink">New {theme.unitOne}!</div>
+          <Collectible slot={slot} className="mx-auto mt-3 h-32 w-44" />
+          <div className="mt-2 font-extrabold text-ink">{rewardName}</div>
           <p className="mx-auto mt-2 max-w-md text-[15px] text-body">{theme.because}</p>
         </div>
       )}
@@ -179,7 +182,9 @@ export default function SpellingResults({ summary, navigate, onAgain }: Props) {
 
       {summary.newAchievements.length > 0 && (
         <Card className="mb-4">
-          <h2 className="mb-3 text-xl font-extrabold text-ink">New badges! 🏅</h2>
+          <h2 className="mb-3 text-xl font-extrabold text-ink">
+            {summary.newAchievements.length === 1 ? 'New badge!' : 'New badges!'} 🏅
+          </h2>
           <div className="flex flex-wrap gap-3">
             {summary.newAchievements.map((a) => (
               <div key={a.id} className="rounded-2xl bg-amber-50 px-4 py-3 text-center">
@@ -194,12 +199,44 @@ export default function SpellingResults({ summary, navigate, onAgain }: Props) {
 
       <div className="grid grid-cols-2 gap-3">
         <Button onClick={onAgain}>🔁 Another round</Button>
-        <Button variant="ghost" onClick={() => navigate({ name: 'spelling' })}>
-          🏠 Spelling home
+        <Button variant="ghost" onClick={done}>
+          Done
         </Button>
       </div>
     </div>
   )
+}
+
+function probeOf(summary: SessionSummary) {
+  return {
+    subject: 'spelling' as const,
+    activity: summary.activity,
+    listId: summary.listId,
+    itemsTotal: summary.itemsTotal,
+    itemsCorrect: summary.itemsCorrect,
+    accuracy: summary.accuracy,
+  }
+}
+
+/** The round as the store would hold it, when the store does not yet. */
+function recordOf(summary: SessionSummary, isTest: boolean): SessionRecord {
+  return {
+    id: 'this-round',
+    ...probeOf(summary),
+    isTest,
+    score: summary.score,
+    wpm: null,
+    durationMs: summary.durationMs,
+    abilityBefore: summary.abilityBefore,
+    abilityAfter: summary.abilityAfter,
+    meta: { level: summary.level.direction, predictedAccuracy: summary.predictedAccuracy },
+    startedAt: Date.now() - summary.durationMs,
+    endedAt: Date.now(),
+    evidence: 'attempts',
+    // Every spelling answer is checked by the app; nothing is self-graded.
+    verifiedItemsTotal: summary.itemsTotal,
+    verifiedItemsCorrect: summary.itemsCorrect,
+  }
 }
 
 function RewardStat({ label, value }: { label: string; value: string }) {

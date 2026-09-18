@@ -204,7 +204,14 @@ export function toDaily(row: any): DailyActivityRow {
   }
 }
 
-export function toDeck(row: any): QuizDeck {
+/**
+ * From whose side a deck row is being read. A library deck is `user` to the
+ * grown-up who owns it and `assigned` to the learner it was set for — the same
+ * row, two lists, and the source says which list this copy is in.
+ */
+export type DeckReach = 'learner' | 'library'
+
+export function toDeck(row: any, reach: DeckReach = 'learner'): QuizDeck {
   return {
     id: row.id,
     track: row.track ?? null,
@@ -218,7 +225,9 @@ export function toDeck(row: any): QuizDeck {
     description: row.description ?? '',
     tags: row.tags ?? [],
     cards: row.cards ?? [],
-    source: 'user',
+    // Ownership is learner_id xor owner_user_id (migration 0011). A row with
+    // an owner and no learner reached a learner only by being set as a task.
+    source: reach === 'learner' && !row.learner_id && row.owner_user_id ? 'assigned' : 'user',
     termLabel: row.term_label ?? 'Term',
     definitionLabel: row.definition_label ?? 'Definition',
     // Null is the draft state, and the library has to be able to say so:

@@ -10,6 +10,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('../../hooks/useBack', async () => (await import('../../test/mockProviders')).backMock())
 vi.mock('../../auth/AuthProvider', async () =>
   (await import('../../test/mockProviders')).authMock(),
 )
@@ -118,6 +119,14 @@ describe('what a task list offers', () => {
     expect(screen.getByText(/Ada · 2 to do/)).toBeTruthy()
   })
 
+  it('offers a grown-up the button to set one', () => {
+    testState.assignments = []
+    render(<TasksScreen navigate={navigate} />)
+    expect(screen.getByText('➕ Set a task')).toBeTruthy()
+    // The old words are gone: it is a task, never "work".
+    expect(screen.queryByText(/Set some work/)).toBeNull()
+  })
+
   it('offers no way for anybody to declare a task done', () => {
     // Done is earned, never asserted — by a grown-up or by the learner.
     testState.assignments = [anAssignment()]
@@ -188,7 +197,8 @@ describe('what a task list offers', () => {
     testState.active = self
     testState.assignments = [anAssignment()]
     render(<TasksScreen navigate={navigate} />)
-    expect(screen.queryByText('➕ Set some work')).toBeNull()
+    expect(screen.queryByText('➕ Set a task')).toBeNull()
+    expect(screen.queryByText('🗑️ Remove')).toBeNull()
     expect(screen.queryByText('Cancel it')).toBeNull()
   })
 })
@@ -350,13 +360,13 @@ describe('work set across several learners', () => {
 
   it('answers "who has done this?" in one place', async () => {
     render(<TasksScreen navigate={navigate} />)
-    expect(await screen.findByText('Work you have set')).toBeTruthy()
+    expect(await screen.findByText('Tasks you have set')).toBeTruthy()
     expect(screen.getByText('1 of 2 done')).toBeTruthy()
   })
 
   it('can withdraw a whole piece of work', async () => {
     render(<TasksScreen navigate={navigate} />)
-    await screen.findByText('Work you have set')
+    await screen.findByText('Tasks you have set')
     const withdraw = screen.queryAllByRole('button').find((b) => /withdraw|remove/i.test(b.textContent ?? ''))
     if (!withdraw) return
     fireEvent.click(withdraw)
@@ -367,14 +377,14 @@ describe('work set across several learners', () => {
     net.listAssignmentSets.mockResolvedValue([])
     render(<TasksScreen navigate={navigate} />)
     await waitFor(() => expect(net.listAssignmentSets).toHaveBeenCalled())
-    expect(screen.queryByText('Work you have set')).toBeNull()
+    expect(screen.queryByText('Tasks you have set')).toBeNull()
   })
 
   it('shows nothing when the list could not be loaded either', async () => {
     net.listAssignmentSets.mockRejectedValue(new Error('offline'))
     render(<TasksScreen navigate={navigate} />)
     await waitFor(() => expect(net.listAssignmentSets).toHaveBeenCalled())
-    expect(screen.queryByText('Work you have set')).toBeNull()
+    expect(screen.queryByText('Tasks you have set')).toBeNull()
   })
 })
 
@@ -427,7 +437,7 @@ describe('the form for setting work', () => {
   it('refuses to set work on nothing', async () => {
     renderForm()
     fireEvent.click(screen.getByText('Set this task'))
-    expect(await screen.findByText('Pick what the work is on.')).toBeTruthy()
+    expect(await screen.findByText('Pick what the task is on.')).toBeTruthy()
     expect(net.createAssignments).not.toHaveBeenCalled()
   })
 
@@ -438,7 +448,7 @@ describe('the form for setting work', () => {
     void target
     fireEvent.click(screen.getByText('Set this task'))
     expect(
-      await screen.findByText(/Pick what the work is on|Choose at least one person/),
+      await screen.findByText(/Pick what the task is on|Choose at least one person/),
     ).toBeTruthy()
   })
 
@@ -467,6 +477,9 @@ describe('the form for setting work', () => {
   it('picks the only learner there is, so the form can be sent at all', async () => {
     // The picker only appears with two or more. With one and no default the
     // form asked for somebody and offered no way to say who.
+    // Starter decks are a catalog, not a default: the learner needs a deck of
+    // their own for the form to have anything to point at.
+    testState.snapshot = { ...emptySnapshot(), decks: [deckFixture('d1', 'Cells')] }
     renderForm({ learners: [learners[0]], defaultLearnerIds: [] })
     expect(screen.queryByText('Who it is for')).toBeNull()
     const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
@@ -660,10 +673,14 @@ describe('the form for setting work', () => {
       // Six tasks all called "Chapter 7" is a task list a learner cannot use.
       // Real ids, because the naming is a lookup — with ids that name nothing
       // the fallback would pass this test without the feature existing.
+      testState.snapshot = {
+        ...emptySnapshot(),
+        decks: [deckFixture('part-1', 'Cells'), deckFixture('part-2', 'Plants')],
+      }
       renderForm({
         fixedTarget: {
           kind: 'deck',
-          ids: ['starter-capitals', 'starter-space'],
+          ids: ['part-1', 'part-2'],
           label: 'Chapter 7',
         },
       })

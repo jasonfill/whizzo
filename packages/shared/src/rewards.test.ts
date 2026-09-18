@@ -6,14 +6,17 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  bucketOf,
   canCancel,
   canFulfill,
   checkCriterion,
   CRITERION_LABEL,
+  isExpired,
   ledger,
   MIN_ITEMS_FOR_SET_REWARD,
   NAG_AFTER_DAYS,
   needsChasing,
+  OFFERABLE_CRITERIA,
   SUGGESTED_CRITERION,
   type Reward,
   type RewardCriterionType,
@@ -53,10 +56,22 @@ describe('what may be promised', () => {
     }
   })
 
-  it('suggests the one that cannot be farmed in an afternoon', () => {
-    // A reward for *still knowing it three weeks later* is the exact behavior
-    // a parent is paying for. Every other app rewards activity.
-    expect(SUGGESTED_CRITERION).toBe('checkpoint')
+  it('suggests the strongest bar the app can actually award', () => {
+    // Retention would be the one worth featuring, but nothing awards a
+    // checkpoint yet, and a default that can never come due is a broken
+    // promise waiting to happen.
+    expect(SUGGESTED_CRITERION).toBe('set_mastered')
+    expect(OFFERABLE_CRITERIA).toContain(SUGGESTED_CRITERION)
+  })
+
+  it('does not offer what cannot be earned or should not be paid for', () => {
+    expect(OFFERABLE_CRITERIA).not.toContain('checkpoint')
+    expect(OFFERABLE_CRITERIA).not.toContain('minutes')
+  })
+
+  it('keeps a label for every criterion, offered or not, so old rows still read', () => {
+    expect(CRITERION_LABEL.checkpoint.length).toBeGreaterThan(8)
+    expect(CRITERION_LABEL.minutes.length).toBeGreaterThan(8)
   })
 
   it('accepts an honest criterion', () => {
@@ -203,12 +218,62 @@ describe('the ledger', () => {
     expect(books.paid.map((r) => r.id)).toEqual(['newer', 'older'])
   })
 
-  it('leaves withdrawn and expired promises out of all three', () => {
-    const books = ledger([reward({ status: 'canceled' }), reward({ status: 'expired' })])
-    expect(books.promised.concat(books.unpaid, books.paid)).toEqual([])
+  it('leaves withdrawn promises out altogether', () => {
+    const books = ledger([reward({ status: 'canceled' })])
+    expect(books.promised.concat(books.unpaid, books.paid, books.expired)).toEqual([])
   })
 
   it('copes with nothing at all', () => {
-    expect(ledger([])).toEqual({ unpaid: [], promised: [], paid: [] })
+    expect(ledger([])).toEqual({ unpaid: [], promised: [], paid: [], expired: [] })
+  })
+})
+
+describe('an offer that ran out', () => {
+  const TODAY = '2026-09-11'
+
+  it('is no longer a promise once its last day has passed', () => {
+    // The database matcher already refuses to award it, so calling it
+    // "promised" would be showing the child a door that does not open.
+    const lapsed = reward({ expiresOn: '2026-09-10' })
+    expect(isExpired(lapsed, TODAY)).toBe(true)
+    expect(bucketOf(lapsed, TODAY)).toBe('expired')
+  })
+
+  it('can still be earned on its last day', () => {
+    const today = reward({ expiresOn: TODAY })
+    expect(isExpired(today, TODAY)).toBe(false)
+    expect(bucketOf(today, TODAY)).toBe('promised')
+  })
+
+  it('never runs out without an end day', () => {
+    expect(isExpired(reward({ expiresOn: null }), '2999-01-01')).toBe(false)
+  })
+
+  it('honors a row something else has already marked expired', () => {
+    expect(bucketOf(reward({ status: 'expired' }), TODAY)).toBe('expired')
+  })
+
+  it('does not lapse a promise that was already earned', () => {
+    // Earning latches. An end day bounds the earning, not the paying.
+    const earned = reward({ status: 'earned', earnedAt: NOW, expiresOn: '2020-01-01' })
+    expect(bucketOf(earned, TODAY)).toBe('unpaid')
+  })
+
+  it('lists them newest-ended first, in their own column of the ledger', () => {
+    const books = ledger(
+      [
+        reward({ id: 'older', expiresOn: '2026-08-01' }),
+        reward({ id: 'live', expiresOn: '2026-12-01' }),
+        reward({ id: 'newer', expiresOn: '2026-09-01' }),
+      ],
+      TODAY,
+    )
+    expect(books.expired.map((r) => r.id)).toEqual(['newer', 'older'])
+    expect(books.promised.map((r) => r.id)).toEqual(['live'])
+  })
+
+  it('can still be tidied away by whoever could have withdrawn it', () => {
+    // It is still `offered` in the database; nothing has changed but the date.
+    expect(canCancel(reward({ expiresOn: '2020-01-01' }), PARENT, false)).toBe(true)
   })
 })

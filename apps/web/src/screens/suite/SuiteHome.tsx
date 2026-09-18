@@ -5,6 +5,7 @@ import AccountChip from '../../components/suite/AccountChip'
 import LearnerChip from '../../components/suite/LearnerChip'
 import TodayStrip from '../../components/planner/TodayStrip'
 import PracticingNow from '../../components/live/PracticingNow'
+import PromisedRewards from '../../components/suite/PromisedRewards'
 import { useRoundsNow } from '../../hooks/useRoundsNow'
 import { Button, Card, Pill } from '../../components/ui'
 import { TOTAL_LESSONS } from '../../data/lessons'
@@ -12,6 +13,7 @@ import { useAssignments } from '../../hooks/useAssignments'
 import type { GameApi } from '../../hooks/useGameState'
 import { routeForAssignment } from '../../lib/assignments/routing'
 import { useLearners } from '../../lib/learners/LearnerProvider'
+import { useAudience } from '../../lib/learners/useAudience'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { bestStreak, unaidedAccuracy } from '../../lib/progress/summary'
 import { useTheme } from '../../lib/theme/ThemeProvider'
@@ -20,39 +22,107 @@ import { progressLine, progressTitle } from '../../lib/themes'
 import { dueWords, levelSnapshot, totalCurriculumWords } from '../../lib/spelling/stats'
 import { breakdown } from '../../lib/spelling/stats'
 import { ALL_WORDS } from '../../data/spelling'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
-import { allDecks, deckStats } from '../../lib/quiz/decks'
+import { deckStats } from '../../lib/quiz/decks'
+import { dueAcrossDecks } from '../../lib/quiz/session'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
 import { todayString } from '../../lib/progress/types'
-import type { Navigate } from '../../routes'
+import type { Assignment } from '@whizzo/shared'
+import type { Navigate, Route } from '../../routes'
+
+/**
+ * The one door on the home screen: the next useful thing, named.
+ *
+ * Priority is what a grown-up would say if asked "what should they do
+ * first?": the task somebody set, then what is about to be forgotten, then
+ * spelling. The theme verb ("Pounce in") used to sit here and always meant
+ * "spelling" without saying so; it stays on the theme picker, where it is
+ * flavor and not a promise.
+ */
+function nextUp(opts: {
+  tasks: Assignment[]
+  today: string
+  cardsDue: number
+  wordsDue: number
+  placed: boolean
+}): { label: string; line: string; route: Route } {
+  const { tasks, today, cardsDue, wordsDue, placed } = opts
+  const overdue = tasks.find((t) => t.dueOn !== null && t.dueOn < today)
+  const task = overdue ?? tasks[0]
+  if (task) {
+    const route = routeForAssignment(task)
+    if (route) {
+      return {
+        label: `Start: ${task.title}`,
+        line: overdue ? 'This one is overdue — a good place to start.' : 'Somebody set this for you.',
+        route,
+      }
+    }
+  }
+  if (cardsDue > 0) {
+    return {
+      label: `Review ${Math.min(cardsDue, 20)} cards`,
+      line: `${cardsDue} ${cardsDue === 1 ? 'card is' : 'cards are'} about to slip. Ten minutes keeps ${cardsDue === 1 ? 'it' : 'them'}.`,
+      route: { name: 'quiz-play', mode: 'review', size: Math.min(cardsDue, 20) },
+    }
+  }
+  if (wordsDue > 0) {
+    return {
+      label: `Practice ${Math.min(wordsDue, 10)} words`,
+      line: `${wordsDue} ${wordsDue === 1 ? 'word is' : 'words are'} ready for another look.`,
+      route: { name: 'spell-play', activity: 'listen-spell', mode: 'adaptive' },
+    }
+  }
+  if (!placed) {
+    return {
+      label: 'Find my spelling level',
+      line: 'A short check works out where to start.',
+      route: { name: 'spell-play', activity: 'listen-spell', mode: 'placement', size: 12 },
+    }
+  }
+  return {
+    label: 'Practice spelling',
+    line: 'Nothing is due. Ten words at the edge of what you know.',
+    route: { name: 'spell-play', activity: 'listen-spell', mode: 'adaptive' },
+  }
+}
 
 export default function SuiteHome({ game, navigate }: { game: GameApi; navigate: Navigate }) {
   const { profile } = useAuth()
-  const { snapshot, skill, sync } = useProgress()
+  const { snapshot, sync } = useProgress()
+  const { learners, active, isLearnerSession } = useLearners()
+  const audience = useAudience()
 
-  const spelling = skill('spelling')
+  const spelling = useProgress().skill('spelling')
   const level = levelSnapshot(snapshot, spelling.levelIndex)
   const overall = breakdown(snapshot, ALL_WORDS)
-  const due = dueWords(snapshot).length
+  const wordsDue = dueWords(snapshot).length
 
   const typingLessons = Object.values(game.state.lessons).filter((l) => l.plays > 0).length
 
   const today = todayString()
-  const quizTotals = allDecks(snapshot, STARTER_DECKS).reduce(
+  const decks = useLearnerDecks()
+  const quizTotals = decks.reduce(
     (acc, deck) => {
       const s = deckStats(snapshot, deck, today)
       return { cards: acc.cards + s.total, mastered: acc.mastered + s.mastered, due: acc.due + s.due }
     },
     { cards: 0, mastered: 0, due: 0 },
   )
-  const greeting = profile?.displayName || game.state.playerName
+  const cardsDue = dueAcrossDecks(snapshot, decks, today).length
+
+  // The learner on screen, never the account. A parent looking at their
+  // child's home is looking at the child's home; a child who was handed the
+  // tablet should read their own name.
+  const greeting = active?.displayName ?? profile?.displayName ?? ''
   const { open: openTasks } = useAssignments()
-  const { learners, active } = useLearners()
   const overdueTasks = openTasks.filter((t) => t.dueOn !== null && t.dueOn < today).length
 
   const { theme } = useTheme()
   const earned = earnedFor(snapshot, theme)
   const unaided = unaidedAccuracy(snapshot)
   const streak = bestStreak(snapshot)
+
+  const next = nextUp({ tasks: openTasks, today, cardsDue, wordsDue, placed: spelling.placed })
 
   // Layout only. The two views show the same data from the same sources; the
   // older one just does not want a mascot the size of its head.
@@ -66,7 +136,9 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
       <div className="mb-4 flex items-center justify-between gap-2">
         <Wordmark />
         <div className="flex items-center gap-2">
-          <LearnerChip onManage={() => navigate({ name: 'family' })} />
+          <LearnerChip
+            onManage={() => navigate(isLearnerSession ? { name: 'theme' } : { name: 'family' })}
+          />
           <AccountChip onOpen={() => navigate({ name: 'account' })} />
         </div>
       </div>
@@ -82,9 +154,10 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
               <h1 className="font-display text-4xl font-extrabold tracking-[-0.02em] text-ink">
                 {greeting ? `Welcome back, ${greeting}.` : 'Whizzo'}
               </h1>
+              <p className="mt-1 text-[15px] text-body">{next.line}</p>
             </div>
-            <Button variant="play" onClick={() => navigate({ name: 'spelling' })}>
-              {theme.verb} →
+            <Button variant="play" onClick={() => navigate(next.route)}>
+              {next.label} →
             </Button>
           </div>
 
@@ -115,17 +188,9 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
             <h1 className="mt-1 font-display text-[38px] font-extrabold leading-[1.05] tracking-[-0.02em] text-ink md:text-[46px]">
               {greeting ? `Hi, ${greeting}!` : 'Ready when you are.'}
             </h1>
-            <p className="mt-2 max-w-md text-[17px] leading-relaxed text-body">
-              {due > 0
-                ? `${due} words are ready for another look.`
-                : 'Pick something below and get going.'}
-            </p>
-            <Button
-              variant="play"
-              className="mt-5 text-[19px]"
-              onClick={() => navigate({ name: 'spelling' })}
-            >
-              {theme.verb} →
+            <p className="mt-2 max-w-md text-[17px] leading-relaxed text-body">{next.line}</p>
+            <Button variant="play" className="mt-5 text-[19px]" onClick={() => navigate(next.route)}>
+              {next.label} →
             </Button>
           </div>
           {/* The secondary companion stays: it is the subject you are not
@@ -192,6 +257,10 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
         </Card>
       )}
 
+      {/* What a grown-up has promised, read-only. Next to the tasks because
+          that is what it is about; nothing here nags the learner. */}
+      {active && <PromisedRewards learnerId={active.id} />}
+
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <SubjectCard
           emoji="🔤"
@@ -200,7 +269,7 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
           stats={[
             { label: 'Level', value: `Grade ${level.grade}` },
             { label: 'Words mastered', value: `${overall.mastered}/${totalCurriculumWords()}` },
-            ...(due > 0 ? [{ label: 'Due for review', value: String(due) }] : []),
+            ...(wordsDue > 0 ? [{ label: 'Due for review', value: String(wordsDue) }] : []),
           ]}
           cta={spelling.placed ? 'Keep practicing' : 'Find my level'}
           onClick={() => navigate({ name: 'spelling' })}
@@ -212,25 +281,23 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
           stats={[
             { label: 'Lessons done', value: `${typingLessons}/${TOTAL_LESSONS}` },
             { label: 'Stars', value: String(game.state.totalStars) },
-            { label: theme.unit, value: String(game.state.collectedCats.length) },
           ]}
-          cta="Keep typing"
+          cta={typingLessons > 0 ? 'Keep typing' : 'Start typing'}
           onClick={() => navigate({ name: 'typing' })}
         />
         <SubjectCard
           emoji="🃏"
-          title="Quiz"
-          tagline="Flashcards for anything at all."
+          title="Flashcards"
+          tagline="Decks for anything you need to know by heart."
           stats={[
-            { label: 'My decks', value: String(snapshot.decks.length) },
+            { label: 'Decks', value: String(decks.length) },
             { label: 'Cards mastered', value: `${quizTotals.mastered}/${quizTotals.cards}` },
             ...(quizTotals.due > 0 ? [{ label: 'Due for review', value: String(quizTotals.due) }] : []),
           ]}
-          cta={snapshot.decks.length ? 'Keep studying' : 'Make a deck'}
+          cta={decks.length ? 'Keep studying' : 'Add a deck'}
           onClick={() => navigate({ name: 'quiz' })}
         />
       </div>
-
 
       {/* Shared by both views: what you have collected, and the door to it. */}
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -282,52 +349,75 @@ export default function SuiteHome({ game, navigate }: { game: GameApi; navigate:
         </button>
       </div>
 
-      {/* The two a grown-up needs from the child's home screen: the work set
-          for them, and the people. Your own things — the library, your tutor
-          code — live in your account instead. */}
-      {learners.length > 0 && (
-        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Button variant="secondary" onClick={() => navigate({ name: 'tasks' })}>
+      {/* Two navs, one per kind of person. A learner gets their own things; a
+          grown-up gets those plus the people they look after and the reports
+          about them. Nothing here is hidden from a learner that they could use —
+          Family, Library and Progress are about other people. */}
+      {isLearnerSession ? (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <Button variant="ghost" onClick={() => navigate({ name: 'tasks' })}>
             ✅ Tasks{openTasks.length > 0 ? ` (${openTasks.length})` : ''}
           </Button>
-          <Button variant="secondary" onClick={() => navigate({ name: 'family' })}>
-            👨‍👩‍👧 Family
+          <Button variant="ghost" onClick={() => navigate({ name: 'planner' })}>
+            🗓️ Planner
+          </Button>
+          <Button variant="ghost" onClick={() => navigate({ name: 'trophies' })}>
+            🏅 Badges
+          </Button>
+          <Button variant="ghost" onClick={() => navigate({ name: 'custom-lists' })}>
+            ✏️ My word lists
+          </Button>
+          <Button variant="ghost" onClick={() => navigate({ name: 'theme' })}>
+            🎨 Theme
+          </Button>
+          <Button variant="ghost" onClick={() => navigate({ name: 'settings' })}>
+            ⚙️ Settings
           </Button>
         </div>
+      ) : (
+        <>
+          {learners.length > 0 && (
+            <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Button variant="secondary" onClick={() => navigate({ name: 'tasks' })}>
+                ✅ Tasks{openTasks.length > 0 ? ` (${openTasks.length})` : ''}
+              </Button>
+              <Button variant="secondary" onClick={() => navigate({ name: 'progress' })}>
+                📊 Progress
+              </Button>
+              <Button variant="secondary" onClick={() => navigate({ name: 'family' })}>
+                {audience.kind === 'family' ? '👨‍👩‍👧 Family' : '🎓 Learners'}
+              </Button>
+            </div>
+          )}
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <Button variant="ghost" onClick={() => navigate({ name: 'planner' })}>
+              🗓️ Planner
+            </Button>
+            <Button variant="ghost" onClick={() => navigate({ name: 'library' })}>
+              📚 Library
+            </Button>
+            <Button variant="ghost" onClick={() => navigate({ name: 'trophies' })}>
+              🏅 Badges
+            </Button>
+            <Button variant="ghost" onClick={() => navigate({ name: 'custom-lists' })}>
+              ✏️ My word lists
+            </Button>
+            <Button variant="ghost" onClick={() => navigate({ name: 'theme' })}>
+              🎨 Theme
+            </Button>
+            <Button variant="ghost" onClick={() => navigate({ name: 'settings' })}>
+              ⚙️ Settings
+            </Button>
+          </div>
+          <p className="mt-6 text-center text-xs font-bold text-stone">
+            Free forever, no ads.{' '}
+            <button className="underline hover:text-ink" onClick={() => navigate({ name: 'upgrade' })}>
+              Covering a child
+            </button>{' '}
+            adds their full history, the reports, and rewards.
+          </p>
+        </>
       )}
-
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <Button variant="ghost" onClick={() => navigate({ name: 'planner' })}>
-          🗓️ Planner
-        </Button>
-        <Button variant="ghost" onClick={() => navigate({ name: 'progress' })}>
-          📊 Progress
-        </Button>
-        <Button variant="ghost" onClick={() => navigate({ name: 'trophies' })}>
-          🏆 Trophies
-        </Button>
-        <Button variant="ghost" onClick={() => navigate({ name: 'custom-lists' })}>
-          ✏️ My lists
-        </Button>
-        <Button variant="ghost" onClick={() => navigate({ name: 'quiz' })}>
-          🃏 My decks
-        </Button>
-        <Button variant="ghost" onClick={() => navigate({ name: 'settings' })}>
-          ⚙️ Settings
-        </Button>
-        <Button variant="ghost" onClick={() => navigate({ name: 'theme' })}>
-          🎨 {theme.name}
-        </Button>
-      </div>
-
-
-      <p className="mt-6 text-center text-xs font-bold text-stone">
-        Free forever, no ads.{' '}
-        <button className="underline hover:text-ink" onClick={() => navigate({ name: 'upgrade' })}>
-          Covering a child
-        </button>{' '}
-        adds their full history, the reports, and rewards.
-      </p>
     </div>
   )
 }

@@ -13,6 +13,7 @@ import type {
   InvitePurpose,
   InviteResponse,
   LearnerResponse,
+  LearnerSettings,
   LearnersResponse,
   NewLearner,
   RedeemResponse,
@@ -27,6 +28,7 @@ export type {
   GuardianRole,
   InvitePurpose,
   Learner,
+  LearnerSettings,
   NewLearner,
 } from '@whizzo/shared'
 export { ageOf, canUseSelfSignIn, SELF_SIGNIN_MIN_AGE } from '@whizzo/shared'
@@ -58,6 +60,10 @@ export async function updateLearner(
     avatarEmoji?: string
     gradeHint?: number | null
     theme?: string | null
+    /** The whole list of added starter decks, never a diff. */
+    starterDecks?: string[]
+    /** Only the keys sent change; the API merges them into what is stored. */
+    settings?: LearnerSettings
   },
 ) {
   const { learner } = await api.patch<LearnerResponse>(`/learners/${id}`, patch)

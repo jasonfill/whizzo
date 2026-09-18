@@ -23,6 +23,23 @@ export const spies = {
 
   select: vi.fn(),
   create: vi.fn(async () => ({}) as any),
+  // Behaves like the provider: the patch lands on the active learner (settings
+  // merged, as the API merges them), so a screen that writes optimistically
+  // and then reads the learner back sees what it wrote.
+  updateLearner: vi.fn(async (id?: unknown, patch?: unknown) => {
+    const { testState } = await import('./state')
+    const active = testState.active
+    if (!active || active.id !== id) return {} as any
+    const { settings, ...rest } = (patch ?? {}) as Record<string, unknown>
+    const updated = {
+      ...active,
+      ...rest,
+      settings: { ...(active.settings ?? {}), ...((settings as object) ?? {}) },
+    }
+    testState.active = updated
+    testState.learners = testState.learners.map((l) => (l.id === updated.id ? updated : l))
+    return updated
+  }),
   refreshLearners: vi.fn(async () => {}),
 
   signOut: vi.fn(async () => {}),
@@ -75,12 +92,25 @@ export async function learnersMock() {
       status: testState.learnerStatus,
       error: null,
       isOwner: testState.isOwner,
+      isLearnerSession: Boolean(
+        testState.active && testState.user && testState.active.authUserId === testState.user.id,
+      ),
       select: spies.select,
       create: spies.create,
+      update: spies.updateLearner,
       refresh: spies.refreshLearners,
     }),
     LearnerProvider: ({ children }: any) => children,
   }
+}
+
+/**
+ * ScreenHeader's `back` prop goes through useBack, which needs a Router.
+ * Screen tests render bare, so Back is mocked to land on the fallback the
+ * screen named — which is also what the assertions want to see.
+ */
+export async function backMock() {
+  return { useBack: (fallback: unknown) => () => spies.navigate(fallback) }
 }
 
 export async function progressMock() {
@@ -187,22 +217,22 @@ export function aGame(over: Record<string, unknown> = {}): any {
   const { state: stateOver, ...rest } = over
   return {
     state: {
-      playerName: 'Ada',
       lessons: {},
       highScores: [],
       achievements: [],
-      collectedCats: [],
-      keyErrors: {},
-      keyAttempts: {},
-      settings: { sound: true, showHands: true, showKeyboard: true },
+      settings: {
+        sound: true,
+        showHands: true,
+        showKeyboard: true,
+        flashcardLayout: 'flip',
+        strikeOutChoices: true,
+      },
       totalStars: 0,
       ...(stateOver as object),
     },
-    setPlayerName: vi.fn(),
     setSetting: vi.fn(),
-    recordLesson: vi.fn(() => ({ stars: 3, newAchievements: [], collectedCat: null })),
+    recordLesson: vi.fn(() => ({ stars: 3, newAchievements: [], earnedCollectible: false })),
     addHighScore: vi.fn(() => []),
-    reset: vi.fn(),
     unlockedAchievements: [],
     ...rest,
   }

@@ -18,6 +18,17 @@ vi.mock('../lib/theme/ThemeProvider', async () =>
 vi.mock('../lib/learners/LearnerProvider', async () =>
   (await import('../test/mockProviders')).learnersMock(),
 )
+// And whether the round earned one of the theme's collectibles.
+vi.mock('../lib/progress/ProgressProvider', async () =>
+  (await import('../test/mockProviders')).progressMock(),
+)
+
+// Back goes to real history when there is one; here there is none, so it
+// lands on the screen's natural parent — through the same navigate spy.
+vi.mock('../hooks/useBack', async () => {
+  const { spies } = await import('../test/mockProviders')
+  return { useBack: (fallback: unknown) => () => spies.navigate(fallback) }
+})
 
 import { aGame, spies } from '../test/mockProviders'
 import CatRainScreen from './CatRainScreen'

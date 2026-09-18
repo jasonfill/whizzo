@@ -9,6 +9,7 @@ import { useSpellingSession, type ItemResult } from '../../hooks/useSpellingSess
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { useTheme } from '../../lib/theme/ThemeProvider'
 import { useBand } from '../../lib/band/useBand'
+import { useBack } from '../../hooks/useBack'
 import { sfx, unlockAudio } from '../../lib/sound'
 import {
   activity as activityDef,
@@ -31,7 +32,6 @@ import {
   stopSpeaking,
   whenVoicesReady,
 } from '../../lib/spelling/speech'
-import type { Navigate } from '../../routes'
 import SpellingResults from './SpellingResults'
 
 interface Props {
@@ -40,12 +40,11 @@ interface Props {
   listId?: string
   customListId?: string
   size?: number
-  navigate: Navigate
 }
 
 type Phase = 'prompt' | 'feedback' | 'grading' | 'done'
 
-export default function SpellingPlay({ activity, mode, listId, customListId, size, navigate }: Props) {
+export default function SpellingPlay({ activity, mode, listId, customListId, size }: Props) {
   const session = useSpellingSession()
   const { snapshot } = useProgress()
   const { theme } = useTheme()
@@ -141,6 +140,9 @@ export default function SpellingPlay({ activity, mode, listId, customListId, siz
   }, [current?.w, phase, activity, speechReady])
 
   useEffect(() => () => stopSpeaking(), [])
+  // Leave goes back to wherever the round was started from — the spelling
+  // screen, a list, or a task — and to spelling only on a cold link.
+  const leave = useBack({ name: 'spelling' })
 
   const finishRound = useCallback(async () => {
     stopSpeaking()
@@ -186,7 +188,6 @@ export default function SpellingPlay({ activity, mode, listId, customListId, siz
     return (
       <SpellingResults
         summary={session.summary}
-        navigate={navigate}
         onAgain={() => {
           collected.current = []
           startedRef.current = false
@@ -241,7 +242,7 @@ export default function SpellingPlay({ activity, mode, listId, customListId, siz
           variant="ghost"
           onClick={() => {
             stopSpeaking()
-            navigate({ name: 'spelling' })
+            leave()
           }}
         >
           ← Leave
@@ -363,7 +364,7 @@ export default function SpellingPlay({ activity, mode, listId, customListId, siz
         </div>
       </div>
       <p className="mt-3 text-center text-[13px] text-stone">
-        The mascot is the only part of this screen your world changes. The words, the grading
+        The mascot is the only part of this screen your theme changes. The words, the grading
         and the level are the same whichever one you pick.
       </p>
       {phase === 'feedback' && last?.correct && <Confetti count={16} />}

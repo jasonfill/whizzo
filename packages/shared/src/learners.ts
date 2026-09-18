@@ -66,6 +66,25 @@ export interface ConnectionCodePreview {
   canManageContent: boolean | null
 }
 
+/**
+ * The learner's own switches. Every key is optional: the client fills in
+ * defaults, and the API merges a patch into what is stored, so a patch that
+ * carries one key never wipes the rest. Cosmetic only — none of this touches
+ * the curriculum, the difficulty, or what earns a reward.
+ */
+export interface LearnerSettings {
+  sound?: boolean
+  showHands?: boolean
+  showKeyboard?: boolean
+  flashcardLayout?: 'flip' | 'slide'
+  /**
+   * Whether a multiple-choice question offers a way to strike out an option.
+   * Ruling out what cannot be right is a real test-taking strategy, and one
+   * some children lean on and others find clutter, so it is a switch.
+   */
+  strikeOutChoices?: boolean
+}
+
 export interface Learner {
   id: string
   ownerId: string
@@ -92,7 +111,31 @@ export interface Learner {
    * set it, and that has to reach the child's device.
    */
   theme: string | null
+  /**
+   * Ids of the starter decks the learner has added to their list. Starter
+   * decks are a catalog the client ships, not a default: none is in the list
+   * until somebody adds it (docs/ux-coherence.md). An id the client no longer
+   * ships is ignored. Absent on older payloads, and absent means none.
+   */
+  starterDecks: string[]
+  /**
+   * The learner's own switches: sound, the typing helpers, the flashcard
+   * layout. On the learner rather than in browser storage for the same reason
+   * `theme` is: the same child on two devices sees one set, and two siblings
+   * on one tablet do not share it. Absent keys mean the client default.
+   */
+  settings: LearnerSettings
+  /**
+   * How the person asking is linked to this learner: they own the record,
+   * they are the learner, or they were let in by a code as a parent or as a
+   * teacher/tutor. What tells a screen whether to say "Family" or "Learners".
+   * Absent on older payloads.
+   */
+  viewerRole?: ViewerRole
 }
+
+/** The caller's relationship to a learner they can see. */
+export type ViewerRole = 'owner' | 'self' | GuardianRole
 
 export interface Guardian {
   guardianId: string

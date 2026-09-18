@@ -17,6 +17,11 @@ vi.mock('../lib/theme/ThemeProvider', async () =>
 vi.mock('../lib/learners/LearnerProvider', async () =>
   (await import('../test/mockProviders')).learnersMock(),
 )
+// The results screen names the collectible a round filled from the same
+// count the collection wall reads, so it needs the progress snapshot.
+vi.mock('../lib/progress/ProgressProvider', async () =>
+  (await import('../test/mockProviders')).progressMock(),
+)
 
 import Background from './Background'
 import Confetti from './Confetti'
@@ -168,12 +173,15 @@ describe('ResultsCard', () => {
         stars={3}
         title="Done"
         soundOn={false}
-        collectedCat="seed-1"
+        earnedCollectible
         onReplay={() => {}}
         onMenu={() => {}}
       />,
     )
-    expect(screen.getByText(/New part/i)).toBeInTheDocument()
+    expect(screen.getByText(/New part!/i)).toBeInTheDocument()
+    // The item it names is a real slot in the theme's set, with the name
+    // the collection screen will show for it.
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('part')
   })
 
   it('says nothing about a collectible when none was earned', () => {
@@ -196,6 +204,9 @@ describe('ResultsCard', () => {
       />,
     )
     expect(screen.getByText(/First Steps/)).toBeInTheDocument()
+    // Badges are badges — never trophies, never achievements.
+    expect(screen.getByText('New badge!')).toBeInTheDocument()
+    expect(screen.queryByText(/Achievement:/)).not.toBeInTheDocument()
   })
 })
 

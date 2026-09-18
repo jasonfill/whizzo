@@ -141,7 +141,7 @@ describe('celebration, which is decoration', () => {
   it('throws confetti for a younger learner who earned it', () => {
     inGrade(2)
     const { container } = render(
-      <QuizResults summary={aSummary()} onAgain={() => {}} onDeck={() => {}} onHome={() => {}} />,
+      <QuizResults summary={aSummary()} onAgain={() => {}} onDone={() => {}} onHome={() => {}} />,
     )
     expect(container.querySelector('.animate-confetti-fall')).toBeTruthy()
   })
@@ -149,7 +149,7 @@ describe('celebration, which is decoration', () => {
   it('does not for an older one', () => {
     inGrade(11)
     const { container } = render(
-      <QuizResults summary={aSummary()} onAgain={() => {}} onDeck={() => {}} onHome={() => {}} />,
+      <QuizResults summary={aSummary()} onAgain={() => {}} onDone={() => {}} onHome={() => {}} />,
     )
     expect(container.querySelector('.animate-confetti-fall')).toBeFalsy()
   })
@@ -159,7 +159,7 @@ describe('celebration, which is decoration', () => {
     // three stars is worth three stars at sixteen.
     inGrade(11)
     render(
-      <QuizResults summary={aSummary()} onAgain={() => {}} onDeck={() => {}} onHome={() => {}} />,
+      <QuizResults summary={aSummary()} onAgain={() => {}} onDone={() => {}} onHome={() => {}} />,
     )
     expect(screen.getByText('9 / 10')).toBeInTheDocument()
     expect(screen.getByText(/you beat it/)).toBeInTheDocument()

@@ -291,6 +291,85 @@ describe('learner routes', () => {
       expect(query).not.toHaveBeenCalled()
     })
 
+    it('writes the starter decks a learner has added, whole and de-duplicated', async () => {
+      query.mockResolvedValue({ rows: [learnerRow({ starter_decks: ['starter-capitals'] })] })
+      const app = await buildApp()
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/learners/${LEARNER}`,
+        headers: await auth(),
+        payload: { starterDecks: ['starter-capitals', 'starter-capitals'] },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().learner.starterDecks).toEqual(['starter-capitals'])
+      const [sql, values] = query.mock.calls.at(-1)!
+      expect(sql).toContain('starter_decks = $1')
+      expect(values[0]).toEqual(['starter-capitals'])
+    })
+
+    it('rejects a starter deck id longer than the column allows', async () => {
+      const app = await buildApp()
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/learners/${LEARNER}`,
+        headers: await auth(),
+        payload: { starterDecks: ['x'.repeat(65)] },
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('merges a settings patch into the stored object rather than replacing it', async () => {
+      query.mockResolvedValue({ rows: [learnerRow({ settings: { sound: false, showHands: true } })] })
+      const app = await buildApp()
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/learners/${LEARNER}`,
+        headers: await auth(),
+        payload: { settings: { sound: false } },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().learner.settings).toEqual({ sound: false, showHands: true })
+      const [sql, values] = query.mock.calls.at(-1)!
+      expect(sql).toContain('settings = settings || $1::jsonb')
+      expect(JSON.parse(values[0])).toEqual({ sound: false })
+    })
+
+    it('refuses a settings key it does not know', async () => {
+      const app = await buildApp()
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/learners/${LEARNER}`,
+        headers: await auth(),
+        payload: { settings: { favouriteColour: 'blue' } },
+      })
+      expect(res.statusCode).toBe(400)
+      expect(query).not.toHaveBeenCalled()
+    })
+
+    it('accepts the strike-out switch for multiple choice', async () => {
+      query.mockResolvedValue({ rows: [learnerRow({ settings: { strikeOutChoices: false } })] })
+      const app = await buildApp()
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/learners/${LEARNER}`,
+        headers: await auth(),
+        payload: { settings: { strikeOutChoices: false } },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().learner.settings).toEqual({ strikeOutChoices: false })
+    })
+
+    it('refuses a flashcard layout it does not ship', async () => {
+      const app = await buildApp()
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/learners/${LEARNER}`,
+        headers: await auth(),
+        payload: { settings: { flashcardLayout: 'spin' } },
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
     it('rejects an empty patch rather than issuing a no-op update', async () => {
       const app = await buildApp()
       const res = await app.inject({

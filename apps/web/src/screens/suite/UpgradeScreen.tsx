@@ -128,7 +128,7 @@ export default function UpgradeScreen({ navigate }: { navigate: Navigate }) {
       <ScreenHeader
         title="Paying for whizzo"
         subtitle="You pay for a child, not for an account. Everything a learner needs is free."
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
       />
 
       {/* The price, before the list of what it buys. Somebody who opened this

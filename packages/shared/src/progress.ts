@@ -306,8 +306,14 @@ export interface QuizDeck {
   description: string
   tags: string[]
   cards: QuizCard[]
-  /** Starter decks ship with the app and are copied, not edited, in place. */
-  source: 'user' | 'starter'
+  /**
+   * How the deck reached the learner's list. `user`: theirs, made by them or
+   * on their behalf. `assigned`: a grown-up's library deck set as a task —
+   * read and practiced, never edited or deleted from the learner's side; it
+   * leaves when the task is withdrawn. `starter`: ships with the app, copied
+   * rather than edited in place.
+   */
+  source: 'user' | 'starter' | 'assigned'
   /**
    * When a grown-up accepted this set, or null while it is still a draft.
    *

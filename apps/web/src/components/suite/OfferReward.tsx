@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import {
   CRITERION_LABEL,
+  OFFERABLE_CRITERIA,
   SUGGESTED_CRITERION,
   type RewardCriterionType,
   type QuizDeck,
@@ -35,14 +36,18 @@ export default function OfferReward({
 }: {
   learnerId: string
   learnerName: string
-  /** Sets a grown-up set them. Their own are not offered — see below. */
+  /** The learner's decks. The ones they made themselves are filtered out here. */
   decks: QuizDeck[]
   onDone: () => void | Promise<void>
   onCancel: () => void
 }) {
+  // Decks the learner made themselves are not offered: three cards of
+  // "cat / cat" would be ninety seconds of work and an ice cream. The API
+  // refuses them too; filtering here means the form never starts on one.
+  const offerable = decks.filter((deck) => deck.source !== 'user')
   const [title, setTitle] = useState('')
   const [type, setType] = useState<RewardCriterionType>(SUGGESTED_CRITERION)
-  const [targetId, setTargetId] = useState(decks[0]?.id ?? '')
+  const [targetId, setTargetId] = useState(offerable[0]?.id ?? '')
   const [amount, setAmount] = useState<number>(AMOUNT[SUGGESTED_CRITERION]?.value ?? 1)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,20 +113,18 @@ export default function OfferReward({
           }}
           className="w-full rounded-2xl border-2 border-edge bg-white px-4 py-3 font-bold text-ink focus:border-ink focus:outline-none"
         >
-          {/* Minutes are not offered at all. Time is an input, not an outcome —
-              a child can sit in front of it — and the API refuses one anyway. */}
-          {(Object.keys(CRITERION_LABEL) as RewardCriterionType[])
-            .filter((t) => t !== 'minutes')
-            .map((t) => (
-              <option key={t} value={t}>
-                {CRITERION_LABEL[t]}
-              </option>
-            ))}
+          {/* Minutes are not offered (time is an input, not an outcome) and
+              neither is a checkpoint (nothing awards one yet). The shared list
+              is the one place that decides. */}
+          {OFFERABLE_CRITERIA.map((t) => (
+            <option key={t} value={t}>
+              {CRITERION_LABEL[t]}
+            </option>
+          ))}
         </select>
         {type === SUGGESTED_CRITERION && (
           <span className="mt-1 block text-xs font-bold text-stone">
-            The one worth picking: it cannot be rushed in an afternoon, and it is the thing
-            you actually want — that it stuck.
+            A good one to pick: every card in the deck, checked by the app.
           </span>
         )}
       </label>
@@ -129,27 +132,25 @@ export default function OfferReward({
       {needsSet && (
         <label className="mb-3 block">
           <span className="mb-1 block text-xs font-extrabold uppercase tracking-wide text-stone">
-            Which set
+            Which deck
           </span>
-          {decks.length ? (
+          {offerable.length ? (
             <select
               value={targetId}
               onChange={(e) => setTargetId(e.target.value)}
               className="w-full rounded-2xl border-2 border-edge bg-white px-4 py-3 font-bold text-ink focus:border-ink focus:outline-none"
             >
-              {decks.map((deck) => (
+              {offerable.map((deck) => (
                 <option key={deck.id} value={deck.id}>
                   {deck.title}
                 </option>
               ))}
             </select>
           ) : (
-            // Sets the learner made themselves are deliberately not here: three
-            // cards of "cat / cat" would be ninety seconds of work and an ice
-            // cream. The API refuses them too.
+            // Only decks a grown-up set (or a starter deck) can carry a
+            // reward — see `offerable` above for why the learner's own are out.
             <p className="font-bold text-stone">
-              You have not set {learnerName} any material yet. Set one first, then promise
-              something for it.
+              Set a deck from your library as a task first, then promise something for it.
             </p>
           )}
         </label>

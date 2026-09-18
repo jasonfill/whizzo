@@ -62,7 +62,7 @@ export default function ConnectScreen({ navigate }: { navigate: Navigate }) {
 
   return (
     <div className="mx-auto w-full max-w-xl py-4">
-      <ScreenHeader title="Connect an assistant" onBack={() => navigate({ name: 'account' })} />
+      <ScreenHeader title="Connect an assistant" back={{ name: 'account' }} />
 
       {error ? (
         <Card>

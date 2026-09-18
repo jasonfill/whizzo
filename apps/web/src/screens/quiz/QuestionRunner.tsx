@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import RichText from '../../components/rich/RichText'
 import { Button, Card, Pill } from '../../components/ui'
 import type { QuizItemResult, QuizSessionApi } from '../../hooks/useQuizSession'
+import { useLearnerSettings } from '../../lib/learners/useLearnerSettings'
 import { gradeWritten, isProduced, type Grade } from '../../lib/quiz/questions'
 import { REASON_LABEL } from '../../lib/quiz/session'
+import { richToPlain } from '../../lib/rich/parse'
 import { sfx } from '../../lib/sound'
 import type { QuestionKind } from '../../lib/quiz/questions'
 
@@ -44,12 +46,21 @@ export default function QuestionRunner({
   const [typed, setTyped] = useState('')
   const [hintsUsed, setHintsUsed] = useState(0)
   const [feedback, setFeedback] = useState<QuizItemResult | null>(null)
+  /**
+   * Options the learner has struck out on this card. Ruling out what cannot
+   * be right is a strategy, not evidence: nothing here reaches the grade or
+   * the record, and it is forgotten the moment the card changes.
+   */
+  const [struck, setStruck] = useState<ReadonlySet<string>>(() => new Set())
+  const { settings } = useLearnerSettings()
+  const canStrike = settings.strikeOutChoices
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setTyped('')
     setHintsUsed(0)
     setFeedback(null)
+    setStruck(new Set())
     beginItem()
     // Autofocus written questions so a learner can type straight away without
     // reaching for the mouse between every card.
@@ -73,6 +84,15 @@ export default function QuestionRunner({
     const all = [...results]
     if (!advance()) onFinish(all)
   }, [advance, feedback, onFinish, results])
+
+  const toggleStrike = useCallback((choice: string) => {
+    setStruck((prev) => {
+      const out = new Set(prev)
+      if (out.has(choice)) out.delete(choice)
+      else out.add(choice)
+      return out
+    })
+  }, [])
 
   // Enter moves on once an answer is in, so a whole round can be done from the
   // keyboard without ever leaving the home row.
@@ -146,22 +166,49 @@ export default function QuestionRunner({
           {q.choices?.map((choice) => {
             const isAnswer = choice === q.answer
             const picked = feedback?.given === choice
+            // Struck only while the question is open: once the answer is
+            // shown the colors say everything, and a line through the right
+            // answer would muddle them.
+            const isStruck = !revealed && canStrike && struck.has(choice)
             const style = !revealed
-              ? 'bg-white/85 text-ink ring-hair hover:-translate-y-0.5 hover:shadow-lg'
+              ? isStruck
+                ? 'bg-white/50 text-stone line-through decoration-2 ring-edge opacity-60'
+                : 'bg-white/85 text-ink ring-hair hover:-translate-y-0.5 hover:shadow-lg'
               : isAnswer
                 ? 'bg-emerald-100 text-emerald-800 ring-emerald-300'
                 : picked
                   ? 'bg-rose-100 text-rose-700 ring-rose-300'
                   : 'bg-white/60 text-stone ring-edge'
+            const plain = richToPlain(choice)
             return (
-              <button
-                key={choice}
-                disabled={revealed}
-                onClick={() => answer(choice, isAnswer ? 'correct' : 'wrong')}
-                className={`rounded-2xl px-5 py-4 text-left text-lg font-bold shadow ring-1 transition-all ${style}`}
-              >
-                <RichText source={choice} />
-              </button>
+              <div key={choice} className="flex items-stretch gap-1">
+                <button
+                  disabled={revealed || isStruck}
+                  onClick={() => answer(choice, isAnswer ? 'correct' : 'wrong')}
+                  className={`min-w-0 flex-1 rounded-2xl px-5 py-4 text-left text-lg font-bold shadow ring-1 transition-all ${style}`}
+                >
+                  <RichText source={choice} />
+                </button>
+                {/* A way to rule an option out without picking it. Only while
+                    the question is open — after that there is nothing left
+                    to rule out. */}
+                {canStrike && !revealed && (
+                  <button
+                    type="button"
+                    aria-pressed={isStruck}
+                    aria-label={isStruck ? `Bring back ${plain}` : `Strike out ${plain}`}
+                    title={isStruck ? 'Bring it back' : 'Strike it out'}
+                    onClick={() => toggleStrike(choice)}
+                    className={`shrink-0 rounded-2xl px-3 text-base font-extrabold shadow ring-1 transition-colors ${
+                      isStruck
+                        ? 'bg-ink text-white ring-ink'
+                        : 'bg-white/70 text-stone ring-hair hover:bg-quiet hover:text-ink'
+                    }`}
+                  >
+                    {isStruck ? '↩' : '✕'}
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>

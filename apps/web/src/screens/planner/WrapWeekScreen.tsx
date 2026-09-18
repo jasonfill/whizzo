@@ -106,7 +106,7 @@ export default function WrapWeekScreen({ navigate }: { navigate: Navigate }) {
   if (!active || !data || !facts) {
     return (
       <div className="mx-auto w-full max-w-2xl py-4">
-        <ScreenHeader title="Wrap up the week" onBack={() => navigate({ name: 'planner' })} />
+        <ScreenHeader title="Wrap up the week" back={{ name: 'planner' }} />
         <p className="font-bold text-muted">{planner.loading ? 'Loading…' : 'Sign in with a learner first.'}</p>
       </div>
     )
@@ -117,7 +117,7 @@ export default function WrapWeekScreen({ navigate }: { navigate: Navigate }) {
   return (
     // Somebody else's edit to the week waits while a field here has focus.
     <div className="mx-auto w-full max-w-2xl py-4" data-live-key="week">
-      <ScreenHeader title="Wrap up the week" subtitle={`Step ${step + 1} of 4`} onBack={() => navigate({ name: 'planner' })} backLabel="Later" />
+      <ScreenHeader title="Wrap up the week" subtitle={`Step ${step + 1} of 4`} back={{ name: 'planner' }} backLabel="Later" />
       <div className="mb-4 flex gap-1">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-ink' : 'bg-tray'}`} />

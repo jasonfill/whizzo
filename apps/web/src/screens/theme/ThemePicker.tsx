@@ -8,13 +8,13 @@ import { themesForGrade, type Theme } from '../../lib/themes'
 import type { Navigate } from '../../routes'
 
 /**
- * "Pick your world."
+ * "Pick your theme."
  *
  * The picker is ordered by grade band, but the band is advisory and nothing
  * else: it is not shown as a gate, no card is ever disabled, and a grade 11
  * student who wants Dinosaurs gets Dinosaurs.
  */
-export default function ThemePicker({ navigate }: { navigate: Navigate }) {
+export default function ThemePicker(_props: { navigate: Navigate }) {
   const { theme, setTheme } = useTheme()
   const { active } = useLearners()
   const { profile } = useAuth()
@@ -26,9 +26,9 @@ export default function ThemePicker({ navigate }: { navigate: Navigate }) {
   return (
     <div className="mx-auto w-full max-w-5xl py-4">
       <ScreenHeader
-        title="Pick your world"
+        title="Pick your theme"
         subtitle="Who you learn with is up to you."
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -88,7 +88,7 @@ function ThemeCard({
         Often picked in {theme.bands}
       </div>
       <div className="mt-3 text-[13px] font-extrabold" style={{ color: theme.deep }}>
-        {active ? 'Your world ✓' : `${theme.verb} →`}
+        {active ? 'Your theme ✓' : `${theme.verb} →`}
       </div>
     </button>
   )
@@ -99,7 +99,7 @@ export function ThemeTeaser({ navigate }: { navigate: Navigate }) {
   const { theme } = useTheme()
   return (
     <Button variant="ghost" onClick={() => navigate({ name: 'theme' })}>
-      {theme.name} · change world
+      {theme.name} · change theme
     </Button>
   )
 }

@@ -4,6 +4,13 @@
 // Not every browser has a usable voice (older Android, some Linux builds), so
 // `isSpeechAvailable()` lets the UI fall back to briefly flashing the word
 // instead of dictating it. The activity stays playable either way.
+//
+// The chosen voice is the one setting that stays on this device, on purpose.
+// A voice is identified by a URI the browser makes up from what is installed,
+// and the same URI does not exist on another device, or even in another
+// browser on this one. Saving it to the learner would hand the iPad a name
+// the laptop cannot find. Everything else a learner can set follows them
+// (lib/learners/useLearnerSettings.ts).
 
 const VOICE_KEY = 'cat-academy:voice:v1'
 

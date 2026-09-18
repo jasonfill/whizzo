@@ -41,12 +41,12 @@ export const SUBJECTS: Subject[] = [
     points: [
       'Hands and keyboard on screen while you learn',
       'Speed and accuracy tracked key by key',
-      'Ten worlds to choose from',
+      'Ten themes to choose from',
     ],
   },
   {
     emoji: '🃏',
-    title: 'Study decks',
+    title: 'Flashcards',
     body: 'Everything else — vocabulary, state capitals, formulas, French verbs, cell biology. Paste a list and study it five ways.',
     points: [
       'Math, fractions and figures on a card',
@@ -185,7 +185,7 @@ export const ACTIVITY_TABLE: ActivityRow[] = [
     note: activity.unaided ? 'unaided — unless a hint is taken' : undefined,
   })),
   ...MODES.map((mode) => ({
-    subject: 'Study decks',
+    subject: 'Flashcards',
     emoji: mode.emoji,
     name: mode.name,
     blurb: mode.blurb,

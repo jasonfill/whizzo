@@ -157,15 +157,15 @@ describe('a library with material in it', () => {
 
   it('opens the assign form from the material, not from a child', async () => {
     render(<LibraryScreen navigate={navigate} />)
-    fireEvent.click(await screen.findByText('Set as work'))
-    expect(screen.getByText('Set some work')).toBeTruthy()
+    fireEvent.click(await screen.findByText('Set as a task'))
+    expect(screen.getByText('Set a task')).toBeTruthy()
   })
 
   it('closes the assign form again', async () => {
     render(<LibraryScreen navigate={navigate} />)
-    fireEvent.click(await screen.findByText('Set as work'))
+    fireEvent.click(await screen.findByText('Set as a task'))
     fireEvent.click(screen.getByText('Never mind'))
-    expect(screen.queryByText('Set some work')).toBeNull()
+    expect(screen.queryByText('Set a task')).toBeNull()
   })
 
   it('opens a deck from its title — owning one you could not read was the gap', async () => {
@@ -234,11 +234,11 @@ describe('a draft in the library', () => {
     render(<LibraryScreen navigate={navigate} />)
     await screen.findByText('Coordinate plane')
     const draftRow = screen.getByText('Coordinate plane').closest('li')!
-    expect(within(draftRow).queryByText('Set as work')).toBeNull()
+    expect(within(draftRow).queryByText('Set as a task')).toBeNull()
     fireEvent.click(within(draftRow).getByText('Review'))
     expect(navigate).toHaveBeenCalledWith({ name: 'library-deck', deckId: 'draft-1' })
     const otherRow = screen.getByText('Planets').closest('li')!
-    expect(within(otherRow).getByText('Set as work')).toBeTruthy()
+    expect(within(otherRow).getByText('Set as a task')).toBeTruthy()
   })
 
   it('will not set a whole document while any part of it is a draft', async () => {

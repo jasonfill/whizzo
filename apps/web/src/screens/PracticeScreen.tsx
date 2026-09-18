@@ -8,6 +8,7 @@ import GamePlay from '../components/GamePlay'
 import ResultsCard from '../components/ResultsCard'
 import { Button, Card } from '../components/ui'
 import Mascot from '../components/Mascot'
+import { useBack } from '../hooks/useBack'
 import type { Route } from '../App'
 
 interface Props {
@@ -27,6 +28,7 @@ function learnedKeys(game: GameApi): string[] {
 }
 
 export default function PracticeScreen({ game, navigate }: Props) {
+  const goBack = useBack({ name: 'typing' })
   const [scope, setScope] = useState<Scope>('learned')
   const [length, setLength] = useState<Length>(25)
   const [phase, setPhase] = useState<'setup' | 'play' | 'results'>('setup')
@@ -54,7 +56,6 @@ export default function PracticeScreen({ game, navigate }: Props) {
           onFinish={(r) => {
             setResult(r)
             game.addHighScore({
-              name: game.state.playerName || 'Kitty',
               score: r.score,
               wpm: r.wpm,
               accuracy: r.accuracy,
@@ -122,8 +123,8 @@ export default function PracticeScreen({ game, navigate }: Props) {
           <Button className="flex-1" onClick={() => { setAttempt((a) => a + 1); setPhase('play') }}>
             Start!
           </Button>
-          <Button variant="ghost" onClick={() => navigate({ name: 'typing' })}>
-            ← Home
+          <Button variant="ghost" onClick={goBack}>
+            ← Typing
           </Button>
         </div>
       </Card>

@@ -23,7 +23,13 @@ import {
   type SkillState,
 } from '../lib/progress/types'
 import { skillKey } from '@whizzo/shared'
-import { buildQuestion, type Grade, type Question, type QuestionKind } from '../lib/quiz/questions'
+import {
+  buildQuestion,
+  reshuffleQuestion,
+  type Grade,
+  type Question,
+  type QuestionKind,
+} from '../lib/quiz/questions'
 
 /**
  * Which rung a question kind asks at.
@@ -195,6 +201,15 @@ export function useQuizSession() {
   const cursorRef = useRef(0)
   /** Tries so far per plan index, which is what caps the requeue loop. */
   const passesRef = useRef(new Map<number, number>())
+  /**
+   * Cards put back in the queue whose options have not been dealt again yet.
+   *
+   * A requeued multiple-choice card used to come back with the right answer in
+   * the same slot, and children learn the slot. The new order is applied when
+   * the learner moves on rather than the moment they answer, so the options do
+   * not rearrange under them while the feedback is still on screen.
+   */
+  const reaskRef = useRef(new Set<number>())
   const [walk, setWalk] = useState<{ queue: number[]; cursor: number }>({ queue: [], cursor: 0 })
   const publish = useCallback(
     () => setWalk({ queue: queueRef.current, cursor: cursorRef.current }),
@@ -230,6 +245,7 @@ export function useQuizSession() {
       queueRef.current = planned.map((_, i) => i)
       cursorRef.current = 0
       passesRef.current = new Map()
+      reaskRef.current = new Set()
       publish()
       startedAtRef.current = Date.now()
       itemStartedAtRef.current = Date.now()
@@ -288,6 +304,7 @@ export function useQuizSession() {
         const next = [...queueRef.current]
         next.splice(at, 0, planIndex)
         queueRef.current = next
+        reaskRef.current.add(planIndex)
       }
 
       const result: QuizItemResult = {
@@ -366,6 +383,18 @@ export function useQuizSession() {
   const advance = useCallback(() => {
     cursorRef.current += 1
     itemStartedAtRef.current = Date.now()
+    if (reaskRef.current.size) {
+      const pending = [...reaskRef.current]
+      reaskRef.current.clear()
+      setQuestions((prev) => {
+        const next = [...prev]
+        for (const i of pending) {
+          const q = next[i]
+          if (q) next[i] = reshuffleQuestion(q)
+        }
+        return next
+      })
+    }
     publish()
     return cursorRef.current < queueRef.current.length
   }, [publish])
@@ -737,6 +766,7 @@ export function useQuizSession() {
     queueRef.current = []
     cursorRef.current = 0
     passesRef.current = new Map()
+    reaskRef.current = new Set()
     publish()
   }, [publish])
 

@@ -9,13 +9,20 @@ import { Button, Card, StarRow } from './ui'
 import Confetti from './Confetti'
 import Collectible from './Collectible'
 import { useTheme } from '../lib/theme/ThemeProvider'
+import { useProgress } from '../lib/progress/ProgressProvider'
+import { earnedFor } from '../lib/theme/rewards'
 
 interface Props {
   result: RoundResult
   stars: number
   title: string
   newAchievements?: Achievement[]
-  collectedCat?: string | null
+  /**
+   * Did this round earn one of the theme's collectibles? Decided upstream by
+   * `earnsCollectible` on the recorded session — the same rule every other
+   * results screen and the collection wall use.
+   */
+  earnedCollectible?: boolean
   soundOn: boolean
   onReplay: () => void
   onNext?: () => void
@@ -27,7 +34,7 @@ export default function ResultsCard({
   stars,
   title,
   newAchievements = [],
-  collectedCat,
+  earnedCollectible = false,
   soundOn,
   onReplay,
   onNext,
@@ -35,6 +42,10 @@ export default function ResultsCard({
 }: Props) {
   const { band, celebrates } = useBand()
   const { theme } = useTheme()
+  const { snapshot } = useProgress()
+  // The round is already in the snapshot by the time this renders, so the
+  // newest filled slot is this one — the same position the wall shows it in.
+  const slot = Math.max(0, earnedFor(snapshot, theme).owned - 1)
 
   useEffect(() => {
     if (soundOn && stars >= 1) {
@@ -62,22 +73,26 @@ export default function ResultsCard({
           <Stat label="Best Combo" value={`x${result.maxCombo}`} color="text-accent" />
         </div>
 
-        {collectedCat && (
+        {earnedCollectible && (
           <div className="mt-5 rounded-2xl bg-tintA p-4">
-            <p className="mb-2 font-extrabold text-ink">New {theme.unitOne} unlocked!</p>
-            <Collectible seed={collectedCat} className="mx-auto h-40 w-56" showLabel />
+            <p className="mb-2 font-extrabold text-ink">New {theme.unitOne}!</p>
+            <Collectible slot={slot} className="mx-auto h-40 w-56" showLabel />
+            <p className="mt-2 text-sm font-semibold text-body">{theme.because}</p>
           </div>
         )}
 
         {newAchievements.length > 0 && (
           <div className="mt-5 space-y-2">
+            <p className="font-extrabold text-ink">
+              {newAchievements.length === 1 ? 'New badge!' : 'New badges!'}
+            </p>
             {newAchievements.map((a) => (
               <div
                 key={a.id}
                 className="flex items-center justify-center gap-2 rounded-2xl bg-quiet p-3 ring-2 ring-edge animate-pop"
               >
                 <span className="text-2xl">{a.emoji}</span>
-                <span className="font-extrabold text-ink">Achievement: {a.name}!</span>
+                <span className="font-extrabold text-ink">{a.name}</span>
               </div>
             ))}
           </div>

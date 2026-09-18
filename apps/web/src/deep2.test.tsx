@@ -12,6 +12,7 @@ import { aGame, spies } from './test/mockProviders'
 import { aLearner, anAssignment, signIn, testState } from './test/state'
 
 vi.mock('./auth/AuthProvider', async () => (await import('./test/mockProviders')).authMock())
+vi.mock('./hooks/useBack', async () => (await import('./test/mockProviders')).backMock())
 vi.mock('./lib/learners/LearnerProvider', async () =>
   (await import('./test/mockProviders')).learnersMock(),
 )
@@ -411,7 +412,7 @@ describe('SessionDetail', () => {
 
 describe('SpellingPlay — through a round', () => {
   it('moves on after an answer', async () => {
-    render(<SpellingPlay activity="missing-letters" mode="adaptive" size={3} navigate={navigate} />)
+    render(<SpellingPlay activity="missing-letters" mode="adaptive" size={3} />)
     const input = screen.getByLabelText(/your spelling/i)
     await userEvent.type(input, 'zzz')
     await userEvent.click(screen.getByRole('button', { name: /Check it/ }))
@@ -421,7 +422,7 @@ describe('SpellingPlay — through a round', () => {
   })
 
   it('takes a hint and says the word has stopped counting', async () => {
-    render(<SpellingPlay activity="listen-spell" mode="adaptive" size={3} navigate={navigate} />)
+    render(<SpellingPlay activity="listen-spell" mode="adaptive" size={3} />)
     await userEvent.click(screen.getByRole('button', { name: /Hint — this word stops counting/ }))
     await waitFor(() =>
       expect(screen.getByText(/will not count toward your level/i)).toBeInTheDocument(),

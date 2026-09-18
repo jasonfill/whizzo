@@ -4,14 +4,17 @@
 // reach rule for decks — a learner's own, plus library decks set as work — so
 // the assistant offers exactly the decks the app shows.
 
-import { skillKey, type ItemMastery, type QuizDeck, type SkillState } from '@whizzo/shared'
+import { skillKey, starterDecksFor, type ItemMastery, type QuizDeck, type SkillState } from '@whizzo/shared'
 import type { Queryable } from './db.js'
 import { toDeck, toMastery, toSkill } from './progressMappers.js'
 
 /**
  * The decks a learner can practice: their own, plus any library deck a
  * grown-up has set them as work. RLS allows exactly these rows; the where
- * clause says which of them this learner needs.
+ * clause says which of them this learner needs. A canceled task no longer
+ * keeps its deck in the list — withdrawing the task is how a grown-up takes
+ * a deck back (docs/ux-coherence.md) — while a done one still does: the
+ * learner has progress on it.
  */
 export async function decksFor(db: Queryable, learnerId: string): Promise<QuizDeck[]> {
   const { rows } = await db.query(
@@ -22,12 +25,39 @@ export async function decksFor(db: Queryable, learnerId: string): Promise<QuizDe
                  from public.assignment_sets t
                  join public.assignments a on a.set_id = t.id
                 where a.learner_id = $1 and t.subject = 'quiz'
+                  and a.status <> 'canceled'
                   and t.target_id ~ '^[0-9a-f-]{36}$'
              ))
       order by updated_at desc`,
     [learnerId],
   )
-  return rows.map(toDeck)
+  return rows.map((row) => toDeck(row))
+}
+
+/**
+ * The decks the tutor may offer: everything `decksFor` returns, plus the
+ * starter decks the learner has added from the catalog. Starters are
+ * constants, not rows — the web client folds them in itself from
+ * `Learner.starterDecks`, which is why `decksFor` stays as it is and the
+ * snapshot loader keeps using it. The tutor has no client to do that folding,
+ * so this is where "US State Capitals" reaches an assistant. Same deck, same
+ * derived card ids, so mastery written under `deckId:cardId` here is the
+ * mastery the app reads.
+ */
+export async function tutorDecksFor(db: Queryable, learnerId: string): Promise<QuizDeck[]> {
+  const [own, { rows }] = await Promise.all([
+    decksFor(db, learnerId),
+    db.query(`select starter_decks from public.learners where id = $1`, [learnerId]),
+  ])
+  const row = rows[0] as { starter_decks: unknown } | undefined
+  const ids = Array.isArray(row?.starter_decks) ? row.starter_decks.map(String) : []
+  return [...own, ...starterDecksFor(ids)]
+}
+
+/** One deck by id, when the tutor may offer it to the learner. */
+export async function tutorDeckFor(db: Queryable, learnerId: string, deckId: string): Promise<QuizDeck | null> {
+  const decks = await tutorDecksFor(db, learnerId)
+  return decks.find((d) => d.id === deckId) ?? null
 }
 
 /** One deck by id, when the learner can reach it. */
@@ -62,7 +92,7 @@ export async function libraryDecksFor(db: Queryable, userId: string, learnerIds:
       order by d.updated_at desc`,
     [userId, learnerIds],
   )
-  return rows.map(toDeck)
+  return rows.map((row) => toDeck(row, 'library'))
 }
 
 /** One library deck by id, under the same reach rule. */
@@ -72,7 +102,7 @@ export async function libraryDeckFor(db: Queryable, userId: string, learnerIds: 
       where d.id = $3 and d.owner_user_id = $1 and not ${HELD_BY_OTHER_LEARNER}`,
     [userId, learnerIds, deckId],
   )
-  return rows[0] ? toDeck(rows[0]) : null
+  return rows[0] ? toDeck(rows[0], 'library') : null
 }
 
 export interface EditableDeck {

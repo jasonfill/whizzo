@@ -68,6 +68,23 @@ const patchLearnerSchema = z
     // unknown id already falls back to the default rather than breaking a
     // screen. The column's length check is the backstop.
     theme: z.string().trim().min(1).max(32).nullable().optional(),
+    // The whole list each time, never a diff: it is short, and "the list is
+    // now this" cannot race with itself. Not checked against the shipped
+    // catalog — that is a client constant — and the column bounds the shape.
+    starterDecks: z.array(z.string().trim().min(1).max(64)).max(50).optional(),
+    // A partial patch: only the keys sent change, and the update merges into
+    // the stored object. Strict, so a client cannot park arbitrary data on a
+    // learner row through this door; the column's size check is the backstop.
+    settings: z
+      .object({
+        sound: z.boolean().optional(),
+        showHands: z.boolean().optional(),
+        showKeyboard: z.boolean().optional(),
+        flashcardLayout: z.enum(['flip', 'slide']).optional(),
+        strikeOutChoices: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'Nothing to change' })
 
@@ -113,7 +130,17 @@ export async function learnerRoutes(app: FastifyInstance): Promise<void> {
         // Coverage comes back with the learner because every gate in the app
         // asks about it, and asking per learner per screen would be a query
         // per row on the family dashboard.
-        `select l.*, public.is_learner_covered(l.id) as covered
+        // The caller's own link to each learner rides along too: owned, or
+        // themselves, or let in by a code as a parent or a teacher. That one
+        // word is what decides whether the app says "Family" or "Learners".
+        `select l.*, public.is_learner_covered(l.id) as covered,
+                case
+                  when l.owner_id = auth.uid() then 'owner'
+                  when l.auth_user_id = auth.uid() then 'self'
+                  else (select g.role from public.guardian_links g
+                         where g.learner_id = l.id and g.guardian_id = auth.uid()
+                         limit 1)
+                end as viewer_role
            from public.learners l
           order by l.created_at asc`,
       )
@@ -348,6 +375,13 @@ export async function learnerRoutes(app: FastifyInstance): Promise<void> {
       if (body.avatarEmoji !== undefined) set('avatar_emoji', body.avatarEmoji)
       if (body.gradeHint !== undefined) set('grade_hint', body.gradeHint)
       if (body.theme !== undefined) set('theme', body.theme)
+      if (body.starterDecks !== undefined) set('starter_decks', [...new Set(body.starterDecks)])
+      if (body.settings !== undefined) {
+        // Merged, not replaced: a switch flipped on one screen must not erase
+        // the ones it did not mention.
+        values.push(JSON.stringify(body.settings))
+        sets.push(`settings = settings || $${values.length}::jsonb`)
+      }
 
       values.push(id)
       const { rows } = await db.query(

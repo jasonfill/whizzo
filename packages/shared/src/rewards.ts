@@ -13,6 +13,8 @@
 // distinction the app already draws between a checked answer and a self-grade,
 // applied to the adult.
 
+import { todayString, type DayString } from './progress.js'
+
 export type RewardStatus = 'offered' | 'earned' | 'claimed' | 'fulfilled' | 'canceled' | 'expired'
 
 export type RewardCriterionType =
@@ -64,13 +66,31 @@ export const CRITERION_LABEL: Record<RewardCriterionType, string> = {
 }
 
 /**
- * The criterion worth featuring.
+ * The criterion the form starts on.
  *
- * A reward for *still knowing it three weeks later* is the only one that cannot
- * be farmed in an afternoon, and it is the exact behavior a parent is paying
- * for. Every other app rewards activity; this rewards retention.
+ * Mastering a set: every card in a deck a grown-up set, checked by the app.
+ * It is the strongest bar the app can actually award today. The one worth
+ * featuring eventually is `checkpoint` — *still knowing it weeks later* is
+ * the only bar that cannot be farmed in an afternoon — but the award path has
+ * no checkpoint branch yet, so a promise made on it could never come due. A
+ * default that can never be earned teaches a child the wrong thing about the
+ * app's word, so it is not offered until checkpoints exist.
  */
-export const SUGGESTED_CRITERION: RewardCriterionType = 'checkpoint'
+export const SUGGESTED_CRITERION: RewardCriterionType = 'set_mastered'
+
+/**
+ * What the offer form lets a grown-up pick, in the order it lists them.
+ *
+ * Not `minutes` (unpayable — see below) and not `checkpoint` (not built —
+ * see above). Both keep their label so a row that already exists still reads.
+ */
+export const OFFERABLE_CRITERIA: readonly RewardCriterionType[] = [
+  'set_mastered',
+  'assignment',
+  'mastery_count',
+  'verified_items',
+  'streak',
+]
 
 /**
  * Criteria that need a clock.
@@ -181,9 +201,24 @@ export function canCancel(
   return reward.createdBy === userId || ownsLearner
 }
 
-export type LedgerBucket = 'promised' | 'unpaid' | 'paid'
+export type LedgerBucket = 'promised' | 'unpaid' | 'paid' | 'expired'
 
-export function bucketOf(reward: Reward): LedgerBucket | null {
+/**
+ * Whether the offer has run out.
+ *
+ * `expiresOn` is a day, and a day is over once today is later than it — an
+ * offer that ends today can still be earned today. The database matcher skips
+ * these already, so nothing can earn one; this is the same rule read from the
+ * client so the ledger stops calling a dead offer a promise. Nothing ever
+ * writes `status: 'expired'` today, but it is honored in case something does.
+ */
+export function isExpired(reward: Reward, today: DayString = todayString()): boolean {
+  if (reward.status === 'expired') return true
+  return reward.status === 'offered' && reward.expiresOn !== null && reward.expiresOn < today
+}
+
+export function bucketOf(reward: Reward, today: DayString = todayString()): LedgerBucket | null {
+  if (isExpired(reward, today)) return 'expired'
   if (reward.status === 'offered') return 'promised'
   if (isUnpaid(reward)) return 'unpaid'
   if (reward.status === 'fulfilled') return 'paid'
@@ -191,18 +226,25 @@ export function bucketOf(reward: Reward): LedgerBucket | null {
 }
 
 /**
- * The parent's ledger: promised, earned-and-unpaid, paid.
+ * The parent's ledger: promised, earned-and-unpaid, paid, and run out.
  *
  * Unpaid first, because it is the only part that is an action list. Everything
  * else is bookkeeping around the one interaction the feature exists for.
+ * Expired offers are kept rather than dropped so a grown-up can see what
+ * lapsed and tidy it away; they are still `offered` in the database, so
+ * `canCancel` still applies to them.
  */
-export function ledger(rewards: readonly Reward[]): Record<LedgerBucket, Reward[]> {
-  const out: Record<LedgerBucket, Reward[]> = { unpaid: [], promised: [], paid: [] }
+export function ledger(
+  rewards: readonly Reward[],
+  today: DayString = todayString(),
+): Record<LedgerBucket, Reward[]> {
+  const out: Record<LedgerBucket, Reward[]> = { unpaid: [], promised: [], paid: [], expired: [] }
   for (const reward of rewards) {
-    const bucket = bucketOf(reward)
+    const bucket = bucketOf(reward, today)
     if (bucket) out[bucket].push(reward)
   }
   out.unpaid.sort((a, b) => (a.earnedAt ?? 0) - (b.earnedAt ?? 0))
   out.paid.sort((a, b) => (b.fulfilledAt ?? 0) - (a.fulfilledAt ?? 0))
+  out.expired.sort((a, b) => (b.expiresOn ?? '').localeCompare(a.expiresOn ?? ''))
   return out
 }

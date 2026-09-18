@@ -1,35 +1,39 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Mascot from '../../components/Mascot'
 import MasteryBar from '../../components/suite/MasteryBar'
 import ScreenHeader from '../../components/suite/ScreenHeader'
+import SourcePill from '../../components/suite/SourcePill'
 import { Button, Card, Pill, StarRow } from '../../components/ui'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { useCoverage } from '../../lib/billing/coverage'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { listKey, todayString, type QuizDeck } from '../../lib/progress/types'
-import { allDecks, deckStats } from '../../lib/quiz/decks'
+import { deckStats } from '../../lib/quiz/decks'
 import { dueAcrossDecks } from '../../lib/quiz/session'
+import { useLearnerDecks, useStarterCatalog } from '../../lib/quiz/useLearnerDecks'
 import type { Navigate } from '../../routes'
 
+/**
+ * The learner's decks: the ones they made, the ones a grown-up set as a task,
+ * and the starter decks they chose to add. Nothing else is here, and every
+ * total counts only this list (docs/ux-coherence.md). The starters not yet
+ * added wait below as a catalog.
+ */
 export default function QuizHome({ navigate }: { navigate: Navigate }) {
-    const { snapshot, skill } = useProgress()
+  const { snapshot, skill } = useProgress()
   const state = skill('quiz')
   const coverage = useCoverage()
   const today = todayString()
 
-  const mine = useMemo(
-    () => [...snapshot.decks].sort((a, b) => b.updatedAt - a.updatedAt),
-    [snapshot.decks],
-  )
-  const everything = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
-  const due = useMemo(() => dueAcrossDecks(snapshot, everything, today), [snapshot, everything, today])
+  const decks = useLearnerDecks()
+  const catalog = useStarterCatalog()
+  const due = useMemo(() => dueAcrossDecks(snapshot, decks, today), [snapshot, decks, today])
 
   const totals = useMemo(() => {
     let cards = 0
     let mastered = 0
     let practiced = 0
     let learning = 0
-    for (const deck of everything) {
+    for (const deck of decks) {
       const s = deckStats(snapshot, deck, today)
       cards += s.total
       mastered += s.mastered
@@ -37,16 +41,20 @@ export default function QuizHome({ navigate }: { navigate: Navigate }) {
       learning += s.learning
     }
     return { cards, mastered, practiced, learning }
-  }, [everything, snapshot, today])
+  }, [decks, snapshot, today])
 
-  const atLimit = mine.length >= coverage.deckLimit
+  // The free tier counts what the learner made. A deck set by a grown-up is
+  // the grown-up's, and a starter deck is nobody's, so neither is held
+  // against them — the API counts the same way.
+  const owned = useMemo(() => snapshot.decks.filter((d) => d.source === 'user').length, [snapshot.decks])
+  const atLimit = owned >= coverage.deckLimit
 
   return (
     <div className="mx-auto w-full max-w-4xl py-4">
       <ScreenHeader
-        title="Quiz 🃏"
-        subtitle="Flashcards for anything you need to learn by heart."
-        onBack={() => navigate({ name: 'home' })}
+        title="Flashcards 🃏"
+        subtitle="Decks for anything you need to know by heart."
+        back={{ name: 'home' }}
         backLabel="← Home"
       />
 
@@ -114,37 +122,59 @@ export default function QuizHome({ navigate }: { navigate: Navigate }) {
       {atLimit && (
         <Card className="mb-4">
           <p className="font-bold text-amber-700">
-            An uncovered learner saves {coverage.deckLimit} decks.{' '}
+            An uncovered learner saves {coverage.deckLimit} decks of their own.{' '}
             <button className="underline" onClick={() => navigate({ name: 'upgrade' })}>
               Covering them
             </button>{' '}
-            removes the limit. Starter decks never count against it.
+            removes the limit. Starter decks and decks set by a grown-up do not count.
           </p>
         </Card>
       )}
 
-      {mine.length === 0 ? (
+      {decks.length === 0 ? (
         <Card className="mb-6">
           <p className="mb-3 font-bold text-muted">
-            No decks of your own yet. Make one by pasting a list — vocabulary, dates, formulas,
-            anything with two sides to it — or start with one of ours below.
+            No decks yet. Make one by pasting a list — vocabulary, dates, formulas, anything with
+            two sides to it — or add a starter deck below.
           </p>
           <Button onClick={() => navigate({ name: 'quiz-edit' })}>➕ Make my first deck</Button>
         </Card>
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-          {mine.map((deck) => (
+          {decks.map((deck) => (
             <DeckCard key={deck.id} deck={deck} navigate={navigate} />
           ))}
         </div>
       )}
 
-      <h3 className="mb-3 text-2xl font-extrabold text-ink">Starter decks</h3>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {STARTER_DECKS.map((deck) => (
-          <DeckCard key={deck.id} deck={deck} navigate={navigate} />
-        ))}
-      </div>
+      <h3 className="mb-1 text-2xl font-extrabold text-ink">Add a starter deck</h3>
+      {catalog.available.length === 0 ? (
+        <p className="mb-3 font-bold text-muted">
+          Every starter deck is in your list. Remove one from its own page if you are done with
+          it.
+        </p>
+      ) : (
+        <>
+          <p className="mb-3 font-bold text-muted">
+            Decks that ship with Whizzo. Nothing is yours until you add it.
+          </p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {catalog.available.map((deck) => (
+              <StarterCard
+                key={deck.id}
+                deck={deck}
+                disabled={catalog.busy || !catalog.canAdd}
+                onAdd={() => catalog.add(deck.id)}
+              />
+            ))}
+          </div>
+          {!catalog.canAdd && (
+            <p className="mt-3 text-sm font-bold text-stone">
+              Sign in and pick a learner to add one.
+            </p>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -168,11 +198,7 @@ function DeckCard({ deck, navigate }: { deck: QuizDeck; navigate: Navigate }) {
             {stats.seen > 0 && ` · ${stats.mastered} mastered`}
           </p>
         </div>
-        {deck.source === 'starter' ? (
-          <Pill className="shrink-0 bg-teal-100 text-teal-700">Starter</Pill>
-        ) : (
-          <Pill className="shrink-0 bg-wash text-ink">Mine</Pill>
-        )}
+        <SourcePill source={deck.source} />
       </div>
 
       {deck.description && (
@@ -196,5 +222,48 @@ function DeckCard({ deck, navigate }: { deck: QuizDeck; navigate: Navigate }) {
         )}
       </div>
     </button>
+  )
+}
+
+/** A starter deck not yet added: what it is, how big, and one button. */
+function StarterCard({
+  deck,
+  disabled,
+  onAdd,
+}: {
+  deck: QuizDeck
+  disabled: boolean
+  onAdd: () => Promise<void>
+}) {
+  const [error, setError] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
+  const add = async () => {
+    setAdding(true)
+    setError(null)
+    try {
+      await onAdd()
+    } catch {
+      setError('That did not save. Check your connection and try again.')
+    } finally {
+      setAdding(false)
+    }
+  }
+  return (
+    <div className="flex flex-col rounded-3xl bg-white/70 p-5 ring-1 ring-hair">
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div>
+          <h4 className="text-lg font-extrabold text-ink">{deck.title}</h4>
+          <p className="text-sm font-bold text-stone">{deck.cards.length} cards</p>
+        </div>
+        <Pill className="shrink-0 bg-teal-100 text-teal-700">Starter</Pill>
+      </div>
+      {deck.description && <p className="mb-3 text-sm font-bold text-muted">{deck.description}</p>}
+      <div className="mt-auto flex flex-wrap items-center gap-2">
+        <Button variant="ghost" onClick={add} disabled={disabled || adding} aria-label={`Add ${deck.title}`}>
+          {adding ? 'Adding…' : '➕ Add'}
+        </Button>
+        {error && <span className="text-sm font-bold text-rose-600">{error}</span>}
+      </div>
+    </div>
   )
 }

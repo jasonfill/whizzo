@@ -38,7 +38,7 @@ export default function AccountScreen({ navigate }: { navigate: Navigate }) {
     return () => controller.abort()
   }, [status])
 
-  const { learners } = useLearners()
+  const { learners, isLearnerSession, active } = useLearners()
   const [portalBusy, setPortalBusy] = useState(false)
   const coverage = useCoverage()
   // What this person actually pays for: the children *of theirs* that are
@@ -53,7 +53,7 @@ export default function AccountScreen({ navigate }: { navigate: Navigate }) {
   if (status !== 'signed-in') {
     return (
       <div className="mx-auto w-full max-w-2xl py-4">
-        <ScreenHeader title="Your account" onBack={() => navigate({ name: 'home' })} />
+        <ScreenHeader title="Your account" back={{ name: 'home' }} />
         <Card>
           <p className="mb-4 font-bold text-muted">
             Nobody is signed in on this device.
@@ -72,12 +72,84 @@ export default function AccountScreen({ navigate }: { navigate: Navigate }) {
     )
   }
 
+  // A learner signed in as themselves. Nothing about coverage, the library or
+  // a tutor code belongs on their screen — those are about the people who
+  // look after them. What is theirs: their name, their look, and the way out.
+  if (isLearnerSession) {
+    return (
+      <div className="mx-auto w-full max-w-2xl py-4">
+        <ScreenHeader title="Me" subtitle={active?.displayName} back={{ name: 'home' }} />
+
+        <Card className="mb-4">
+          <h2 className="mb-3 text-xl font-extrabold text-ink">Profile</h2>
+          <label className="mb-1 block text-sm font-bold text-muted">What we call you</label>
+          <div className="mb-4 flex gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={24}
+              className="flex-1 rounded-xl border-2 border-edge px-4 py-3 font-bold text-ink focus:border-ink focus:outline-none"
+            />
+            <Button
+              variant="secondary"
+              onClick={() => updateProfile({ displayName: name.trim() })}
+              disabled={!name.trim() || name.trim() === profile?.displayName}
+            >
+              Save
+            </Button>
+          </div>
+          <label className="mb-2 block text-sm font-bold text-muted">Your avatar</label>
+          <div className="flex flex-wrap gap-2">
+            {AVATARS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => updateProfile({ avatarEmoji: emoji })}
+                className={`rounded-xl px-3 py-2 text-2xl transition-transform hover:scale-110 ${
+                  profile?.avatarEmoji === emoji ? 'bg-wash ring-2 ring-ink' : 'bg-quiet'
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-extrabold text-ink">Your theme 🎨</h2>
+              <p className="font-bold text-muted">Who you learn with. Change it any time.</p>
+            </div>
+            <Button variant="secondary" onClick={() => navigate({ name: 'theme' })}>
+              Pick a theme
+            </Button>
+          </div>
+        </Card>
+
+        <p className="mb-4 text-sm font-bold text-stone">
+          Progress is saved to your account, so it is there on any device you sign in on.
+        </p>
+
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={() => {
+            void signOut()
+            navigate({ name: 'home' })
+          }}
+        >
+          Sign out
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto w-full max-w-2xl py-4">
       <ScreenHeader
         title="Your account"
         subtitle={user?.email ?? undefined}
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
       />
 
       <Card className="mb-4">

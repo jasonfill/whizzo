@@ -18,7 +18,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
-import { createLearner, listLearners, type Learner, type NewLearner } from './api'
+import { createLearner, listLearners, updateLearner, type Learner, type NewLearner } from './api'
 
 export type LearnerStatus = 'loading' | 'ready' | 'unavailable' | 'error'
 
@@ -31,10 +31,26 @@ interface LearnerContextValue {
   error: string | null
   /** True when the session owns the active learner, rather than guarding it. */
   isOwner: boolean
+  /**
+   * True when the person signed in *is* the learner on screen — a child who
+   * signed in with their code, or a teenager with their own Google account.
+   * The one role distinction the app makes: grown-up screens (family, library,
+   * billing, setting tasks) hide behind it, and the learner's own screens
+   * read as theirs rather than as a report about them.
+   */
+  isLearnerSession: boolean
   select: (learnerId: string) => void
   create: (learner: NewLearner) => Promise<Learner>
+  /**
+   * Patch one learner and swap the returned row into place, so every reader
+   * of `active` sees the change without a full reload. Cosmetic fields only:
+   * the API refuses the rest.
+   */
+  update: (learnerId: string, patch: LearnerPatch) => Promise<Learner>
   refresh: () => Promise<void>
 }
+
+export type LearnerPatch = Parameters<typeof updateLearner>[1]
 
 const LearnerContext = createContext<LearnerContextValue | null>(null)
 
@@ -133,6 +149,12 @@ export function LearnerProvider({ children }: { children: ReactNode }) {
     [select, user],
   )
 
+  const update = useCallback(async (learnerId: string, patch: LearnerPatch) => {
+    const updated = await updateLearner(learnerId, patch)
+    setLearners((prev) => prev.map((l) => (l.id === updated.id ? updated : l)))
+    return updated
+  }, [])
+
   const active = useMemo(
     () => learners.find((l) => l.id === activeId) ?? null,
     [learners, activeId],
@@ -145,11 +167,13 @@ export function LearnerProvider({ children }: { children: ReactNode }) {
       status,
       error,
       isOwner: Boolean(active && user && active.ownerId === user.id),
+      isLearnerSession: Boolean(active && user && active.authUserId === user.id),
       select,
       create,
+      update,
       refresh: load,
     }),
-    [learners, active, status, error, user, select, create, load],
+    [learners, active, status, error, user, select, create, update, load],
   )
 
   return <LearnerContext.Provider value={value}>{children}</LearnerContext.Provider>

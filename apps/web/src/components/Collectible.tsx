@@ -3,12 +3,18 @@ import { placeholderStripe, slotLabels } from '../lib/themes'
 
 interface Props {
   /**
-   * Stable id for this collectible, stored in progress. Which slot of the
-   * theme's set it maps to is derived from it, so the same earned item is the
-   * same item forever — and stays the same item after a theme change, just
-   * wearing the new world's name.
+   * Which slot of the theme's set this is, 0-based, in the order the
+   * collection screen fills them. The results screen passes the slot the
+   * round just filled (`roundCollectible().slot`), so the item it announces
+   * is the item the wall shows next — the same name, the same position.
    */
-  seed: string
+  slot?: number
+  /**
+   * @deprecated Legacy hashed id from the typing game's per-lesson cards.
+   * Kept only so the typing lesson map still compiles; hashes to a slot, so
+   * the name it produces does not line up with the wall. Pass `slot`.
+   */
+  seed?: string
   className?: string
   rounded?: string
   /** Show the item's name underneath. */
@@ -25,18 +31,19 @@ function hashSeed(seed: string): number {
 }
 
 /**
- * One earned collectible, in whatever the current world calls it.
+ * One earned collectible, in whatever the current theme calls it.
  *
  * Replaces CatPhoto, which fetched real kitten photographs from a third-party
  * image host. That was wrong twice over: it made the typing game's rewards
- * cats no matter which of the ten worlds a learner had chosen, and it put a
+ * cats no matter which of the ten themes a learner had chosen, and it put a
  * network round trip — to a service that can be down, slow, or serve something
  * unexpected — in front of a child's reward.
  *
  * Art is the theme's stripe until drawn reward art exists, the same slot the
- * world screen uses, so the two agree about what a learner owns.
+ * collection screen uses, so the two agree about what a learner owns.
  */
 export default function Collectible({
+  slot,
   seed,
   className = '',
   rounded = 'rounded-2xl',
@@ -44,8 +51,11 @@ export default function Collectible({
 }: Props) {
   const { theme } = useTheme()
   const labels = slotLabels(theme)
-  const index = hashSeed(seed) % labels.length
-  const name = labels[index]!
+  const index =
+    typeof slot === 'number'
+      ? Math.min(labels.length - 1, Math.max(0, Math.floor(slot)))
+      : hashSeed(seed ?? '') % labels.length
+  const name = labels[index] ?? theme.unitOne
 
   return (
     <div className={showLabel ? '' : className}>

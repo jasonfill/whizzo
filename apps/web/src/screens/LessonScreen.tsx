@@ -4,6 +4,7 @@ import { CURRICULUM, getLesson } from '../data/lessons'
 import { generateLessonText } from '../lib/content'
 import { useTheme } from '../lib/theme/ThemeProvider'
 import { useLiveRound } from '../hooks/useLiveRound'
+import { useBack } from '../hooks/useBack'
 import { typingWorldFor } from '../lib/themes'
 import type { RoundResult } from '../lib/stats'
 import GamePlay from '../components/GamePlay'
@@ -22,6 +23,9 @@ export default function LessonScreen({ game, lessonId, navigate }: Props) {
   const lesson = getLesson(lessonId)
   const [attempt, setAttempt] = useState(0)
   const [outcome, setOutcome] = useState<LessonOutcome | null>(null)
+  // Leaving goes back to wherever the lesson was opened from — the lessons
+  // screen, or a task — and to the lessons screen only on a cold link.
+  const back = useBack({ name: 'map' })
 
   // Anybody following along. A lesson has no cards to mirror, so this is only
   // ever discovery: "Ada is doing a typing lesson", and how it ended.
@@ -52,13 +56,13 @@ export default function LessonScreen({ game, lessonId, navigate }: Props) {
     return (
       <Card className="mx-auto max-w-md text-center">
         <p className="mb-4 font-bold">Hmm, that lesson wandered off. 🐈</p>
-        <Button onClick={() => navigate({ name: 'map' })}>Back to Levels</Button>
+        <Button onClick={back}>Back to lessons</Button>
       </Card>
     )
   }
 
   const handleFinish = (result: RoundResult) => {
-    const o = game.recordLesson(lesson.id, result, lesson.catSeed)
+    const o = game.recordLesson(lesson.id, result)
     if (roundIdRef.current) {
       // A typing lesson is keystrokes rather than cards, so it reports its two
       // ends and nothing in between — enough for a grown-up to know it is
@@ -83,7 +87,7 @@ export default function LessonScreen({ game, lessonId, navigate }: Props) {
           stars={outcome.stars}
           title={lesson.title}
           newAchievements={outcome.newAchievements}
-          collectedCat={outcome.collectedCat}
+          earnedCollectible={outcome.earnedCollectible}
           soundOn={game.state.settings.sound}
           onReplay={() => {
             setOutcome(null)
@@ -98,7 +102,7 @@ export default function LessonScreen({ game, lessonId, navigate }: Props) {
                 }
               : undefined
           }
-          onMenu={() => navigate({ name: 'map' })}
+          onMenu={back}
         />
       </div>
     )
@@ -115,7 +119,7 @@ export default function LessonScreen({ game, lessonId, navigate }: Props) {
         showHands={game.state.settings.showHands}
         sound={game.state.settings.sound}
         onFinish={handleFinish}
-        onQuit={() => navigate({ name: 'map' })}
+        onQuit={back}
       />
     </div>
   )

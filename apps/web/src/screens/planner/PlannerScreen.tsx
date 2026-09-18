@@ -41,7 +41,6 @@ import Timeline from '../../components/planner/Timeline'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import HereNow from '../../components/live/HereNow'
 import { Button, Card } from '../../components/ui'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { usePlannerWeek } from '../../hooks/usePlannerWeek'
 import { routeForAssignment } from '../../lib/assignments/routing'
 import { useCoverage } from '../../lib/billing/coverage'
@@ -50,7 +49,7 @@ import { addComment, weekHistory } from '../../lib/planner/api'
 import { useCardDrag, type DropTarget } from '../../lib/planner/drag'
 import { routeForTarget } from '../../lib/planner/routing'
 import { useProgress } from '../../lib/progress/ProgressProvider'
-import { allDecks } from '../../lib/quiz/decks'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
 import type { Navigate } from '../../routes'
 
 const LAST_COURSE_KEY = 'whizzo:planner:last-course'
@@ -105,7 +104,7 @@ export default function PlannerScreen({
   )
 
   const days = useMemo(() => daysOfWeek(planner.weekStart), [planner.weekStart])
-  const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
+  const decks = useLearnerDecks()
   const masteries = useMemo(() => Object.values(snapshot.mastery), [snapshot.mastery])
   const isThisWeek = planner.weekStart === weekStartOf(today)
   const weekdayToday = isoWeekday(today)
@@ -286,7 +285,7 @@ export default function PlannerScreen({
   if (!active || !planner.learnerId) {
     return (
       <div className="mx-auto w-full max-w-5xl py-4">
-        <ScreenHeader title="Planner 🗓️" onBack={() => navigate({ name: 'home' })} />
+        <ScreenHeader title="Planner 🗓️" back={{ name: 'home' }} />
         <Card>
           <p className="mb-3 font-bold text-muted">The planner belongs to a learner, so it needs one signed in.</p>
           <Button onClick={() => navigate({ name: 'auth' })}>Sign in</Button>
@@ -298,7 +297,7 @@ export default function PlannerScreen({
   if (gatedWeek) {
     return (
       <div className="mx-auto w-full max-w-5xl py-4">
-        <ScreenHeader title="Planner 🗓️" onBack={() => navigate({ name: 'planner' })} />
+        <ScreenHeader title="Planner 🗓️" back={{ name: 'planner' }} />
         <Card>
           <h2 className="mb-1 text-xl font-extrabold text-ink">Earlier weeks</h2>
           <p className="mb-3 font-bold text-muted">
@@ -321,7 +320,7 @@ export default function PlannerScreen({
       <ScreenHeader
         title={isGrownUp ? `${active.displayName}'s planner` : 'Planner 🗓️'}
         subtitle={weekLabel}
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
         right={
           <div className="flex flex-wrap items-center gap-2">
             <HereNow names={planner.watchers.map((w) => w.name?.trim() || 'Someone')} />

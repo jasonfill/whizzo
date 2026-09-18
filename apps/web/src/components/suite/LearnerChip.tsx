@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLearners } from '../../lib/learners/LearnerProvider'
+import { useAudience } from '../../lib/learners/useAudience'
 
 /**
  * Who is practicing right now.
@@ -11,7 +12,8 @@ import { useLearners } from '../../lib/learners/LearnerProvider'
  * label — no dropdown for a choice of one.
  */
 export default function LearnerChip({ onManage }: { onManage: () => void }) {
-  const { learners, active, select, status } = useLearners()
+  const { learners, active, select, status, isLearnerSession } = useLearners()
+  const audience = useAudience()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -78,7 +80,7 @@ export default function LearnerChip({ onManage }: { onManage: () => void }) {
             }}
             className="w-full border-t-2 border-hair px-3 py-2.5 text-left text-sm font-extrabold text-stone transition-colors hover:bg-quiet hover:text-ink"
           >
-            Manage family →
+            {isLearnerSession ? 'Change theme →' : audience.manage}
           </button>
         </div>
       )}

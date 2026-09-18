@@ -12,6 +12,12 @@ import { aLearner, signIn, testState } from './test/state'
 import { emptySnapshot } from './lib/progress/types'
 
 vi.mock('./auth/AuthProvider', async () => (await import('./test/mockProviders')).authMock())
+// Back goes to real history when there is one; here there is none, so it
+// lands on the screen's natural parent — through the same navigate spy.
+vi.mock('./hooks/useBack', async () => {
+  const { spies } = await import('./test/mockProviders')
+  return { useBack: (fallback: unknown) => () => spies.navigate(fallback) }
+})
 vi.mock('./lib/learners/LearnerProvider', async () =>
   (await import('./test/mockProviders')).learnersMock(),
 )
@@ -102,7 +108,7 @@ describe('FamilyScreen — the manage panel', () => {
     render(<FamilyScreen navigate={navigate} />)
     await waitFor(() => expect(screen.getByText('Ada')).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /Manage/ }))
-    expect(screen.getByText(/Ada’s world/)).toBeInTheDocument()
+    expect(screen.getByText(/Ada’s theme/)).toBeInTheDocument()
   })
 
   it('offers all ten worlds from inside the panel', async () => {
@@ -132,7 +138,7 @@ describe('FamilyScreen — the manage panel', () => {
     await waitFor(() => expect(screen.getByText('Ada')).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /Manage/ }))
     await userEvent.click(screen.getByRole('button', { name: /Done/ }))
-    expect(screen.queryByText(/Ada’s world/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Ada’s theme/)).not.toBeInTheDocument()
   })
 
   it('shows no manage panel for a child merely shared with you', async () => {

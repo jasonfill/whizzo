@@ -23,11 +23,16 @@ import type { Navigate } from '../../routes'
  *   journey     Football, Space, Ocean         a rail you move along
  *   assembly    Dinosaurs, Racing, Robots      a thing you build
  *
- * All three read from the same earned count, on the same fixed earn rate.
+ * All three read from the same earned count, on the same fixed earn rate, and
+ * fill their slots in order: slot 0 first. The results screens name the slot a
+ * round filled with the same rule, so what a learner is told they earned is
+ * what they find here.
  */
-export default function WorldScreen({ navigate }: { navigate: Navigate }) {
+export default function WorldScreen(_props: { navigate: Navigate }) {
   const { theme } = useTheme()
   const { snapshot } = useProgress()
+  // The one count. Home, every results screen and the badges room read the
+  // same `earnedFor`, and fill slots in the same order this screen draws them.
   const earned = earnedFor(snapshot, theme)
 
   return (
@@ -38,7 +43,7 @@ export default function WorldScreen({ navigate }: { navigate: Navigate }) {
       <ScreenHeader
         title={theme.worldNoun}
         subtitle={`${earned.owned} of ${earned.total} ${theme.unit}`}
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
       />
 
       {theme.shape === 'collection' && <Collection theme={theme} earned={earned} />}

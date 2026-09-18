@@ -127,7 +127,7 @@ function Router() {
   const game = useGameState()
   const { ready } = useProgress()
   const { status: authStatus, configured } = useAuth()
-  const { learners, status: learnerStatus } = useLearners()
+  const { learners, status: learnerStatus, isLearnerSession } = useLearners()
   const navigate = useAppNavigate()
   const location = useLocation()
   const sentToSetup = useRef(false)
@@ -253,19 +253,30 @@ function Router() {
           />
         }
       />
-      <Route path="/family" element={<FamilyScreen navigate={navigate} />} />
+      {/* The grown-up's screens. A learner signed in as themselves has no
+          family to manage, nothing to pay for, no library and no assistant to
+          connect, so these addresses take them home rather than showing a
+          child a billing page. Their own account screen stays: it is where
+          they change their name and sign out. */}
+      <Route path="/family" element={isLearnerSession ? <Redirect to="/" replace /> : <FamilyScreen navigate={navigate} />} />
       <Route path="/account" element={<AccountScreen navigate={navigate} />} />
-      <Route path="/connect" element={<ConnectScreen navigate={navigate} />} />
-      <Route path="/upgrade" element={<UpgradeScreen navigate={navigate} />} />
-      <Route path="/progress" element={<ProgressScreen game={game} navigate={navigate} />} />
+      <Route path="/connect" element={isLearnerSession ? <Redirect to="/" replace /> : <ConnectScreen navigate={navigate} />} />
+      <Route path="/upgrade" element={isLearnerSession ? <Redirect to="/" replace /> : <UpgradeScreen navigate={navigate} />} />
+      <Route path="/progress" element={<ProgressScreen navigate={navigate} />} />
       <Route path="/progress/print" element={<PrintableReport navigate={navigate} />} />
       <Route path="/custom-lists" element={<CustomListsScreen navigate={navigate} />} />
       <Route path="/tasks" element={<TasksScreen navigate={navigate} />} />
-      <Route path="/library" element={<LibraryScreen navigate={navigate} />} />
-      <Route path="/library/add" element={<ContentScreen navigate={navigate} />} />
-      <Route path="/library/new" element={<DeckEditor scope="library" navigate={navigate} />} />
-      <Route path="/library/deck/:deckId" element={<Deck scope="library" navigate={navigate} />} />
-      <Route path="/library/edit/:deckId" element={<EditDeck scope="library" navigate={navigate} />} />
+      {isLearnerSession ? (
+        <Route path="/library/*" element={<Redirect to="/quiz" replace />} />
+      ) : (
+        <>
+          <Route path="/library" element={<LibraryScreen navigate={navigate} />} />
+          <Route path="/library/add" element={<ContentScreen navigate={navigate} />} />
+          <Route path="/library/new" element={<DeckEditor scope="library" navigate={navigate} />} />
+          <Route path="/library/deck/:deckId" element={<Deck scope="library" navigate={navigate} />} />
+          <Route path="/library/edit/:deckId" element={<EditDeck scope="library" navigate={navigate} />} />
+        </>
+      )}
       <Route path="/planner" element={<Planner navigate={navigate} />} />
       <Route path="/planner/week/:weekStart" element={<Planner navigate={navigate} />} />
       <Route path="/watch/:learnerId" element={<Watch navigate={navigate} />} />
@@ -299,12 +310,15 @@ function Router() {
       <Route path="/typing/lesson/:id" element={<Lesson game={game} navigate={navigate} />} />
       <Route path="/typing/practice" element={<PracticeScreen game={game} navigate={navigate} />} />
       <Route path="/typing/rain" element={<CatRainScreen game={game} navigate={navigate} />} />
-      <Route path="/typing/trophies" element={<TrophyRoom game={game} navigate={navigate} />} />
+      {/* Badges are for every subject, so they live at the suite level; the
+          old typing-namespaced address still lands. */}
+      <Route path="/badges" element={<TrophyRoom game={game} navigate={navigate} />} />
+      <Route path="/typing/trophies" element={<Redirect to="/badges" replace />} />
 
       {/* Spelling */}
       <Route path="/spelling" element={<SpellingHome navigate={navigate} />} />
       <Route path="/spelling/lists" element={<SpellingLists navigate={navigate} />} />
-      <Route path="/spelling/play/:activity/:mode" element={<SpellRound navigate={navigate} />} />
+      <Route path="/spelling/play/:activity/:mode" element={<SpellRound />} />
 
       {/* Quiz */}
       <Route path="/quiz" element={<QuizHome navigate={navigate} />} />
@@ -348,7 +362,7 @@ function EditDeck({ scope, navigate }: { scope?: DeckScope; navigate: Navigate }
   return <DeckEditor deckId={deckId} scope={scope} navigate={navigate} />
 }
 
-function SpellRound({ navigate }: { navigate: Navigate }) {
+function SpellRound() {
   const params = useParams()
   const [query] = useSearchParams()
   const activity = parseActivity(params.activity)
@@ -367,7 +381,6 @@ function SpellRound({ navigate }: { navigate: Navigate }) {
       listId={listId}
       customListId={customListId}
       size={parseSize(query.get('size'))}
-      navigate={navigate}
     />
   )
 }

@@ -2,7 +2,8 @@ import type { GameApi } from '../hooks/useGameState'
 import { WORLDS, CURRICULUM } from '../data/lessons'
 import { useTheme } from '../lib/theme/ThemeProvider'
 import { typingWorldFor } from '../lib/themes'
-import { Button, StarRow } from '../components/ui'
+import { StarRow } from '../components/ui'
+import ScreenHeader from '../components/suite/ScreenHeader'
 import Collectible from '../components/Collectible'
 import type { Route } from '../App'
 
@@ -13,9 +14,12 @@ interface Props {
 
 export default function WorldMap({ game, navigate }: Props) {
   const { theme } = useTheme()
+  // Lesson progress follows the account, so this map is the same on every
+  // device the learner signs in on.
   const { state } = game
 
-  // A lesson is unlocked if it's the first, or the previous one has been played.
+  // A lesson is unlocked if it's the first, or the previous one has been
+  // finished at least once. Stars are for pride, not for the door.
   const isUnlocked = (globalIndex: number): boolean => {
     if (globalIndex === 0) return true
     const prev = CURRICULUM[globalIndex - 1]
@@ -24,12 +28,12 @@ export default function WorldMap({ game, navigate }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-4xl py-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-3xl font-extrabold text-ink">Choose a Level 🗺️</h1>
-        <Button variant="ghost" onClick={() => navigate({ name: 'typing' })}>
-          ← Home
-        </Button>
-      </div>
+      <ScreenHeader
+        title="Typing lessons 🗺️"
+        subtitle="One lesson at a time. Finish one to unlock the next."
+        back={{ name: 'typing' }}
+        backLabel="← Typing"
+      />
 
       <div className="space-y-6">
         {WORLDS.map((world, wi) => (

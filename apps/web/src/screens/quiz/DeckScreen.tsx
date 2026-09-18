@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import RichText from '../../components/rich/RichText'
+import SourcePill from '../../components/suite/SourcePill'
 import { Button, Card, Pill, StarRow } from '../../components/ui'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { listKey, todayString, type QuizCard, type QuizDeck } from '../../lib/progress/types'
 import {
-  allDecks,
   copyDeck,
   deckStats,
   findDeck,
@@ -16,6 +15,7 @@ import {
 } from '../../lib/quiz/decks'
 import type { DeckScope } from '../../lib/quiz/scope'
 import { MODES, type DirectionSetting } from '../../lib/quiz/session'
+import { isStarterId, useLearnerDecks, useStarterCatalog } from '../../lib/quiz/useLearnerDecks'
 import type { Navigate } from '../../routes'
 import { bandForGrade, tutorPacket } from '@whizzo/shared'
 import { useLearners } from '../../lib/learners'
@@ -26,6 +26,7 @@ import {
   saveLibraryDecks,
 } from '../../lib/assignments/library'
 import AssignForm from '../suite/AssignForm'
+import DeckHistory from '../../components/suite/DeckHistory'
 
 /**
  * One deck: what is in it, how it is going, and the ways to study it.
@@ -35,6 +36,11 @@ import AssignForm from '../suite/AssignForm'
  * a learner practicing, and this deck reaches a learner only by being set as
  * work. What is left is what an owner needs: read it, change it, copy it, set
  * it, or delete it.
+ *
+ * In the learner scope the deck is one of the three kinds in
+ * docs/ux-coherence.md, and the action row follows: a deck of their own is
+ * edited or deleted; a starter is copied or removed from the list; a deck set
+ * by a grown-up is neither — withdrawing the task is what removes it.
  */
 export default function DeckScreen({
   deckId,
@@ -55,11 +61,13 @@ export default function DeckScreen({
   const [accepting, setAccepting] = useState(false)
   const [acceptError, setAcceptError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const { active, learners } = useLearners()
+  const [starterError, setStarterError] = useState<string | null>(null)
+  const { active, learners, isLearnerSession } = useLearners()
   const today = todayString()
   const inLibrary = scope === 'library'
 
-  const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
+  const decks = useLearnerDecks()
+  const catalog = useStarterCatalog()
 
   // A library deck comes from the API rather than the snapshot. Three things
   // can come back and they read differently: still loading, not there, and
@@ -87,11 +95,33 @@ export default function DeckScreen({
 
   const deck = inLibrary ? (load.status === 'ready' ? load.deck : undefined) : findDeck(decks, deckId)
   const home = inLibrary ? ({ name: 'library' } as const) : ({ name: 'quiz' } as const)
+  const backLabel = inLibrary ? '← Library' : '← Flashcards'
+
+  // A starter deck opened by link before it was added: the one "not found"
+  // that has a fix, and the fix is offered rather than described.
+  const addable = !inLibrary && isStarterId(deckId) && catalog.canAdd
+  const addStarter = async () => {
+    setStarterError(null)
+    try {
+      await catalog.add(deckId)
+    } catch {
+      setStarterError('That did not save. Check your connection and try again.')
+    }
+  }
+  const removeStarter = async () => {
+    setStarterError(null)
+    try {
+      await catalog.remove(deckId)
+      navigate(home)
+    } catch {
+      setStarterError('That did not save. Check your connection and try again.')
+    }
+  }
 
   if (inLibrary && load.status === 'loading') {
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
-        <ScreenHeader title="Opening…" onBack={() => navigate(home)} backLabel="← Library" />
+        <ScreenHeader title="Opening…" back={home} backLabel={backLabel} />
         <Card>
           <p className="font-bold text-stone">Loading…</p>
         </Card>
@@ -102,7 +132,7 @@ export default function DeckScreen({
   if (inLibrary && load.status === 'failed') {
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
-        <ScreenHeader title="Could not open that" onBack={() => navigate(home)} backLabel="← Library" />
+        <ScreenHeader title="Could not open that" back={home} backLabel={backLabel} />
         <Card>
           <p className="mb-3 font-bold text-muted">
             The deck is still there, but it could not be fetched. Check your connection.
@@ -116,15 +146,23 @@ export default function DeckScreen({
   if (!deck) {
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
-        <ScreenHeader
-          title="Deck not found"
-          onBack={() => navigate(home)}
-          backLabel={inLibrary ? '← Library' : '← Back'}
-        />
+        <ScreenHeader title={addable ? 'Not added yet' : 'Deck not found'} back={home} backLabel={backLabel} />
         <Card>
-          <p className="font-bold text-muted">
-            That deck is gone. It may have been deleted on another device.
-          </p>
+          {addable ? (
+            <>
+              <p className="mb-3 font-bold text-muted">
+                This starter deck is not in your list yet. Add it and it is yours to study.
+              </p>
+              <Button onClick={addStarter} disabled={catalog.busy}>
+                {catalog.busy ? 'Adding…' : '➕ Add this starter deck'}
+              </Button>
+              {starterError && <p className="mt-2 font-bold text-rose-600">{starterError}</p>}
+            </>
+          ) : (
+            <p className="font-bold text-muted">
+              That deck is gone. It may have been deleted on another device.
+            </p>
+          )}
         </Card>
       </div>
     )
@@ -146,6 +184,22 @@ export default function DeckScreen({
         await saveDeck(copy)
         navigate({ name: 'quiz-deck', deckId: copy.id })
       }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /**
+   * A grown-up's copy of a deck set by somebody else goes to their library,
+   * not into the learner's list: it is theirs to set as a task later, and a
+   * learner's list is not where a grown-up keeps things.
+   */
+  const copyToLibrary = async () => {
+    setBusy(true)
+    try {
+      const copy = copyDeck(deck)
+      await saveLibraryDecks([copy])
+      navigate({ name: 'library-deck', deckId: copy.id })
     } finally {
       setBusy(false)
     }
@@ -197,13 +251,18 @@ export default function DeckScreen({
       <ScreenHeader
         title={deck.title}
         subtitle={deck.description || `${deck.cards.length} cards`}
-        onBack={() => navigate(home)}
-        backLabel={inLibrary ? '← Library' : '← Decks'}
+        back={home}
+        backLabel={backLabel}
         right={
           // Stars are a learner's; a library deck shares its id with the copy
           // a student was set, so without this the header would show whoever
           // is on screen.
-          !inLibrary && progress?.stars ? <StarRow stars={progress.stars} size={22} /> : undefined
+          !inLibrary ? (
+            <span className="flex items-center gap-2">
+              <SourcePill source={deck.source} />
+              {progress?.stars ? <StarRow stars={progress.stars} size={22} /> : null}
+            </span>
+          ) : undefined
         }
       />
 
@@ -216,8 +275,8 @@ export default function DeckScreen({
             <Pill className="bg-sun/30 text-ink">Draft</Pill>
             <p className="flex-1 font-bold text-muted">
               {inLibrary
-                ? 'Not looked over yet. Read the cards below and accept it to be able to set it as work — or edit and save, which counts.'
-                : 'An assistant changed this deck. Read the cards below and accept it before it can be set as work — or edit and save, which counts.'}
+                ? 'Not looked over yet. Read the cards below and accept it to be able to set it as a task — or edit and save, which counts.'
+                : 'An assistant changed this deck. Read the cards below and accept it before it can be set as a task — or edit and save, which counts.'}
             </p>
             <Button onClick={accept} disabled={accepting}>
               {accepting ? 'Accepting…' : '✓ Accept'}
@@ -237,7 +296,7 @@ export default function DeckScreen({
               once you have set it for them.
             </p>
             <Button className="ml-auto" onClick={() => setAssigning(true)}>
-              Set as work
+              Set as a task
             </Button>
           </div>
           {assigning && (
@@ -264,6 +323,9 @@ export default function DeckScreen({
           </div>
         </Card>
       )}
+      {/* Every round on this deck, newest first, with the answers a tap away.
+          The learner sees their own; a grown-up sees the child's. */}
+      {!inLibrary && <DeckHistory deckId={deck.id} navigate={navigate} />}
 
       {inLibrary ? null : tooSmall ? (
         <Card className="mb-5">
@@ -364,12 +426,36 @@ export default function DeckScreen({
         </div>
       )}
 
-      {/* Deck management */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {deck.source === 'starter' ? (
-          <Button variant="ghost" onClick={takeCopy} disabled={busy}>
-            {busy ? 'Copying…' : '📋 Make my own copy'}
-          </Button>
+      {/* Deck management, by how the deck got here. A library deck is the
+          owner's whatever its source says, so the library scope always gets
+          the full row. */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        {!inLibrary && deck.source === 'starter' ? (
+          <>
+            <Button variant="ghost" onClick={takeCopy} disabled={busy}>
+              {busy ? 'Copying…' : '📋 Make my own copy'}
+            </Button>
+            <Button variant="ghost" onClick={removeStarter} disabled={catalog.busy}>
+              {catalog.busy ? 'Removing…' : '➖ Remove from my decks'}
+            </Button>
+            <span className="text-sm font-bold text-stone">
+              Your answers are kept if you add it back.
+            </span>
+          </>
+        ) : !inLibrary && deck.source === 'assigned' ? (
+          /* Set by a grown-up: the learner reads and practices it, nothing
+             more. A grown-up looking on can copy it into their own library
+             and, either way, takes it back by withdrawing the task. */
+          <>
+            {!isLearnerSession && (
+              <Button variant="ghost" onClick={copyToLibrary} disabled={busy}>
+                {busy ? 'Copying…' : '📋 Duplicate into my library'}
+              </Button>
+            )}
+            <span className="text-sm font-bold text-stone">
+              Set as a task — withdraw the task to remove it.
+            </span>
+          </>
         ) : (
           <>
             <Button
@@ -411,6 +497,7 @@ export default function DeckScreen({
       </div>
 
       {deleteError && <p className="mb-4 font-bold text-rose-600">{deleteError}</p>}
+      {starterError && <p className="mb-4 font-bold text-rose-600">{starterError}</p>}
 
       {/* The cards themselves, weakest first so the list is useful to read */}
       <h3 className="mb-3 text-xl font-extrabold text-ink">

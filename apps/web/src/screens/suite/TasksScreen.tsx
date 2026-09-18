@@ -3,7 +3,6 @@ import ScreenHeader from '../../components/suite/ScreenHeader'
 import SessionDetail from '../../components/suite/SessionDetail'
 import SharedWork from '../../components/suite/SharedWork'
 import { Button, Card, Pill } from '../../components/ui'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { useAssignments } from '../../hooks/useAssignments'
 import {
   deleteAssignment,
@@ -14,7 +13,7 @@ import { assignableFor, routeForAssignment, targetName } from '../../lib/assignm
 import { useAuth } from '../../auth/AuthProvider'
 import { useLearners } from '../../lib/learners/LearnerProvider'
 import { useProgress } from '../../lib/progress/ProgressProvider'
-import { allDecks } from '../../lib/quiz/decks'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
 import { todayString } from '../../lib/progress/types'
 import type { Navigate } from '../../routes'
 import AssignForm from './AssignForm'
@@ -25,39 +24,41 @@ import AssignForm from './AssignForm'
  * A child sees what they have been asked to do and a button that starts it. A
  * grown-up sees the same list plus the means to add to it, and — the part that
  * makes it worth keeping — the round behind every finished task, openable in
- * place. There is no "mark as done" for anybody: work is closed by doing it.
+ * place. There is no "mark as done" for anybody: a task is closed by doing it.
  */
 export default function TasksScreen({ navigate }: { navigate: Navigate }) {
   const { user } = useAuth()
-  const { active, learners } = useLearners()
+  const { active, learners, isLearnerSession } = useLearners()
   const { snapshot } = useProgress()
+  const decks = useLearnerDecks()
   const { open, done, loading, error, refresh, learnerId } = useAssignments()
   const [busy, setBusy] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [openResult, setOpenResult] = useState<string | null>(null)
 
   /**
-   * Whether to offer the controls for setting work.
+   * Whether to offer the controls for setting a task.
    *
    * The real rule lives in `can_assign_to_learner()` and depends on guardian
    * rights the client is not told about, so this cannot be exact. It draws the
-   * one line it can see — the learner themselves never sets their own homework
-   * — and lets the API refuse anyone else who is not entitled. Erring this way
-   * round is deliberate: a co-parent who may assign but sees no button has lost
-   * a feature silently, where one who tries and is refused gets told why.
+   * one line it can see — a learner acting as themselves never sets their own
+   * homework — and lets the API refuse anyone else who is not entitled. Erring
+   * this way round is deliberate: a co-parent who may assign but sees no
+   * button has lost a feature silently, where one who tries and is refused
+   * gets told why.
    */
-  const canAssign = !!user && user.id !== active?.authUserId
+  const canAssign = !!user && !isLearnerSession
 
   const deckTitles = useMemo(() => {
     const map = new Map<string, string>()
-    for (const deck of allDecks(snapshot, STARTER_DECKS)) map.set(deck.id, deck.title)
+    for (const deck of decks) map.set(deck.id, deck.title)
     return map
-  }, [snapshot])
+  }, [decks])
 
   if (!active || !learnerId) {
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
-        <ScreenHeader title="Tasks ✅" onBack={() => navigate({ name: 'home' })} />
+        <ScreenHeader title="Tasks ✅" back={{ name: 'home' }} />
         <Card>
           <p className="mb-3 font-bold text-muted">
             Tasks are set for a learner, so they need an account with a learner profile.
@@ -83,7 +84,7 @@ export default function TasksScreen({ navigate }: { navigate: Navigate }) {
       <ScreenHeader
         title="Tasks ✅"
         subtitle={`${active.displayName} · ${open.length} to do`}
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
       />
 
       {error && <Card className="mb-4"><p className="font-bold text-rose-500">{error}</p></Card>}
@@ -103,7 +104,7 @@ export default function TasksScreen({ navigate }: { navigate: Navigate }) {
               onCancel={() => setShowForm(false)}
             />
           ) : (
-            <Button onClick={() => setShowForm(true)}>➕ Set some work</Button>
+            <Button onClick={() => setShowForm(true)}>➕ Set a task</Button>
           )}
         </div>
       )}

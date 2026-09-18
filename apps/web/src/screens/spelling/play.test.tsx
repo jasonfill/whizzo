@@ -70,7 +70,7 @@ type Activity = 'study' | 'listen-spell' | 'missing-letters' | 'scramble' | 'pro
 
 function play(activity: Activity, over: Record<string, unknown> = {}) {
   return render(
-    <SpellingPlay activity={activity} mode="adaptive" size={4} navigate={navigate} {...over} />,
+    <SpellingPlay activity={activity} mode="adaptive" size={4} {...over} />,
   )
 }
 

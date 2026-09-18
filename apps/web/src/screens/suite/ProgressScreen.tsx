@@ -6,28 +6,41 @@ import ScreenHeader from '../../components/suite/ScreenHeader'
 import SessionDetail from '../../components/suite/SessionDetail'
 import { Button, Card, Pill } from '../../components/ui'
 import { ALL_WORDS, GRADES } from '../../data/spelling'
-import type { GameApi } from '../../hooks/useGameState'
 import { useCoverage } from '../../lib/billing/coverage'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
-import { allDecks, deckStats } from '../../lib/quiz/decks'
-import { MODES } from '../../lib/quiz/session'
-import { ACTIVITIES } from '../../lib/spelling/activities'
+import { deckStats } from '../../lib/quiz/decks'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { addDays, todayString } from '../../lib/progress/types'
+import type { SessionRecord, Subject } from '../../lib/progress/types'
 import { breakdown, gradeBreakdown, troubleWords, turnaroundWords } from '../../lib/spelling/stats'
 import { errorPattern } from '../../lib/spelling/activities'
 import { trackReadings, unaidedAccuracy } from '../../lib/progress/summary'
-import { activityDef, forecast, retentionReading } from '@whizzo/shared'
+import { activityLabel, partlyChecked, SUBJECT_EMOJI } from '../../lib/progress/roundLabels'
+import { forecast, retentionReading } from '@whizzo/shared'
 import { useTheme } from '../../lib/theme/ThemeProvider'
 import { useAssignments } from '../../hooks/useAssignments'
 import { useLearners } from '../../lib/learners/LearnerProvider'
 import type { Navigate } from '../../routes'
 
-export default function ProgressScreen({ game, navigate }: { game: GameApi; navigate: Navigate }) {
-    const { snapshot, skill } = useProgress()
+/** How many rounds the log shows before asking whether you want the rest. */
+const FIRST_PAGE = 15
+
+/** The subject chips above the log. 'all' is the default and means no filter. */
+const SUBJECT_FILTERS: Array<{ id: Subject | 'all'; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'spelling', label: 'Spelling' },
+  { id: 'typing', label: 'Typing' },
+  { id: 'quiz', label: 'Flashcards' },
+]
+
+export default function ProgressScreen({ navigate }: { navigate: Navigate }) {
+  const { snapshot, skill } = useProgress()
   const coverage = useCoverage()
+  const decks = useLearnerDecks()
 
   const [openSession, setOpenSession] = useState<string | null>(null)
+  const [subjectFilter, setSubjectFilter] = useState<Subject | 'all'>('all')
+  const [showAllRounds, setShowAllRounds] = useState(false)
 
   const spelling = skill('spelling')
   const typing = skill('typing')
@@ -54,10 +67,16 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
     (s) => new Date(s.endedAt).toISOString().slice(0, 10) >= horizon,
   )
   const hiddenSessions = snapshot.sessions.length - visibleSessions.length
+  const filteredSessions =
+    subjectFilter === 'all'
+      ? visibleSessions
+      : visibleSessions.filter((s) => s.subject === subjectFilter)
+  const listedSessions = showAllRounds ? filteredSessions : filteredSessions.slice(0, FIRST_PAGE)
+  const moreRounds = filteredSessions.length - listedSessions.length
 
   const quizTotals = useMemo(() => {
     const today = todayString()
-    return allDecks(snapshot, STARTER_DECKS).reduce(
+    return decks.reduce(
       (acc, deck) => {
         const s = deckStats(snapshot, deck, today)
         return {
@@ -69,13 +88,15 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
       },
       { cards: 0, mastered: 0, due: 0, started: 0 },
     )
-  }, [snapshot])
+  }, [snapshot, decks])
 
   const totalMinutes = Math.round(
     snapshot.daily.reduce((n, d) => n + d.seconds, 0) / 60,
   )
-  const typingLessons = Object.values(game.state.lessons).filter((l) => l.plays > 0).length
-  const bestWpm = Math.max(0, ...Object.values(game.state.lessons).map((l) => l.bestWpm))
+  // Typing, from the account rather than this browser: a lesson done on the
+  // iPad is done on the laptop. Each lesson keeps one `typing:<lesson>` row;
+  // the best speed is the best any typing round has recorded.
+  const typingStats = useMemo(() => typingSummary(snapshot), [snapshot])
 
   const { active } = useLearners()
   const { theme } = useTheme()
@@ -83,9 +104,9 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
   const unaided = unaidedAccuracy(snapshot)
 
   const byTrack = useMemo(() => {
-    const decks = new Map(allDecks(snapshot, STARTER_DECKS).map((d) => [d.id, d.track ?? null]))
-    return trackReadings(snapshot, (deckId) => decks.get(deckId))
-  }, [snapshot])
+    const trackOf = new Map(decks.map((d) => [d.id, d.track ?? null]))
+    return trackReadings(snapshot, (deckId) => trackOf.get(deckId))
+  }, [snapshot, decks])
   const last21 = useMemo(() => buildActivityChart(snapshot.daily), [snapshot.daily])
   const insight = useMemo(() => activityInsight(last21), [last21])
 
@@ -94,7 +115,7 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
       <ScreenHeader
         title={active ? `${active.displayName}’s progress` : 'Progress'}
         subtitle="Everything here comes from words they actually attempted."
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
       />
 
       <ChildSwitcher />
@@ -243,6 +264,11 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
               </div>
             )
           })}
+        </div>
+        <div className="mt-4">
+          <Button variant="ghost" onClick={() => navigate({ name: 'spelling' })}>
+            Open spelling →
+          </Button>
         </div>
       </Card>
 
@@ -426,9 +452,11 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xl font-extrabold text-ink">Typing ⌨️</h2>
           <div className="flex flex-wrap gap-2">
-            <Pill className="bg-pineSoft/30 text-pine">{typingLessons} lessons played</Pill>
-            <Pill className="bg-wash text-muted">{game.state.totalStars} stars</Pill>
-            <Pill className="bg-wash text-muted">best {bestWpm} WPM</Pill>
+            <Pill className="bg-pineSoft/30 text-pine">
+              {typingStats.lessons} {typingStats.lessons === 1 ? 'lesson' : 'lessons'} played
+            </Pill>
+            <Pill className="bg-wash text-muted">{typingStats.stars} stars</Pill>
+            <Pill className="bg-wash text-muted">best {typingStats.bestWpm} WPM</Pill>
           </div>
         </div>
         <Button variant="ghost" onClick={() => navigate({ name: 'typing' })}>
@@ -436,10 +464,10 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
         </Button>
       </Card>
 
-      {/* Quiz decks */}
+      {/* Flashcards */}
       <Card className="mb-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xl font-extrabold text-ink">Quiz decks 🃏</h2>
+          <h2 className="text-xl font-extrabold text-ink">Flashcards 🃏</h2>
           <div className="flex flex-wrap gap-2">
             <Pill className="bg-pine/10 text-pine">
               {quizTotals.mastered}/{quizTotals.cards} cards mastered
@@ -451,21 +479,49 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
           </div>
         </div>
         <Button variant="ghost" onClick={() => navigate({ name: 'quiz' })}>
-          Open quiz →
+          Open flashcards →
         </Button>
       </Card>
 
-      {/* Session log */}
+      {/* The round log */}
       <Card>
-        <h2 className="mb-1 text-xl font-extrabold text-ink">Recent sessions</h2>
+        <h2 className="mb-1 text-xl font-extrabold text-ink">Recent rounds</h2>
         <p className="mb-3 font-bold text-muted">
           Open any round to see every answer, what was typed, and how long each one took.
         </p>
+        {/* A filter, not a tab: the list stays one list, and "All" is where it
+            starts. Remembered only while this screen is open. */}
+        <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Show rounds from">
+          {SUBJECT_FILTERS.map((f) => {
+            const selected = subjectFilter === f.id
+            return (
+              <button
+                key={f.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => {
+                  setSubjectFilter(f.id)
+                  setShowAllRounds(false)
+                }}
+                className={`rounded-full px-3 py-1 text-sm font-extrabold ring-1 transition-colors ${
+                  selected ? 'bg-ink text-white ring-ink' : 'bg-white text-body ring-hair hover:bg-quiet'
+                }`}
+              >
+                {f.label}
+              </button>
+            )
+          })}
+        </div>
         {visibleSessions.length === 0 ? (
-          <p className="font-bold text-stone">No sessions recorded yet.</p>
+          <p className="font-bold text-stone">No rounds recorded yet.</p>
+        ) : filteredSessions.length === 0 ? (
+          <p className="font-bold text-stone">
+            No {SUBJECT_FILTERS.find((f) => f.id === subjectFilter)?.label.toLowerCase()} rounds in
+            this window.
+          </p>
         ) : (
           <ul className="divide-y divide-hair">
-            {visibleSessions.slice(0, 15).map((s) => {
+            {listedSessions.map((s) => {
               const open = openSession === s.id
               return (
                 <li key={s.id} className="py-1">
@@ -477,13 +533,7 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
                     <span className="text-xs font-bold text-stone">{open ? '▾' : '▸'}</span>
                     <span
                       className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${
-                        !s.isTest
-                          ? 'bg-edge'
-                          : typeof s.verifiedItemsTotal === 'number' &&
-                              s.evidence === 'attempts' &&
-                              s.verifiedItemsTotal < s.itemsTotal
-                            ? 'bg-pineSoft'
-                            : 'bg-pine'
+                        !s.isTest ? 'bg-edge' : partlyChecked(s) ? 'bg-pineSoft' : 'bg-pine'
                       }`}
                     />
                     <span className="text-lg">{SUBJECT_EMOJI[s.subject] ?? '⌨️'}</span>
@@ -502,16 +552,14 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
                     </span>
                     {/* Only worth saying when some of the round was not checked;
                         a fully verified round needs no caveat. */}
-                    {typeof s.verifiedItemsTotal === 'number' &&
-                      s.evidence === 'attempts' &&
-                      s.verifiedItemsTotal < s.itemsTotal && (
-                        <span
-                          className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-extrabold text-amber-700"
-                          title={`${s.verifiedItemsTotal} of ${s.itemsTotal} answers were checked by the app; the rest were self-graded.`}
-                        >
-                          {s.verifiedItemsTotal}/{s.itemsTotal} checked
-                        </span>
-                      )}
+                    {partlyChecked(s) && (
+                      <span
+                        className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-extrabold text-amber-700"
+                        title={`${s.verifiedItemsTotal} of ${s.itemsTotal} answers were checked by the app; the rest were self-graded.`}
+                      >
+                        {s.verifiedItemsTotal}/{s.itemsTotal} checked
+                      </span>
+                    )}
                     <span className="ml-auto text-xs font-bold text-stone">
                       {new Date(s.endedAt).toLocaleDateString()}
                     </span>
@@ -522,9 +570,16 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
             })}
           </ul>
         )}
+        {moreRounds > 0 && (
+          <div className="mt-3">
+            <Button variant="ghost" onClick={() => setShowAllRounds(true)}>
+              Show {moreRounds} more
+            </Button>
+          </div>
+        )}
         {hiddenSessions > 0 && (
           <p className="mt-3 rounded-xl bg-spark/10 px-4 py-3 text-[14px] font-bold text-[#7C4A22]">
-            {hiddenSessions} older {hiddenSessions === 1 ? 'session is' : 'sessions are'} outside
+            {hiddenSessions} older {hiddenSessions === 1 ? 'round is' : 'rounds are'} outside
             the {coverage.historyDays}-day window.{' '}
             <button className="underline" onClick={() => navigate({ name: 'upgrade' })}>
               Covering this learner
@@ -555,7 +610,7 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
           surface, and it stays one even while setting a child's color. */}
       <div className="mt-4 rounded-[20px] border border-hair bg-chalk p-6">
         <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-faint">
-          Their world
+          {active ? `${active.displayName}’s theme` : 'Their theme'}
         </div>
         <h2 className="mt-1 font-display text-lg font-extrabold text-ink">{theme.name}</h2>
         <p className="mt-1 text-[15px] leading-relaxed text-body">
@@ -573,33 +628,26 @@ export default function ProgressScreen({ game, navigate }: { game: GameApi; navi
   )
 }
 
-/** Session rows store the raw activity id; show the name a person would use. */
-const SUBJECT_EMOJI: Record<string, string> = {
-  spelling: '🔤',
-  typing: '⌨️',
-  quiz: '🃏',
-}
-
 /**
- * Subject matters here: both spelling and quiz have an activity called 'test',
- * and looking the id up without it would label a quiz round "Spelling Test".
+ * Typing, summed from the account: one `list_progress` row per lesson played
+ * (keyed `typing:<lessonId>`), and the best speed across every typing round.
  */
-function activityLabel(activity: string, subject: string): string {
-  if (subject === 'quiz') {
-    const quizMode = MODES.find((m) => m.id === activity)
-    if (quizMode) return quizMode.name
-    if (activity === 'review') return 'Card review'
-    // Rounds the app itself cannot start — a tutor round run through an
-    // assistant — are named by the catalog.
-    const def = activityDef(activity)
-    if (def) return def.name
-    return activity
+function typingSummary(snapshot: {
+  lists: Record<string, { plays: number; stars: number }>
+  sessions: SessionRecord[]
+}): { lessons: number; stars: number; bestWpm: number } {
+  let lessons = 0
+  let stars = 0
+  for (const [key, row] of Object.entries(snapshot.lists)) {
+    if (!key.startsWith('typing:') || row.plays <= 0) continue
+    lessons += 1
+    stars += row.stars
   }
-  const known = ACTIVITIES.find((a) => a.id === activity)
-  if (known) return known.name
-  if (activity === 'lesson') return 'Typing lesson'
-  if (activity === 'cat-rain') return 'Word Rain'
-  return activity
+  const bestWpm = snapshot.sessions.reduce(
+    (best, s) => (s.subject === 'typing' && s.wpm !== null ? Math.max(best, s.wpm) : best),
+    0,
+  )
+  return { lessons, stars, bestWpm: Math.round(bestWpm) }
 }
 
 /** One band of the retention split: the count, and what the word means. */

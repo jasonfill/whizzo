@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLearnerSettings } from '../../lib/learners/useLearnerSettings'
 import RichText from '../../components/rich/RichText'
 import { Button, Card, Pill } from '../../components/ui'
 import type { QuizItemResult, QuizSessionApi } from '../../hooks/useQuizSession'
@@ -32,24 +33,6 @@ import { isSpeechAvailable, speak, stopSpeaking } from '../../lib/spelling/speec
 
 export type CardLayout = 'flip' | 'slide'
 
-const LAYOUT_KEY = 'whizzo:flashcards:layout'
-
-function loadLayout(): CardLayout {
-  try {
-    return localStorage.getItem(LAYOUT_KEY) === 'slide' ? 'slide' : 'flip'
-  } catch {
-    return 'flip'
-  }
-}
-
-function saveLayout(layout: CardLayout): void {
-  try {
-    localStorage.setItem(LAYOUT_KEY, layout)
-  } catch {
-    // Storage unavailable — the choice lasts for this round and no longer.
-  }
-}
-
 export default function Flashcards({
   session,
   onFinish,
@@ -59,7 +42,10 @@ export default function Flashcards({
 }) {
   const [flipped, setFlipped] = useState(false)
   const [comingBack, setComingBack] = useState(false)
-  const [layout, setLayoutState] = useState<CardLayout>(loadLayout)
+  // The choice follows the learner, so it is the same on every device and
+  // can also be set from Settings.
+  const { settings, set: setSettings } = useLearnerSettings()
+  const layout = settings.flashcardLayout
   const handoffRef = useRef(0)
   const { cursor, progress, current, currentQuestion, results, beginItem, submit, advance } =
     session
@@ -70,10 +56,10 @@ export default function Flashcards({
     beginItem()
   }, [cursor, beginItem])
 
-  const setLayout = useCallback((next: CardLayout) => {
-    setLayoutState(next)
-    saveLayout(next)
-  }, [])
+  const setLayout = useCallback(
+    (next: CardLayout) => setSettings({ flashcardLayout: next }),
+    [setSettings],
+  )
 
   const grade = useCallback(
     (knewIt: boolean) => {
@@ -300,7 +286,7 @@ function SlideCard({
   )
 }
 
-/** Flip or slide. Small, out of the way, and remembered between rounds. */
+/** Flip or slide. Small, out of the way, and remembered on the learner. */
 function LayoutToggle({
   value,
   onChange,

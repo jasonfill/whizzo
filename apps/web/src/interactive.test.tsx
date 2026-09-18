@@ -14,6 +14,7 @@ import { aLearner, signIn, testState } from './test/state'
 import { emptySnapshot } from './lib/progress/types'
 
 vi.mock('./auth/AuthProvider', async () => (await import('./test/mockProviders')).authMock())
+vi.mock('./hooks/useBack', async () => (await import('./test/mockProviders')).backMock())
 vi.mock('./lib/learners/LearnerProvider', async () =>
   (await import('./test/mockProviders')).learnersMock(),
 )

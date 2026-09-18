@@ -40,7 +40,7 @@ export default function PlannerPrint({ navigate, weekStart }: { navigate: Naviga
   if (!data) {
     return (
       <div className="mx-auto w-full max-w-3xl py-6">
-        <ScreenHeader title="Print the week" onBack={() => navigate({ name: 'planner' })} />
+        <ScreenHeader title="Print the week" back={{ name: 'planner' }} />
         <p className="font-bold text-muted">Loading…</p>
       </div>
     )

@@ -16,17 +16,28 @@ vi.mock('../lib/theme/ThemeProvider', async () =>
 vi.mock('../lib/learners/LearnerProvider', async () =>
   (await import('../test/mockProviders')).learnersMock(),
 )
+// And whether the round earned one of the theme's collectibles.
+vi.mock('../lib/progress/ProgressProvider', async () =>
+  (await import('../test/mockProviders')).progressMock(),
+)
 
 // A lesson now says it has started, so a grown-up can find it. That needs the
 // auth provider and the live client, neither of which this file is about.
 vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'grown-up-1' } }) }))
 vi.mock('../lib/live/client', () => ({ openLive: () => () => {} }))
+// Back goes to real history when there is one; here there is none, so it
+// lands on the screen's natural parent — through the same navigate spy.
+vi.mock('../hooks/useBack', async () => {
+  const { spies } = await import('../test/mockProviders')
+  return { useBack: (fallback: unknown) => () => spies.navigate(fallback) }
+})
 vi.mock('../lib/api/client', () => ({
   ORIGIN_ID: 'origin-under-test',
   api: { post: async () => {} },
 }))
 
 import { aGame, spies } from '../test/mockProviders'
+import { aLearner, testState } from '../test/state'
 import { CURRICULUM } from '../data/lessons'
 import CatRainScreen from './CatRainScreen'
 import LessonScreen from './LessonScreen'
@@ -139,7 +150,7 @@ describe('a lesson', () => {
   it('says so rather than crashing when the lesson wandered off', () => {
     render(<LessonScreen lessonId="no-such-lesson" game={aGame()} navigate={navigate} />)
     expect(screen.getByText(/that lesson wandered off/i)).toBeTruthy()
-    fireEvent.click(screen.getByText('Back to Levels'))
+    fireEvent.click(screen.getByText('Back to lessons'))
     expect(navigate).toHaveBeenCalledWith({ name: 'map' })
   })
 
@@ -186,9 +197,9 @@ describe('free practice', () => {
     expect(screen.getByText('⌨️ Free Practice')).toBeTruthy()
   })
 
-  it('goes home rather than starting anything', () => {
+  it('goes back to typing rather than starting anything', () => {
     render(<PracticeScreen game={aGame()} navigate={navigate} />)
-    fireEvent.click(screen.getByText('← Home'))
+    fireEvent.click(screen.getByText('← Typing'))
     expect(navigate).toHaveBeenCalledWith({ name: 'typing' })
   })
 
@@ -221,9 +232,9 @@ describe('the arcade', () => {
     expect(screen.getByText(/Miss 3 and it/)).toBeTruthy()
   })
 
-  it('goes home without starting', () => {
+  it('goes back to typing without starting', () => {
     renderArcade()
-    fireEvent.click(screen.getByText('← Home'))
+    fireEvent.click(screen.getByText('← Typing'))
     expect(navigate).toHaveBeenCalledWith({ name: 'typing' })
   })
 
@@ -242,7 +253,18 @@ describe('the arcade', () => {
     fireEvent.click(screen.getByText('✕ End'))
     expect(game.addHighScore).toHaveBeenCalled()
     const row = (game.addHighScore as ReturnType<typeof vi.fn>).mock.calls[0]![0]
-    expect(row).toMatchObject({ score: 0, mode: 'Cat Rain' })
+    expect(row).toMatchObject({ score: 0, mode: 'Word Rain' })
+  })
+
+  it('does not sign the score: the board is the learner’s own', () => {
+    // High scores follow the account, so whose they are is already known.
+    testState.active = aLearner({ displayName: 'Ada' })
+    const game = aGame()
+    renderArcade(game)
+    fireEvent.click(screen.getByText('▶ Start'))
+    fireEvent.click(screen.getByText('✕ End'))
+    const row = (game.addHighScore as ReturnType<typeof vi.fn>).mock.calls[0]![0]
+    expect(row).not.toHaveProperty('name')
   })
 
   it('ends on Escape too', () => {

@@ -13,6 +13,7 @@ import {
   isPass,
   isProduced,
   normalize,
+  reshuffleQuestion,
 } from './questions'
 import type { QuizCard } from '../progress/types'
 
@@ -200,5 +201,63 @@ describe('scaffolded questions', () => {
     expect(isProduced('written')).toBe(true)
     expect(isProduced('multiple-choice')).toBe(false)
     expect(isProduced('true-false')).toBe(false)
+  })
+})
+
+// A card that comes back in the same round used to come back with the right
+// answer in the same slot, and children learn the slot rather than the answer.
+describe('reshuffleQuestion', () => {
+  const card: QuizCard = { id: 'a', term: 'A', definition: 'alpha', hint: null } as QuizCard
+  const choice = {
+    card,
+    kind: 'multiple-choice' as const,
+    direction: 'term-first' as const,
+    prompt: 'A',
+    answer: 'alpha',
+    choices: ['alpha', 'beta', 'gamma', 'delta'],
+  }
+
+  it('moves the right answer to a different slot every time', () => {
+    for (let i = 0; i < 50; i++) {
+      const again = reshuffleQuestion(choice)
+      expect(again.choices!.indexOf('alpha')).not.toBe(0)
+    }
+  })
+
+  it('keeps the same options — only the order changes', () => {
+    const again = reshuffleQuestion(choice)
+    expect([...again.choices!].sort()).toEqual([...choice.choices].sort())
+    expect(again.answer).toBe('alpha')
+  })
+
+  it('does not change the question it was given', () => {
+    reshuffleQuestion(choice)
+    expect(choice.choices).toEqual(['alpha', 'beta', 'gamma', 'delta'])
+  })
+
+  it('moves the answer even when the shuffle happened to leave it put', () => {
+    // An rng that never moves anything: the fallback swap has to do the work.
+    const again = reshuffleQuestion(choice, () => 0.999)
+    expect(again.choices!.indexOf('alpha')).not.toBe(0)
+    expect([...again.choices!].sort()).toEqual([...choice.choices].sort())
+  })
+
+  it('deals a word bank again the same way', () => {
+    const bank = { ...choice, kind: 'word-bank' as const, choices: undefined, bank: ['beta', 'alpha', 'gamma'] }
+    for (let i = 0; i < 30; i++) {
+      const again = reshuffleQuestion(bank)
+      expect(again.bank!.indexOf('alpha')).not.toBe(1)
+      expect([...again.bank!].sort()).toEqual(['alpha', 'beta', 'gamma'])
+    }
+  })
+
+  it('leaves a question with nothing to reorder alone', () => {
+    const written = { ...choice, kind: 'written' as const, choices: undefined }
+    expect(reshuffleQuestion(written)).toBe(written)
+  })
+
+  it('copes with a single option', () => {
+    const lone = { ...choice, choices: ['alpha'] }
+    expect(reshuffleQuestion(lone).choices).toEqual(['alpha'])
   })
 })

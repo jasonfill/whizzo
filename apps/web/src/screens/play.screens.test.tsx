@@ -25,6 +25,12 @@ vi.mock('../lib/theme/ThemeProvider', async () =>
 vi.mock('../hooks/useAssignments', async () =>
   (await import('../test/mockProviders')).assignmentsMock(),
 )
+// ScreenHeader's Back goes to real history; there is none in a test, so it
+// lands on the fallback route, which is what a test can assert on.
+vi.mock('../hooks/useBack', async () => {
+  const { spies } = await import('../test/mockProviders')
+  return { useBack: (fallback: unknown) => () => spies.navigate(fallback) }
+})
 
 // Speech is a browser capability jsdom does not have, and the spelling screens
 // dictate on mount.
@@ -155,21 +161,25 @@ describe('WorldMap', () => {
 })
 
 describe('TrophyRoom', () => {
-  it('names the collection tab after the theme’s collectible', () => {
+  it('is the badges room, and says so', () => {
     render(<TrophyRoom game={aGame()} navigate={navigate} />)
-    expect(screen.getByRole('button', { name: testState.theme.unit })).toBeInTheDocument()
+    expect(screen.getByText('Badges 🏅')).toBeInTheDocument()
+    expect(screen.queryByText(/trophy/i)).not.toBeInTheDocument()
   })
 
-  it('says the collection is empty in the theme’s own words', async () => {
+  it('keeps no collection of its own — it links to the theme’s', async () => {
+    // One collectible system: the count here is the count everywhere.
     render(<TrophyRoom game={aGame()} navigate={navigate} />)
-    await userEvent.click(screen.getByRole('button', { name: testState.theme.unit }))
-    expect(screen.getByText(new RegExp(`No ${testState.theme.unit}`, 'i'))).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: testState.theme.unit })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByText(`See your ${testState.theme.worldNoun} →`))
+    expect(navigate).toHaveBeenCalledWith({ name: 'world' })
   })
 
-  it('shows earned collectibles once there are some', async () => {
-    render(<TrophyRoom game={aGame({ state: { collectedCats: ['a', 'b'] } })} navigate={navigate} />)
-    await userEvent.click(screen.getByRole('button', { name: testState.theme.unit }))
-    expect(screen.getAllByRole('img').length).toBeGreaterThanOrEqual(2)
+  it('shows the same count as the collection screen', () => {
+    render(<TrophyRoom game={aGame()} navigate={navigate} />)
+    expect(
+      screen.getByText(new RegExp(`0 of ${testState.theme.total} ${testState.theme.unit}`)),
+    ).toBeInTheDocument()
   })
 })
 
@@ -203,9 +213,15 @@ describe('ThemePicker', () => {
     expect(screen.getAllByText(/often picked in/i).length).toBe(10)
   })
 
-  it('marks the current world as chosen', () => {
+  it('is called a theme, never a world', () => {
     render(<ThemePicker navigate={navigate} />)
-    expect(screen.getByText(/Your world ✓/)).toBeInTheDocument()
+    expect(screen.getByText('Pick your theme')).toBeInTheDocument()
+    expect(screen.queryByText(/world/i)).not.toBeInTheDocument()
+  })
+
+  it('marks the current theme as chosen', () => {
+    render(<ThemePicker navigate={navigate} />)
+    expect(screen.getByText(/Your theme ✓/)).toBeInTheDocument()
   })
 
   it('sets a world when one is picked', async () => {

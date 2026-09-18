@@ -31,7 +31,7 @@ import {
 import { richToPlain } from '@whizzo/shared/rich'
 import { z } from 'zod'
 import { dayOf } from '../progressMappers.js'
-import { deckFor, decksFor, editableDeckFor, libraryDeckFor, libraryDecksFor, masteryFor } from '../progressRead.js'
+import { editableDeckFor, libraryDeckFor, libraryDecksFor, masteryFor, tutorDeckFor, tutorDecksFor } from '../progressRead.js'
 import { appUrl, newId } from './tokens.js'
 import {
   asUser,
@@ -494,7 +494,7 @@ const handlers: Record<string, Handler> = {
     return asUser(ctx.grant, async (db) => {
       const who = await resolveLearner(db, ctx.grant, args.learner)
       const [decks, mastery, tasks] = await Promise.all([
-        decksFor(db, who.learner.id),
+        tutorDecksFor(db, who.learner.id),
         masteryFor(db, who.learner.id),
         db.query(
           `select a.id, t.activity, t.target_id, t.due_on
@@ -561,7 +561,7 @@ const handlers: Record<string, Handler> = {
     const args = z.object({ learner: learnerParam, materialId: z.string().max(120).optional() }).parse(input)
     return asUser(ctx.grant, async (db) => {
       const who = await resolveLearner(db, ctx.grant, args.learner)
-      const [decks, mastery] = await Promise.all([decksFor(db, who.learner.id), masteryFor(db, who.learner.id)])
+      const [decks, mastery] = await Promise.all([tutorDecksFor(db, who.learner.id), masteryFor(db, who.learner.id)])
       const chosen = args.materialId ? decks.filter((d) => d.id === args.materialId) : decks
       if (args.materialId && !chosen.length) throw new ToolRefused('No deck with that id is available to this learner.')
       const today = todayString()
@@ -812,7 +812,7 @@ const handlers: Record<string, Handler> = {
       const learners = await grantedLearners(db, ctx.grant)
       const [library, ...perLearner] = await Promise.all([
         libraryDecksFor(db, ctx.grant.userId, ctx.grant.learnerIds),
-        ...learners.map((l) => decksFor(db, l.id)),
+        ...learners.map((l) => tutorDecksFor(db, l.id)),
       ])
       const hit = (d: QuizDeck) => !needle || d.title.toLowerCase().includes(needle) || d.cards.some((c) => richToPlain(c.term).toLowerCase().includes(needle))
       const inLibrary = new Set(library.map((d) => d.id))
@@ -852,7 +852,7 @@ const handlers: Record<string, Handler> = {
       const learners = await grantedLearners(db, ctx.grant)
       const [inLibrary, ...perLearner] = await Promise.all([
         libraryDeckFor(db, ctx.grant.userId, ctx.grant.learnerIds, id),
-        ...learners.map((l) => deckFor(db, l.id, id)),
+        ...learners.map((l) => tutorDeckFor(db, l.id, id)),
       ])
       const held = perLearner.find((d) => d !== null) ?? null
       const deck = held ?? inLibrary

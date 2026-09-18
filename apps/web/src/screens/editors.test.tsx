@@ -10,6 +10,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../auth/AuthProvider', async () => (await import('../test/mockProviders')).authMock())
+vi.mock('../hooks/useBack', async () => (await import('../test/mockProviders')).backMock())
 vi.mock('../lib/learners/LearnerProvider', async () =>
   (await import('../test/mockProviders')).learnersMock(),
 )
@@ -41,7 +42,7 @@ vi.mock('../lib/assignments/api', async (orig) => ({
 }))
 
 import { spies } from '../test/mockProviders'
-import { signIn, testState } from '../test/state'
+import { aLearner, signIn, testState } from '../test/state'
 import { emptySnapshot, listKey } from '../lib/progress/types'
 import { STARTER_DECKS } from '../data/quiz/starterDecks'
 import CustomListsScreen from './suite/CustomListsScreen'
@@ -312,6 +313,7 @@ describe('a deck’s own screen', () => {
     // The starters ship with the app; editing one in place would change it for
     // everybody who has practiced against it.
     const starter = STARTER_DECKS[0]!
+    signIn(aLearner({ starterDecks: [starter.id] }))
     render(<DeckScreen deckId={starter.id} navigate={navigate} />)
     expect(screen.getByText('📋 Make my own copy')).toBeTruthy()
     expect(screen.queryByText('✏️ Edit deck')).toBeNull()
@@ -553,8 +555,8 @@ describe('a library deck, opened by its owner', () => {
 
   it('offers to set it as work right there', async () => {
     render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
-    fireEvent.click(await screen.findByText('Set as work'))
-    expect(screen.getByText('Set some work')).toBeTruthy()
+    fireEvent.click(await screen.findByText('Set as a task'))
+    expect(screen.getByText('Set a task')).toBeTruthy()
   })
 
   it('opens the library editor, not the learner one', async () => {
@@ -620,7 +622,7 @@ describe('a draft in the library, opened by its owner', () => {
     await screen.findByText('Rivers')
     expect(screen.getByText('Draft')).toBeTruthy()
     expect(screen.getByText(/Not looked over yet/)).toBeTruthy()
-    expect(screen.queryByText('Set as work')).toBeNull()
+    expect(screen.queryByText('Set as a task')).toBeNull()
   })
 
   it('still shows the cards, because that is what the review is', async () => {
@@ -634,7 +636,7 @@ describe('a draft in the library, opened by its owner', () => {
     render(<DeckScreen deckId="lib-1" scope="library" navigate={navigate} />)
     fireEvent.click(await screen.findByText('✓ Accept'))
     await waitFor(() => expect(lib.acceptLibraryDeck).toHaveBeenCalledWith('lib-1'))
-    expect(await screen.findByText('Set as work')).toBeTruthy()
+    expect(await screen.findByText('Set as a task')).toBeTruthy()
     expect(screen.queryByText('Draft')).toBeNull()
   })
 

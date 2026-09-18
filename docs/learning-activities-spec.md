@@ -163,6 +163,14 @@ the Checkpoint measures.
   nothing as evidence of durable retrieval. It restores the item, it does not
   advance it. Without this rule the requeue policy quietly manufactures
   promotions, which is the most likely way this ladder gets silently wrong.
+- **A requeued card is dealt again.** The same multiple-choice options come
+  back, but the right answer is guaranteed a different slot: children learn
+  where the green one was, and a second sighting that rewards that is not
+  practice. A word bank is dealt again the same way.
+- **Striking out an option is a strategy, never evidence.** Multiple choice
+  offers a way to rule an option out without picking it (a learner setting,
+  on by default). Nothing about it reaches the grade, the attempt, or the
+  schedule; it is forgotten when the card changes.
 - **One miss spends the banked evidence; two misses running cost a rung.**
   Originally this demoted on every miss, and the ladder simulation showed why
   that is wrong: an item practiced at the learner's frontier is *meant* to be

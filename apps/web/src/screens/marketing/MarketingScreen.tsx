@@ -129,7 +129,7 @@ function Hero({ onStart }: { onStart: () => void }) {
   return (
     <section className="grid grid-cols-1 items-center gap-6 rounded-[26px] bg-chalk p-7 ring-1 ring-hair md:grid-cols-[1fr_280px] md:p-10">
       <div>
-        <Eyebrow>Spelling · Typing · Study decks</Eyebrow>
+        <Eyebrow>Spelling · Typing · Flashcards</Eyebrow>
         <h1 className="mt-2 font-display text-[44px] font-extrabold leading-[1.05] tracking-[-0.02em] text-ink md:text-[58px]">
           {/* Each beat is unbreakable, so a narrow column wraps between "Prove it."
               and "Keep it." rather than stranding "it." on a line of its own. */}

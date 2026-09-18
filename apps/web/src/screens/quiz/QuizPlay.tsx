@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import HereNow from '../../components/live/HereNow'
 import { Button, Card } from '../../components/ui'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { useQuizSession, type QuizItemResult, type QuizSummary } from '../../hooks/useQuizSession'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import { useBand } from '../../lib/band/useBand'
-import { allDecks, findDeck } from '../../lib/quiz/decks'
+import { useBack } from '../../hooks/useBack'
+import { findDeck } from '../../lib/quiz/decks'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
 import {
   DEFAULT_TEST_SIZE,
   MATCH_PAIRS,
@@ -47,14 +48,17 @@ function defaultSize(mode: StudyMode, roundSize: number): number | undefined {
 }
 
 export default function QuizPlay({ mode, deckId, size, direction, navigate }: Props) {
-  const { snapshot, reloadMaterial, materialLoading } = useProgress()
+  const { reloadMaterial, materialLoading } = useProgress()
   const { roundSize } = useBand()
   const session = useQuizSession()
   const [summary, setSummary] = useState<QuizSummary | null>(null)
   const [saving, setSaving] = useState(false)
   const [round, setRound] = useState(0)
+  // Leaving goes back to wherever the round was started from — the deck, or
+  // a task — and to the deck (or the deck list) only on a cold link.
+  const done = useBack(deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' })
 
-  const decks = useMemo(() => allDecks(snapshot, STARTER_DECKS), [snapshot])
+  const decks = useLearnerDecks()
   const deck = deckId ? findDeck(decks, deckId) : undefined
 
   // A deck named by the route but not in the snapshot is usually one set as
@@ -89,13 +93,13 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
   }, [round, deckMissing])
 
   const def = modeDef(mode)
-  const title = mode === 'review' ? 'Review' : (deck?.title ?? 'Study')
+  const title = mode === 'review' ? 'Review' : (deck?.title ?? 'Flashcards')
 
   const complete = async (results: QuizItemResult[]) => {
     if (!results.length) {
       // Nothing was answered — a stopped Match game with no pairs found. There
       // is no progress to record, so bow out rather than write an empty round.
-      navigate(deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' })
+      done()
       return
     }
     setSaving(true)
@@ -137,7 +141,7 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
       <QuizResults
         summary={summary}
         onAgain={goAgain}
-        onDeck={() => navigate(deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' })}
+        onDone={done}
         onHome={() => navigate({ name: 'quiz' })}
       />
     )
@@ -155,17 +159,14 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
     const waiting = materialLoading || !asked
     return (
       <div className="mx-auto w-full max-w-2xl py-4">
-        <ScreenHeader
-          title={`${def.emoji} ${def.name}`}
-          onBack={() => navigate({ name: 'quiz' })}
-        />
+        <ScreenHeader title={`${def.emoji} ${def.name}`} back={{ name: 'quiz' }} backLabel="← Flashcards" />
         <Card>
           <p className="mb-3 font-bold text-muted">
             {waiting
               ? 'Fetching the deck…'
               : 'That deck is not here. It may have been deleted, or taken back by whoever set it.'}
           </p>
-          {!waiting && <Button onClick={() => navigate({ name: 'quiz' })}>Back to decks</Button>}
+          {!waiting && <Button onClick={() => navigate({ name: 'quiz' })}>Back to Flashcards</Button>}
         </Card>
       </div>
     )
@@ -176,7 +177,8 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
       <div className="mx-auto w-full max-w-2xl py-4">
         <ScreenHeader
           title={`${def.emoji} ${def.name}`}
-          onBack={() => navigate(deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' })}
+          back={deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' }}
+          backLabel={deckId ? '← Back to the deck' : '← Flashcards'}
         />
         <Card>
           <p className="mb-3 font-bold text-muted">
@@ -184,7 +186,7 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
               ? 'Nothing is due for review right now. That is the system working — come back when a card is about to slip.'
               : 'There are no cards to study here yet.'}
           </p>
-          <Button onClick={() => navigate({ name: 'quiz' })}>Back to decks</Button>
+          <Button onClick={() => navigate({ name: 'quiz' })}>Back to Flashcards</Button>
         </Card>
       </div>
     )
@@ -195,7 +197,7 @@ export default function QuizPlay({ mode, deckId, size, direction, navigate }: Pr
       <ScreenHeader
         title={`${def.emoji} ${title}`}
         subtitle={def.name}
-        onBack={() => navigate(deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' })}
+        back={deckId ? { name: 'quiz-deck', deckId } : { name: 'quiz' }}
         backLabel="← Quit"
         right={<HereNow names={session.watcherNames} doing="following along" />}
       />

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { useProgress } from '../../lib/progress/ProgressProvider'
-import { allDecks } from '../../lib/quiz/decks'
-import type { Attempt, SessionRecord } from '../../lib/progress/types'
+import { formatDuration } from '../../lib/progress/roundLabels'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
+import type { Attempt, QuizDeck, SessionRecord } from '../../lib/progress/types'
 
 /**
- * The answers behind one session.
+ * The answers behind one round.
  *
  * This is the oversight view: a grown-up opens a round and sees what the score
  * was actually made of. Every answer, in the order it was given, including a
@@ -18,7 +18,7 @@ import type { Attempt, SessionRecord } from '../../lib/progress/types'
  * they look.
  */
 export default function SessionDetail({ session }: { session: SessionRecord }) {
-  const { snapshot, attemptsForSession } = useProgress()
+  const { attemptsForSession } = useProgress()
   const [attempts, setAttempts] = useState<Attempt[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -37,7 +37,7 @@ export default function SessionDetail({ session }: { session: SessionRecord }) {
     }
   }, [attemptsForSession, session.id])
 
-  const decks = allDecks(snapshot, STARTER_DECKS)
+  const decks = useLearnerDecks()
 
   // How long the round took and where its numbers came from are worth showing
   // whatever else is or is not available, so the header sits above every
@@ -120,6 +120,14 @@ export default function SessionDetail({ session }: { session: SessionRecord }) {
                     self-graded
                   </span>
                 )}
+                {a.channel === 'mcp' && (
+                  <span
+                    className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-extrabold text-sky-700"
+                    title="This answer was given out loud to the tutor, through the assistant."
+                  >
+                    via tutor
+                  </span>
+                )}
                 {a.hintsUsed > 0 && (
                   <span className="rounded-full bg-wash px-2 py-0.5 text-[11px] font-extrabold text-muted">
                     💡 {a.hintsUsed}
@@ -177,10 +185,7 @@ function EvidenceBadge({ session }: { session: SessionRecord }) {
  * `deckId:cardId`, which means nothing to a person — the deck is looked up so
  * a parent sees the card rather than an identifier.
  */
-function itemLabel(
-  attempt: Attempt,
-  decks: ReturnType<typeof allDecks>,
-): { title: string; detail?: string } {
+function itemLabel(attempt: Attempt, decks: QuizDeck[]): { title: string; detail?: string } {
   if (attempt.subject !== 'quiz') return { title: attempt.itemKey }
 
   for (const deck of decks) {
@@ -210,9 +215,3 @@ function formatMs(ms: number | null): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
-function formatDuration(ms: number): string {
-  const seconds = Math.round(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  return `${minutes}m ${seconds % 60}s`
-}

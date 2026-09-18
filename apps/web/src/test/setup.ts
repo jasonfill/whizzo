@@ -82,3 +82,10 @@ afterEach(async () => {
   resetTestState()
   resetSpies()
 })
+
+// ScreenHeader's `back` prop goes through useBack, which needs a Router. Most
+// screen tests render bare, so Back lands on the fallback the screen named —
+// which is also what their assertions want to see. Tests that render inside a
+// real router (App.test) are unaffected in what they assert: a fallback
+// navigation is the same destination a cold deep link would use.
+vi.mock('../hooks/useBack', async () => (await import('./mockProviders')).backMock())

@@ -61,6 +61,8 @@ const learner = {
     authUserId: null,
     createdAt: 0,
     theme: null,
+    starterDecks: [],
+    settings: {},
     covered: false,
   },
   band: 'growing' as const,
@@ -92,6 +94,8 @@ const rounds = new Map<string, Record<string, unknown>>()
 let masteryRows: Array<Record<string, unknown>> = []
 /** Session ids the database already holds, for the retry test. */
 let existingSessions = new Set<string>()
+/** The starter decks the learner row says were added; tests that need one set it. */
+let starterIds: string[] = []
 
 const masteredRow = (cardId: string) => ({
   learner_id: LEARNER, subject: 'quiz', item_key: `${DECK}:${cardId}`, list_id: DECK, difficulty: 2,
@@ -101,7 +105,7 @@ const masteredRow = (cardId: string) => ({
 
 const learnerRow = (id: string, name: string) => ({
   id, owner_id: CALLER, display_name: name, avatar_emoji: '🐱', grade_hint: 4, birth_year: null,
-  auth_kind: 'none', auth_user_id: null, created_at: new Date().toISOString(), theme: null, covered: false,
+  auth_kind: 'none', auth_user_id: null, created_at: new Date().toISOString(), theme: null, starter_decks: [], covered: false,
 })
 
 function wire() {
@@ -111,6 +115,7 @@ function wire() {
       return { rows: [learnerRow(LEARNER, 'Maya'), learnerRow(LEARNER2, 'Theo')].filter((l) => ids.includes(l.id)), rowCount: 2 }
     }
     if (sql.includes('from public.decks')) return { rows: [deckRow], rowCount: 1 }
+    if (sql.includes('select starter_decks from public.learners')) return { rows: [{ starter_decks: starterIds }], rowCount: 1 }
     if (sql.includes('from public.item_mastery')) return { rows: masteryRows, rowCount: masteryRows.length }
     if (sql.includes('select 1 from public.sessions where id')) {
       const hit = existingSessions.has(String(params[0]))
@@ -146,6 +151,7 @@ beforeEach(() => {
   rounds.clear()
   masteryRows = []
   existingSessions = new Set()
+  starterIds = []
   query.mockReset()
   wire()
 })
@@ -159,6 +165,41 @@ async function open(roundId: string, g = grant) {
 }
 
 const theo = { ...learner, learner: { ...learner.learner, id: LEARNER2, displayName: 'Theo' }, firstName: 'Theo' }
+
+describe('a starter deck', () => {
+  // The learner added it from the catalog; it is a constant, not a row. The
+  // tutor still has to be able to run it — and write mastery under the same
+  // `deckId:cardId` the app uses, or the round would count for nothing.
+  it('can be started once the learner has added it, and is written under the app\'s keys', async () => {
+    const { startRound, answerRound } = await import('./rounds.js')
+    starterIds = ['starter-capitals']
+
+    const started = await startRound(grant, learner, null, { mode: 'test', deckId: 'starter-capitals', size: 1 })
+    expect(started.total).toBe(1)
+    const q = started.question!
+    expect(q.cardId).toMatch(/^starter-capitals-\d+$/)
+    expect(q.itemKey).toBe(`starter-capitals:${q.cardId}`)
+
+    const o = await open(started.roundId)
+    const done = await answerRound(grant, o.who, o.round, 'no idea', false)
+    expect(done.summary).toBeDefined()
+
+    const attemptsInsert = query.mock.calls.find(([s]) => String(s).includes('insert into public.attempts'))
+    expect(attemptsInsert).toBeDefined()
+    expect(attemptsInsert![1] as unknown[]).toContain(`starter-capitals:${q.cardId}`)
+    // No track on a starter, so only the whole-subject pool ('') is written —
+    // no per-track skill state is invented for it, and nothing throws.
+    const skillWrites = query.mock.calls.filter(([s]) => String(s).includes('insert into public.skill_states'))
+    expect(skillWrites.length).toBeGreaterThan(0)
+    for (const [, params] of skillWrites) expect((params as unknown[])[2]).toBe('')
+    expect(rounds.get(started.roundId)?.ended_at).toBeTruthy()
+  })
+
+  it('is refused until the learner adds it', async () => {
+    const { startRound } = await import('./rounds.js')
+    await expect(startRound(grant, learner, null, { mode: 'test', deckId: 'starter-capitals', size: 1 })).rejects.toThrow(/No deck with that id/)
+  })
+})
 
 describe('a practice round', () => {
   it('asks without telling, records the answer as mcp evidence, and writes once at the end', async () => {
@@ -295,7 +336,7 @@ describe('a practice round', () => {
     expect(query.mock.calls.some(([s]) => String(s).includes('insert into public.sessions'))).toBe(false)
   })
 
-  it('study hands over answers and writes exposure only: no session, no closers, no daily line', async () => {
+  it('study hands over answers and writes exposure only: a practice-only session with nothing checked', async () => {
     const { startRound } = await import('./rounds.js')
     const study = await startRound(grant, learner, null, { mode: 'study', deckId: DECK })
     expect(study.cards?.length).toBe(4)
@@ -307,10 +348,66 @@ describe('a practice round', () => {
     expect(values[6]).toBe(false) // unverified: a flashcard flip
     expect(values[7]).toBe(false) // and claims nothing
     expect(values[14]).toBe(0) // rung 0
-    expect(sql.some((s) => s.includes('insert into public.sessions'))).toBe(false)
-    expect(sql.some((s) => s.includes('complete_matching_assignments'))).toBe(false)
-    expect(sql.some((s) => s.includes('award_matching_rewards'))).toBe(false)
-    expect(sql.some((s) => s.includes('bump_daily_activity'))).toBe(false)
+
+    // The round is on the record, so a grown-up can see it happened — and it
+    // is marked as what it was. Column order follows the insert in
+    // progressWrite.ts: is_test at 5, items_correct at 7, accuracy at 8,
+    // meta at 14, verified_items_total at 18, verified_items_correct at 19.
+    const sessionInsert = query.mock.calls.find(([s]) => String(s).includes('insert into public.sessions'))
+    expect(sessionInsert).toBeDefined()
+    const row = sessionInsert![1] as unknown[]
+    expect(row[0]).toBe(study.roundId)
+    expect(row[3]).toBe('tutor')
+    expect(row[4]).toBe(DECK)
+    expect(row[5]).toBe(false) // is_test: practice only
+    expect(row[6]).toBe(4) // every card met
+    expect(row[7]).toBe(0) // nothing got right, because nothing was asked
+    expect(row[18]).toBe(0) // nothing checked
+    expect(row[19]).toBe(0)
+    // Not "complete": that flag is what lets a tutor round close a Learn task
+    // (migration 0020), and a round with no answers in it never may.
+    expect(JSON.parse(String(row[14])).complete).toBe(false)
+    expect(JSON.parse(String(row[14])).mode).toBe('study')
+    expect(rounds.get(study.roundId)?.session_id).toBe(study.roundId)
+
+    // The closers run as they do for every session — and each finds nothing
+    // to close: no min_accuracy bar clears on nothing checked, no Learn task
+    // matches an incomplete tutor round, no reward or goal has new evidence.
+    // The minutes land on the daily strip with nothing counted right.
+    const daily = query.mock.calls.find(([s]) => String(s).includes('bump_daily_activity'))
+    expect(daily).toBeDefined()
+    expect((daily![1] as unknown[])[3]).toBe(4)
+    expect((daily![1] as unknown[])[4]).toBe(0)
+    // No ability, no streak: the skill row is untouched.
+    expect(sql.some((s) => s.includes('insert into public.skill_states'))).toBe(false)
+  })
+
+  it('a study round is labeled practice-only by the grown-up-facing list', async () => {
+    // What the Progress and deck-history rows read from: `isTest` false is
+    // "Practice only", and 0 of N checked says nothing was judged.
+    const { startRound } = await import('./rounds.js')
+    const study = await startRound(grant, learner, null, { mode: 'study', deckId: DECK })
+    const sessionInsert = query.mock.calls.find(([s]) => String(s).includes('insert into public.sessions'))
+    const row = sessionInsert![1] as unknown[]
+    const listed = { isTest: row[5] as boolean, itemsTotal: row[6] as number, verifiedItemsTotal: row[18] as number }
+    expect(listed.isTest ? 'Graded' : 'Practice only').toBe('Practice only')
+    expect(`${listed.verifiedItemsTotal}/${listed.itemsTotal} checked`).toBe('0/4 checked')
+    void study
+  })
+
+  it('closing a study round whose session already exists writes nothing twice', async () => {
+    const { startRound } = await import('./rounds.js')
+    // The round id is the session id, and it is minted inside startRound —
+    // so the guard is exercised by making every session "already there".
+    const base = query.getMockImplementation()!
+    query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      if (sql.includes('select 1 from public.sessions where id')) return { rows: [{ '?column?': 1 }], rowCount: 1 }
+      return base(sql, params)
+    })
+    const study = await startRound(grant, learner, null, { mode: 'study', deckId: DECK })
+    expect(query.mock.calls.some(([s]) => String(s).includes('insert into public.attempts'))).toBe(false)
+    expect(query.mock.calls.some(([s]) => String(s).includes('insert into public.sessions'))).toBe(false)
+    expect(rounds.get(study.roundId)?.ended_at).toBeTruthy()
   })
 
   it('a round is closed under the child it started with, whoever starts the next one', async () => {

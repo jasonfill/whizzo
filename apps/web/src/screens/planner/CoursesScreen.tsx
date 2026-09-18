@@ -13,7 +13,7 @@ import { useLearners } from '../../lib/learners/LearnerProvider'
 import { archiveCourse, createCourse, deleteCourse, listCourses, rolloverCourses, updateCourse } from '../../lib/planner/api'
 import type { Navigate } from '../../routes'
 
-export default function CoursesScreen({ navigate }: { navigate: Navigate }) {
+export default function CoursesScreen({ navigate: _navigate }: { navigate: Navigate }) {
   const { active } = useLearners()
   const learnerId = active?.id ?? null
   const [courses, setCourses] = useState<Course[]>([])
@@ -42,7 +42,7 @@ export default function CoursesScreen({ navigate }: { navigate: Navigate }) {
   if (!active || !learnerId) {
     return (
       <div className="mx-auto w-full max-w-2xl py-4">
-        <ScreenHeader title="Courses" onBack={() => navigate({ name: 'planner' })} />
+        <ScreenHeader title="Courses" back={{ name: 'planner' }} />
         <Card>
           <p className="font-bold text-muted">Courses belong to a learner. Sign in with one first.</p>
         </Card>
@@ -58,7 +58,7 @@ export default function CoursesScreen({ navigate }: { navigate: Navigate }) {
       <ScreenHeader
         title={`${active.displayName}'s courses 🎒`}
         subtitle="The classes this term. Tap one to edit."
-        onBack={() => navigate({ name: 'planner' })}
+        back={{ name: 'planner' }}
       />
       {error && (
         <p className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-600" role="alert">

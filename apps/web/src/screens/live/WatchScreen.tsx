@@ -21,6 +21,7 @@ import type {
 import { api } from '../../lib/api/client'
 import { useLiveLearner } from '../../hooks/useLiveChannel'
 import { useLearners } from '../../lib/learners/LearnerProvider'
+import { useAudience } from '../../lib/learners/useAudience'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import { Button, Card } from '../../components/ui'
 import type { Route } from '../../routes'
@@ -51,6 +52,7 @@ const NOTHING: Watching = { round: null, card: null, draft: '', answered: 0, cor
 
 export default function WatchScreen({ learnerId, navigate }: Props) {
   const { learners } = useLearners()
+  const audience = useAudience()
   const learner = learners.find((l) => l.id === learnerId) ?? null
   const [seen, setSeen] = useState<Watching>(NOTHING)
 
@@ -145,7 +147,7 @@ export default function WatchScreen({ learnerId, navigate }: Props) {
       <ScreenHeader
         title={`Following ${name}`}
         subtitle={seen.round ? `${seen.round.title} · ${seen.round.activity}` : 'Nothing running'}
-        onBack={() => navigate({ name: 'family' })}
+        back={{ name: 'family' }}
         right={right}
       />
 
@@ -232,7 +234,7 @@ export default function WatchScreen({ learnerId, navigate }: Props) {
           </p>
           <div className="mt-3">
             <Button variant="ghost" onClick={() => navigate({ name: 'family' })}>
-              Back to Family
+              Back to {audience.label}
             </Button>
           </div>
         </Card>

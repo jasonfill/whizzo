@@ -51,9 +51,9 @@ export default function SharedWork({ onChanged }: { onChanged?: () => void | Pro
 
   return (
     <Card className="mb-4">
-      <h2 className="mb-1 text-xl font-extrabold text-ink">Work you have set</h2>
+      <h2 className="mb-1 text-xl font-extrabold text-ink">Tasks you have set</h2>
       <p className="mb-3 font-bold text-muted">
-        One piece of work, everyone you gave it to, and who has finished it.
+        One task, everyone you gave it to, and who has finished it.
       </p>
 
       <ul className="space-y-3">

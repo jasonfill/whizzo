@@ -1,12 +1,17 @@
 // Row shapes in, wire shapes out. snake_case never leaves the API.
 
-import type { AuthKind, Guardian, GuardianRole, Learner } from '@whizzo/shared'
+import type { AuthKind, Guardian, GuardianRole, Learner, LearnerSettings, ViewerRole } from '@whizzo/shared'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 function epoch(value: any): number {
   if (!value) return 0
   return value instanceof Date ? value.getTime() : Date.parse(String(value)) || 0
+}
+
+/** node-pg parses jsonb already; anything that is not an object is treated as empty. */
+function isPlainObject(value: any): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 export function toLearner(row: any): Learner {
@@ -21,7 +26,10 @@ export function toLearner(row: any): Learner {
     authUserId: row.auth_user_id ?? null,
     createdAt: epoch(row.created_at),
     theme: row.theme ?? null,
+    starterDecks: Array.isArray(row.starter_decks) ? row.starter_decks.map(String) : [],
+    settings: isPlainObject(row.settings) ? (row.settings as LearnerSettings) : {},
     covered: Boolean(row.covered),
+    ...(row.viewer_role ? { viewerRole: String(row.viewer_role) as ViewerRole } : {}),
   }
 }
 

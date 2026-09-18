@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('../../auth/AuthProvider', async () =>
   (await import('../../test/mockProviders')).authMock(),
 )
+vi.mock('../../hooks/useBack', async () => (await import('../../test/mockProviders')).backMock())
 vi.mock('../../lib/learners/LearnerProvider', async () =>
   (await import('../../test/mockProviders')).learnersMock(),
 )
@@ -36,14 +37,15 @@ vi.mock('../../lib/spelling/speech', () => ({
 
 import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import { spies } from '../../test/mockProviders'
-import { signIn, testState } from '../../test/state'
+import { aLearner, signIn, testState } from '../../test/state'
 import QuizPlay from './QuizPlay'
 
 const navigate = spies.navigate
 const DECK = STARTER_DECKS[0]!
 
 beforeEach(() => {
-  signIn()
+  // The starter is studied here, so it is in the learner's list.
+  signIn(aLearner({ starterDecks: [DECK.id] }))
   navigate.mockClear()
 })
 
@@ -55,7 +57,7 @@ describe('a deck with nothing to study', () => {
 
   it('offers a way back to the decks', async () => {
     render(<QuizPlay mode="review" navigate={navigate} />)
-    fireEvent.click(await screen.findByText('Back to decks'))
+    fireEvent.click(await screen.findByText('Back to Flashcards'))
     expect(navigate).toHaveBeenCalledWith({ name: 'quiz' })
   })
 
@@ -182,10 +184,17 @@ describe('flashcards', () => {
       expect(screen.getByLabelText('Hide the answer')).toBeTruthy()
     })
 
-    it('remembers the choice for next time', async () => {
+    it('saves the choice to the learner, so it is the same on every device', async () => {
       await renderSliding()
-      expect(localStorage.getItem('whizzo:flashcards:layout')).toBe('slide')
+      expect(spies.updateLearner).toHaveBeenCalledWith('l1', {
+        settings: { flashcardLayout: 'slide' },
+      })
+      expect(localStorage.getItem('whizzo:flashcards:layout')).toBeNull()
+    })
+
+    it('opens the way the learner last chose', async () => {
       cleanup()
+      signIn(aLearner({ starterDecks: [DECK.id], settings: { flashcardLayout: 'slide' } }))
       renderCards()
       await screen.findByText('Question')
       expect(screen.getByRole('radio', { name: /Slide/ }).getAttribute('aria-checked')).toBe('true')
@@ -195,7 +204,9 @@ describe('flashcards', () => {
       await renderSliding()
       fireEvent.click(screen.getByRole('radio', { name: /Flip/ }))
       expect(screen.getByLabelText('Turn card over')).toBeTruthy()
-      expect(localStorage.getItem('whizzo:flashcards:layout')).toBe('flip')
+      expect(spies.updateLearner).toHaveBeenLastCalledWith('l1', {
+        settings: { flashcardLayout: 'flip' },
+      })
     })
   })
 })
@@ -286,6 +297,75 @@ describe('an all-multiple-choice round', () => {
       await waitFor(() => expect(screen.queryByText(/Next card|See how I did/)).toBeTruthy())
       if (i < 2) fireEvent.keyDown(window, { key: 'Enter' })
     }
+  })
+})
+
+describe('striking out an option', () => {
+  function renderChoice() {
+    return render(<QuizPlay mode="choice" deckId={DECK.id} size={3} navigate={navigate} />)
+  }
+
+  it('offers a strike-out beside every option by default', async () => {
+    renderChoice()
+    await screen.findByText('0 of 3 done')
+    const strikes = screen.getAllByRole('button', { name: /^Strike out / })
+    const options = screen.getAllByRole('button').filter((b) => b.className.includes('text-left'))
+    expect(strikes.length).toBe(options.length)
+    expect(strikes.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('rules an option out without answering, and lets it back', async () => {
+    renderChoice()
+    await screen.findByText('0 of 3 done')
+    const strike = screen.getAllByRole('button', { name: /^Strike out / })[0]!
+    const option = screen.getAllByRole('button').filter((b) => b.className.includes('text-left'))[0]!
+    expect((option as HTMLButtonElement).disabled).toBe(false)
+
+    fireEvent.click(strike)
+    // Nothing was answered: no feedback, and the option is off the table.
+    expect(screen.queryByText(/Next card|See how I did/)).toBeNull()
+    expect((option as HTMLButtonElement).disabled).toBe(true)
+    expect(option.className).toContain('line-through')
+
+    fireEvent.click(screen.getByRole('button', { name: /^Bring back / }))
+    expect((option as HTMLButtonElement).disabled).toBe(false)
+    expect(option.className).not.toContain('line-through')
+  })
+
+  it('takes the strike-outs away once the answer is shown', async () => {
+    renderChoice()
+    await screen.findByText('0 of 3 done')
+    fireEvent.click(screen.getAllByRole('button', { name: /^Strike out / })[0]!)
+    const open = screen.getAllByRole('button').filter(
+      (b) => b.className.includes('text-left') && !(b as HTMLButtonElement).disabled,
+    )
+    fireEvent.click(open[0]!)
+    await waitFor(() => expect(screen.queryByText(/Next card|See how I did/)).toBeTruthy())
+    expect(screen.queryAllByRole('button', { name: /^(Strike out|Bring back) / })).toHaveLength(0)
+  })
+
+  it('forgets the strike-outs when the next card arrives', async () => {
+    renderChoice()
+    await screen.findByText('0 of 3 done')
+    fireEvent.click(screen.getAllByRole('button', { name: /^Strike out / })[0]!)
+    const open = screen.getAllByRole('button').filter(
+      (b) => b.className.includes('text-left') && !(b as HTMLButtonElement).disabled,
+    )
+    fireEvent.click(open[0]!)
+    await waitFor(() => expect(screen.queryByText(/Next card|See how I did/)).toBeTruthy())
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.queryByText(/Next card|See how I did/)).toBeNull())
+    expect(screen.queryAllByRole('button', { name: /^Bring back / })).toHaveLength(0)
+    const options = screen.getAllByRole('button').filter((b) => b.className.includes('text-left'))
+    expect(options.every((b) => !(b as HTMLButtonElement).disabled)).toBe(true)
+  })
+
+  it('is not offered when the learner has switched it off', async () => {
+    signIn(aLearner({ starterDecks: [DECK.id], settings: { strikeOutChoices: false } }))
+    renderChoice()
+    await screen.findByText('0 of 3 done')
+    expect(screen.queryAllByRole('button', { name: /^Strike out / })).toHaveLength(0)
+    expect(screen.getAllByRole('button').filter((b) => b.className.includes('text-left')).length).toBeGreaterThanOrEqual(3)
   })
 })
 

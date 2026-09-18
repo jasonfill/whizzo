@@ -115,6 +115,7 @@ const learnerRow = (id: string, name: string) => ({
   auth_user_id: null,
   created_at: new Date().toISOString(),
   theme: null,
+  starter_decks: [],
   covered: false,
 })
 

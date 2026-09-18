@@ -5,6 +5,7 @@ import { sfx, unlockAudio } from '../lib/sound'
 import { Button, Card } from '../components/ui'
 import Mascot from '../components/Mascot'
 import ResultsCard from '../components/ResultsCard'
+import { useBack } from '../hooks/useBack'
 import type { Route } from '../App'
 
 interface Props {
@@ -43,6 +44,7 @@ interface Loop {
 }
 
 export default function CatRainScreen({ game, navigate }: Props) {
+  const goBack = useBack({ name: 'typing' })
   const [, forceRender] = useReducer((n: number) => n + 1, 0)
   const phaseRef = useRef<'ready' | 'playing' | 'over'>('ready')
   const gRef = useRef<Loop | null>(null)
@@ -98,13 +100,10 @@ export default function CatRainScreen({ game, navigate }: Props) {
       const total = g.correct + g.wrong
       const accuracy = total > 0 ? Math.round((g.correct / total) * 100) : 100
       game.addHighScore({
-        name: game.state.playerName || 'Kitty',
         score: g.score,
         wpm: 0,
         accuracy,
-        // Stored on the high-score row. Left as-is on purpose: changing it
-        // would relabel every score already set.
-        mode: 'Cat Rain',
+        mode: 'Word Rain',
         date: Date.now(),
       })
       forceRender()
@@ -230,8 +229,8 @@ export default function CatRainScreen({ game, navigate }: Props) {
           </p>
           <div className="mt-6 flex justify-center gap-3">
             <Button onClick={start}>▶ Start</Button>
-            <Button variant="ghost" onClick={() => navigate({ name: 'typing' })}>
-              ← Home
+            <Button variant="ghost" onClick={goBack}>
+              ← Typing
             </Button>
           </div>
         </Card>

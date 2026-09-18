@@ -3,11 +3,13 @@
 // The existing suite tests cover the empty states and the trust card. What is
 // added here is the report as a parent with a term of practice behind them
 // would see it: the activity chart read back as a sentence, the trouble-word
-// list, the session log with each round openable, and the two places the free
+// list, the round log with each round openable, and the two places the free
 // plan draws a line and says so rather than quietly showing less.
 
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('../../hooks/useBack', async () => (await import('../../test/mockProviders')).backMock())
 
 vi.mock('../../auth/AuthProvider', async () =>
   (await import('../../test/mockProviders')).authMock(),
@@ -30,7 +32,7 @@ vi.mock('../../lib/assignments/api', async (orig) => ({
   listAssignmentSets: vi.fn(async () => []),
 }))
 
-import { aGame, spies } from '../../test/mockProviders'
+import { spies } from '../../test/mockProviders'
 import { aLearner, anAssignment, signIn, skill, testState } from '../../test/state'
 import { addDays, emptySnapshot, masteryKey, todayString } from '../../lib/progress/types'
 import type { ProgressSnapshot, SessionRecord } from '../../lib/progress/types'
@@ -108,25 +110,25 @@ describe('the activity chart, read back in words', () => {
     // A chart is another number. The sentence under it is the answer a parent
     // came for.
     testState.snapshot = { ...emptySnapshot(), daily: daily([...Array(14).fill(0), ...Array(7).fill(20)]) }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/Picking up/)).toBeTruthy()
   })
 
   it('says practice is slowing down', () => {
     testState.snapshot = { ...emptySnapshot(), daily: daily([...Array(7).fill(20), ...Array(14).fill(0)]) }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/Nothing this week|Slowing down/)).toBeTruthy()
   })
 
   it('says so plainly when a steady week follows a steady month', () => {
     testState.snapshot = { ...emptySnapshot(), daily: daily(Array(21).fill(10)) }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/Steady/)).toBeTruthy()
   })
 
   it('offers a way back rather than a scolding after a gap', () => {
     testState.snapshot = { ...emptySnapshot(), daily: daily([...Array(14).fill(15), ...Array(7).fill(0)]) }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/nothing is lost by coming back to it/)).toBeTruthy()
   })
 })
@@ -139,7 +141,7 @@ describe('the words that keep going wrong', () => {
         ['because', 'friend', 'through'].map((w) => [`spelling:${w}`, mastery(w)]),
       ),
     }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText('because')).toBeTruthy()
   })
 
@@ -150,7 +152,7 @@ describe('the words that keep going wrong', () => {
         Array.from({ length: 9 }, (_, i) => [`spelling:w${i}`, mastery(`w${i}`)]),
       ),
     }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/Showing 4 of 9/)).toBeTruthy()
     // "Covering this learner", not "Family Pro" — what is bought is a child,
     // and there is no tier to be on.
@@ -171,12 +173,12 @@ describe('the words that keep going wrong', () => {
         }),
       },
     }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(document.body.textContent).toContain('because')
   })
 })
 
-describe('the session log', () => {
+describe('the round log', () => {
   beforeEach(() => {
     testState.snapshot = {
       ...emptySnapshot(),
@@ -189,7 +191,7 @@ describe('the session log', () => {
   })
 
   it('names each round in words a parent would use', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(document.body.textContent).toMatch(/Flashcards|Typing lesson|Test/)
   })
 
@@ -205,7 +207,7 @@ describe('the session log', () => {
         responseMs: 3000,
       },
     ])
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     const rows = screen.getAllByRole('button').filter((b) => b.getAttribute('aria-expanded') !== null)
     expect(rows.length).toBeGreaterThan(0)
     fireEvent.click(rows[0]!)
@@ -213,12 +215,77 @@ describe('the session log', () => {
   })
 
   it('closes it again', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     const row = screen.getAllByRole('button').find((b) => b.getAttribute('aria-expanded') !== null)!
     fireEvent.click(row)
     expect(row.getAttribute('aria-expanded')).toBe('true')
     fireEvent.click(row)
     expect(row.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('calls them rounds, never sessions', () => {
+    render(<ProgressScreen navigate={navigate} />)
+    expect(screen.getByText('Recent rounds')).toBeTruthy()
+    expect(document.body.textContent).not.toMatch(/session/i)
+  })
+
+  it('shows fifteen and then offers the rest, rather than stopping at fifteen', () => {
+    testState.snapshot = {
+      ...emptySnapshot(),
+      sessions: Array.from({ length: 20 }, (_, i) => session({ id: `s${i}` })),
+    }
+    render(<ProgressScreen navigate={navigate} />)
+    const rows = () => screen.getAllByRole('button').filter((b) => b.getAttribute('aria-expanded') !== null)
+    expect(rows().length).toBe(15)
+    fireEvent.click(screen.getByText('Show 5 more'))
+    expect(rows().length).toBe(20)
+    expect(screen.queryByText(/Show \d+ more/)).toBeNull()
+  })
+
+  it('filters by subject, and says so when a subject has nothing in the window', () => {
+    render(<ProgressScreen navigate={navigate} />)
+    const rows = () => screen.getAllByRole('button').filter((b) => b.getAttribute('aria-expanded') !== null)
+    expect(rows().length).toBe(3)
+    fireEvent.click(screen.getByRole('button', { name: 'Typing' }))
+    expect(rows().length).toBe(1)
+    expect(screen.getByText('Typing lesson')).toBeTruthy()
+    // "Flashcards", not "Quiz": the chip uses the subject's one name.
+    fireEvent.click(screen.getByRole('button', { name: 'Flashcards' }))
+    expect(rows().length).toBe(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Spelling' }))
+    expect(rows().length).toBe(1)
+  })
+
+  it('says so when a subject has nothing in the window', () => {
+    testState.snapshot = { ...emptySnapshot(), sessions: [session({ subject: 'spelling' })] }
+    render(<ProgressScreen navigate={navigate} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Typing' }))
+    expect(screen.getByText(/No typing rounds in this window/)).toBeTruthy()
+  })
+
+  it('labels a tutor round as one, practice-only when nothing was checked', () => {
+    // A study round with the tutor: on the record, marked practice, nothing
+    // checked — so it reads as what it was and not as a score.
+    testState.snapshot = {
+      ...emptySnapshot(),
+      sessions: [
+        session({
+          id: 'tutor-study',
+          subject: 'quiz',
+          activity: 'tutor',
+          isTest: false,
+          itemsTotal: 4,
+          itemsCorrect: 0,
+          accuracy: 0,
+          verifiedItemsTotal: 0,
+          verifiedItemsCorrect: 0,
+        }),
+      ],
+    }
+    render(<ProgressScreen navigate={navigate} />)
+    expect(screen.getByText('Tutor round')).toBeTruthy()
+    expect(screen.getByText(/Practice only/)).toBeTruthy()
+    expect(screen.getByText('0/4 checked')).toBeTruthy()
   })
 
   it('says how much history is kept, rather than hiding the rest', () => {
@@ -229,33 +296,73 @@ describe('the session log', () => {
         session({ id: `old-${i}`, startedAt: old, endedAt: old }),
       ),
     }
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText(/outside\s+the 30-day window/)).toBeTruthy()
+    expect(screen.getByText(/older rounds are/)).toBeTruthy()
   })
 })
 
 describe('the other two subjects', () => {
-  it('summarizes typing and offers a way into it', () => {
-    const game = aGame({
-      state: { lessons: { l1: { plays: 2, stars: 3, bestWpm: 26, bestAccuracy: 95 } }, totalStars: 3 },
+  it('summarizes typing from the account, not this browser, and offers a way into it', () => {
+    // A lesson done on the iPad is done on the laptop: the numbers come from
+    // the learner's list_progress rows and typing rounds, not localStorage.
+    const listRow = (listId: string, plays: number, stars: number) => ({
+      subject: 'typing' as const,
+      listId,
+      plays,
+      testsTaken: plays,
+      bestScore: 100,
+      bestAccuracy: 95,
+      stars,
+      masteredAt: null,
     })
-    render(<ProgressScreen game={game} navigate={navigate} />)
-    expect(screen.getByText(/best 26 WPM/)).toBeTruthy()
+    testState.snapshot = {
+      ...emptySnapshot(),
+      lists: {
+        'typing:l1': listRow('l1', 2, 3),
+        'typing:l2': listRow('l2', 1, 2),
+        'typing:never': listRow('never', 0, 0),
+        'spelling:g4-1': { ...listRow('g4-1', 5, 3), subject: 'spelling' as const },
+      },
+      sessions: [
+        session({ id: 't1', subject: 'typing', activity: 'lesson', listId: 'l1', wpm: 26 }),
+        session({ id: 't2', subject: 'typing', activity: 'lesson', listId: 'l2', wpm: 31 }),
+        session({ id: 'sp', subject: 'spelling', activity: 'test', wpm: 99 }),
+      ],
+    }
+    render(<ProgressScreen navigate={navigate} />)
+    expect(screen.getByText('2 lessons played')).toBeTruthy()
+    expect(screen.getByText('5 stars')).toBeTruthy()
+    expect(screen.getByText(/best 31 WPM/)).toBeTruthy()
     fireEvent.click(screen.getByText('Open typing →'))
     expect(navigate).toHaveBeenCalledWith({ name: 'typing' })
   })
 
-  it('summarizes quiz and offers a way into it', () => {
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
-    fireEvent.click(screen.getByText('Open quiz →'))
+  it('summarizes flashcards and offers a way into it, under that name', () => {
+    render(<ProgressScreen navigate={navigate} />)
+    expect(screen.getByText('Flashcards 🃏')).toBeTruthy()
+    expect(screen.queryByText(/Quiz decks/)).toBeNull()
+    fireEvent.click(screen.getByText('Open flashcards →'))
     expect(navigate).toHaveBeenCalledWith({ name: 'quiz' })
+  })
+
+  it('offers a way into spelling too', () => {
+    render(<ProgressScreen navigate={navigate} />)
+    fireEvent.click(screen.getByText('Open spelling →'))
+    expect(navigate).toHaveBeenCalledWith({ name: 'spelling' })
+  })
+
+  it('calls the theme a theme, and names whose it is', () => {
+    render(<ProgressScreen navigate={navigate} />)
+    expect(screen.getByText('Ada’s theme')).toBeTruthy()
+    expect(screen.queryByText(/Their world/)).toBeNull()
   })
 })
 
 describe('work the grown-up has set', () => {
   it('is shown alongside the report, with a way to set more', () => {
     testState.assignments = [anAssignment({ title: 'Friday spelling' })]
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     const assign = screen.queryByText('Assign something new')
     if (!assign) return
     fireEvent.click(assign)
@@ -295,7 +402,7 @@ describe('progress by subject', () => {
 
   it('breaks the score out once there is more than one subject', () => {
     studying([['bio', 'science.biology', 0.9, 1], ['esp', 'world.spanish', 0.4, 1]])
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText('By subject')).toBeTruthy()
     expect(screen.getByText('Biology')).toBeTruthy()
     expect(screen.getByText('Spanish')).toBeTruthy()
@@ -303,19 +410,19 @@ describe('progress by subject', () => {
 
   it('says how much of each is mastered', () => {
     studying([['bio', 'science.biology', 0.9, 1], ['esp', 'world.spanish', 0.4, 1]])
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText('1 of 1 mastered')).toBeTruthy()
   })
 
   it('stays out of the way for a learner with one subject', () => {
     studying([['bio', 'science.biology', 0.9, 1]])
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.queryByText('By subject')).toBeNull()
   })
 
   it('files unfiled decks under General rather than hiding them', () => {
     studying([['misc', null, 0.5, 1], ['bio', 'science.biology', 0.5, 1]])
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText('General')).toBeTruthy()
   })
 })
@@ -339,7 +446,7 @@ describe('will it stick?', () => {
       mastery('secure', { intervalDays: 40, dueOn: addDays(todayString(), 40), lapses: 0 }),
       mastery('gone', { intervalDays: 2, dueOn: addDays(todayString(), -9), lapses: 0 }),
     )
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText('Will it stick?')).toBeTruthy()
     expect(screen.getByText('Secure')).toBeTruthy()
     expect(screen.getByText('Slipping')).toBeTruthy()
@@ -352,13 +459,13 @@ describe('will it stick?', () => {
       mastery('known', { intervalDays: 40, dueOn: addDays(todayString(), 40), lapses: 0 }),
       mastery('unseen', { totalAttempts: 0, reps: 0, lapses: 0, dueOn: null }),
     )
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.getByText('100% holding')).toBeTruthy()
   })
 
   it('says nothing at all when there is nothing to say', () => {
     covered(mastery('unseen', { totalAttempts: 0, reps: 0, lapses: 0, dueOn: null }))
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.queryByText('Will it stick?')).toBeNull()
   })
 
@@ -375,14 +482,14 @@ describe('will it stick?', () => {
         }),
       },
     } as never
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     expect(screen.queryByText('Will it stick?')).toBeNull()
   })
 
   it('offers the printable sheet whether or not it is unlocked', () => {
     // A locked door you can see beats a feature nobody knows exists.
     covered(mastery('known', { intervalDays: 40, dueOn: addDays(todayString(), 40) }))
-    render(<ProgressScreen game={aGame()} navigate={navigate} />)
+    render(<ProgressScreen navigate={navigate} />)
     fireEvent.click(screen.getByText(/Weekly sheet to print/))
     expect(navigate).toHaveBeenCalledWith({ name: 'progress-print' })
   })

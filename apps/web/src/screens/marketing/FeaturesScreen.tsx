@@ -67,9 +67,9 @@ const BLOCKS: Block[] = [
   },
   {
     id: 'decks',
-    nav: 'Study decks',
+    nav: 'Flashcards',
     eyebrow: 'Subject',
-    title: 'Study decks for everything else',
+    title: 'Flashcards for everything else',
     lede: 'Two-sided cards — vocabulary, capitals, dates, formulas, conjugations — running on the same engine as spelling instead of on a shuffle.',
     points: [
       'Five modes, including free recall of an entire set',
@@ -182,7 +182,7 @@ const BLOCKS: Block[] = [
     id: 'register',
     nav: 'Themes and register',
     eyebrow: 'Presentation',
-    title: 'Ten worlds, and a register that suits the learner',
+    title: 'Ten themes, and a register that suits the learner',
     lede: 'A theme is paint. So is age. Neither one is allowed anywhere near what is being taught or what counts as evidence.',
     points: [
       'Ten themes, each with its own character, palette and collection',

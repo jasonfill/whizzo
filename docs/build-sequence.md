@@ -116,6 +116,8 @@ six.
 | 0020 | `mcp_clients`, `mcp_grants`, `mcp_auth_codes`, `mcp_refresh_tokens`, `mcp_rounds`, `attempts.channel` | 10 |
 | 0024 | backfill: decks and word lists with no `source_id` accepted at creation — the 0017 gate had been refusing every hand-made deck | 3 |
 | 0025 | `content_sources.kind` admits `'gimkit'` | 12 |
+| 0026 | `learners.starter_decks` — the starter decks a learner has added; backfilled from practiced starters (docs/ux-coherence.md) | — |
+| 0027 | `learners.settings` — sound, typing helpers, flashcard layout; a small jsonb object merged on write (docs/ux-coherence.md) | — |
 
 Numbers follow the stages except ingestion, which is built third and numbered
 last: rewards is the smaller and more certain change, and there is no value in

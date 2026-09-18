@@ -596,7 +596,7 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
         ),
       ])
       return {
-        decks: decks.rows.map(toDeck),
+        decks: decks.rows.map((row) => toDeck(row, 'library')),
         customLists: lists.rows.map(toCustomList),
       }
     })
@@ -618,7 +618,7 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
           where d.id = $1 and d.owner_user_id = $2`,
         [deckId, caller.id],
       )
-      return rows[0] ? toDeck(rows[0]) : null
+      return rows[0] ? toDeck(rows[0], 'library') : null
     })
     if (!deck) throw notFound('That deck is not in your library')
 
@@ -670,7 +670,7 @@ export async function progressRoutes(app: FastifyInstance): Promise<void> {
            deck.definitionLabel ?? 'Definition', deck.track ?? null,
            deck.objectives ?? []],
         )
-        out.push(toDeck(rows[0]))
+        out.push(toDeck(rows[0], 'library'))
       }
       return out
     })

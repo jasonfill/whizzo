@@ -14,6 +14,7 @@ import { Button, Card, Pill } from '../../components/ui'
 import { ApiError } from '../../lib/api/client'
 import { familyOverview, type LearnerOverview } from '../../lib/assignments/api'
 import { useLearners } from '../../lib/learners/LearnerProvider'
+import { useAudience } from '../../lib/learners/useAudience'
 import {
   ageOf,
   canUseSelfSignIn,
@@ -41,6 +42,7 @@ function messageOf(err: unknown): string {
 export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
   const { user, profile } = useAuth()
   const { learners, active, select, create, refresh, status } = useLearners()
+  const audience = useAudience()
   const [expanded, setExpanded] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Read once: it is a hand-off from the sign-up screen, not live state.
@@ -77,7 +79,7 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
   if (status === 'unavailable') {
     return (
       <div className="mx-auto w-full max-w-2xl">
-        <ScreenHeader title="Family" onBack={() => navigate({ name: 'home' })} />
+        <ScreenHeader title={audience.label} back={{ name: 'home' }} />
         <Card>
           <p className="font-bold text-muted">
             Sign in to add learners and share progress with another grown-up.
@@ -215,9 +217,9 @@ export default function FamilyScreen({ navigate }: { navigate: Navigate }) {
   return (
     <div className="mx-auto w-full max-w-2xl">
       <ScreenHeader
-        title="Family"
-        subtitle={familySubtitle(overview, learners.length)}
-        onBack={() => navigate({ name: 'home' })}
+        title={audience.label}
+        subtitle={familySubtitle(overview, learners.length, audience.phrase)}
+        back={{ name: 'home' }}
       />
 
       {error && (
@@ -427,7 +429,7 @@ function LearnerStatus({
           🗓️ Planner
         </Button>
         <Button variant="ghost" onClick={() => onOpen({ name: 'progress' })}>
-          📊 History
+          📊 Progress
         </Button>
       </div>
     </div>
@@ -445,7 +447,7 @@ function lastSeen(at: number | null): string {
 }
 
 /** Leads with what needs doing, because that is what a grown-up opens this for. */
-function familySubtitle(overview: Map<string, LearnerOverview>, learnerCount: number): string {
+function familySubtitle(overview: Map<string, LearnerOverview>, learnerCount: number, phrase: string): string {
   const rows = [...overview.values()]
   const outstanding = rows.reduce((n, r) => n + r.openAssignments, 0)
   const overdue = rows.reduce((n, r) => n + r.overdueAssignments, 0)
@@ -457,7 +459,7 @@ function familySubtitle(overview: Map<string, LearnerOverview>, learnerCount: nu
     return `${outstanding} task${outstanding === 1 ? '' : 's'} outstanding, ${overdue} overdue.`
   }
   if (outstanding > 0) {
-    return `${outstanding} task${outstanding === 1 ? '' : 's'} outstanding across the family.`
+    return `${outstanding} task${outstanding === 1 ? '' : 's'} outstanding across ${phrase}.`
   }
   return 'Nothing outstanding. Everyone is up to date.'
 }
@@ -514,7 +516,7 @@ function ManagePanel({
     <div className="mt-5 flex flex-col gap-5 border-t-2 border-hair pt-5">
       <section>
         <h3 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-stone">
-          {learner.displayName}’s world
+          {learner.displayName}’s theme
         </h3>
         <p className="mb-3 text-sm font-bold text-muted">
           Swaps the mascot and what gets collected — never the words, the difficulty, or what

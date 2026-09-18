@@ -18,9 +18,15 @@ vi.mock('../../lib/rewards/api', () => rewardsApi)
 vi.mock('../../lib/progress/ProgressProvider', async () =>
   (await import('../../test/mockProviders')).progressMock(),
 )
+// The deck picker reads the learner's own list, which needs a learner on screen.
+vi.mock('../../lib/learners/LearnerProvider', async () =>
+  (await import('../../test/mockProviders')).learnersMock(),
+)
 
 import RewardLedger from './RewardLedger'
-import type { Reward } from '@whizzo/shared'
+import { testState } from '../../test/state'
+import { emptySnapshot } from '../../lib/progress/types'
+import type { QuizDeck, Reward } from '@whizzo/shared'
 
 const PARENT = 'u-parent'
 const TUTOR = 'u-tutor'
@@ -49,6 +55,19 @@ function reward(over: Partial<Reward> = {}): Reward {
   }
 }
 
+function deck(over: Partial<QuizDeck>): QuizDeck {
+  return {
+    id: 'd',
+    title: 'Deck',
+    description: '',
+    cards: [],
+    createdAt: 0,
+    updatedAt: 0,
+    source: 'starter',
+    ...over,
+  } as QuizDeck
+}
+
 function show(rewards: Reward[], userId = PARENT, ownsLearner = true) {
   rewardsApi.rewardsFor.mockResolvedValue({ rewards })
   return render(
@@ -74,7 +93,7 @@ describe('with nothing promised', () => {
 describe('what is owed comes first', () => {
   it('puts an earned promise at the top with a way to settle it', async () => {
     show([reward({ id: 'a' }), reward({ id: 'b', status: 'earned', earnedAt: NOW })])
-    expect(await screen.findByText('Earned — not yet given')).toBeTruthy()
+    expect(await screen.findByText('Earned · not yet given')).toBeTruthy()
     expect(screen.getByText('✅ Given')).toBeTruthy()
   })
 
@@ -142,6 +161,46 @@ describe('what has been given', () => {
   })
 })
 
+describe('when a promise ran out', () => {
+  // Nothing can earn it any more — the database matcher skips it — so
+  // calling it "promised" would be a door that does not open.
+  const lapsed = () => reward({ id: 'x', title: 'Zoo trip', expiresOn: '2000-01-01' })
+
+  it('is not listed as promised', async () => {
+    show([lapsed()])
+    await screen.findByText('Expired')
+    expect(screen.queryByText('Promised')).toBeNull()
+    expect(screen.queryByText('Take it back')).toBeNull()
+  })
+
+  it('says when it ended', async () => {
+    show([lapsed()])
+    expect(await screen.findByText(/Zoo trip · ended/)).toBeTruthy()
+  })
+
+  it('can be tidied away by whoever could have withdrawn it', async () => {
+    show([lapsed()])
+    fireEvent.click(await screen.findByText('Remove'))
+    await waitFor(() => expect(rewardsApi.cancelReward).toHaveBeenCalledWith('x'))
+  })
+
+  it('offers no Remove to somebody who neither promised it nor owns the child', async () => {
+    show([lapsed()], TUTOR, false)
+    await screen.findByText('Expired')
+    expect(screen.queryByText('Remove')).toBeNull()
+  })
+
+  it('is still promised on its last day', async () => {
+    const today = new Date()
+    const y = today.getFullYear()
+    const m = String(today.getMonth() + 1).padStart(2, '0')
+    const d = String(today.getDate()).padStart(2, '0')
+    show([reward({ expiresOn: `${y}-${m}-${d}` })])
+    expect(await screen.findByText('Promised')).toBeTruthy()
+    expect(screen.queryByText('Expired')).toBeNull()
+  })
+})
+
 describe('when saving fails', () => {
   it('says so rather than looking like it worked', async () => {
     rewardsApi.fulfillReward.mockRejectedValue(new Error('Only whoever promised this can.'))
@@ -154,6 +213,14 @@ describe('when saving fails', () => {
 // Making a promise. Short on purpose: what they get, what for, how much. When
 // it is earned and whether the evidence is good enough are the app's business.
 describe('promising something', () => {
+  // A deck a grown-up set as a task, so the default criterion has a target.
+  beforeEach(() => {
+    testState.snapshot = {
+      ...emptySnapshot(),
+      decks: [deck({ id: 'set', title: 'US capitals', source: 'assigned' })],
+    }
+  })
+
   async function openForm() {
     show([])
     fireEvent.click(await screen.findByText(/Promise something/))
@@ -174,16 +241,48 @@ describe('promising something', () => {
     expect(screen.getByText(/never.*saying they did it/i)).toBeTruthy()
   })
 
-  it('starts on the criterion worth picking, and says why', async () => {
-    // Retention is the only one that cannot be rushed in an afternoon.
+  it('starts on mastering a deck, and says what that means', async () => {
     await openForm()
-    expect(screen.getByText(/cannot be rushed in an afternoon/)).toBeTruthy()
+    expect(screen.getByText(/every card in the deck, checked by the app/)).toBeTruthy()
   })
 
   it('never offers minutes, which a child can sit through', async () => {
     await openForm()
     const options = [...screen.getByLabelText(/For what/i).querySelectorAll('option')]
     expect(options.map((o) => (o as HTMLOptionElement).value)).not.toContain('minutes')
+  })
+
+  it('does not offer a checkpoint, because nothing awards one yet', async () => {
+    // A promise that can never come due is worse than no promise at all.
+    await openForm()
+    const options = [...screen.getByLabelText(/For what/i).querySelectorAll('option')]
+    expect(options.map((o) => (o as HTMLOptionElement).value)).not.toContain('checkpoint')
+  })
+
+  it('starts on a deck a grown-up set, never one the learner made', async () => {
+    testState.snapshot = {
+      ...emptySnapshot(),
+      decks: [
+        deck({ id: 'mine', title: 'Cat cat cat', source: 'user' }),
+        deck({ id: 'set', title: 'US capitals', source: 'assigned' }),
+      ],
+    }
+    await openForm()
+    const picker = screen.getByLabelText(/Which deck/i) as HTMLSelectElement
+    expect(picker.value).toBe('set')
+    expect([...picker.querySelectorAll('option')].map((o) => o.textContent)).not.toContain(
+      'Cat cat cat',
+    )
+  })
+
+  it('says what to do when the only decks are ones the learner made', async () => {
+    testState.snapshot = {
+      ...emptySnapshot(),
+      decks: [deck({ id: 'mine', title: 'Cat cat cat', source: 'user' })],
+    }
+    await openForm()
+    expect(screen.getByText(/Set a deck from your library as a task first/)).toBeTruthy()
+    expect(screen.getByText('Promise it').closest('button')!.disabled).toBe(true)
   })
 
   it('will not promise something with no name', async () => {
@@ -198,7 +297,11 @@ describe('promising something', () => {
     fireEvent.click(screen.getByText('Promise it'))
     await waitFor(() =>
       expect(rewardsApi.offerReward).toHaveBeenCalledWith(
-        expect.objectContaining({ learnerId: 'l1', title: 'Ice cream' }),
+        expect.objectContaining({
+        learnerId: 'l1',
+        title: 'Ice cream',
+        criterion: expect.objectContaining({ type: 'set_mastered', targetId: 'set' }),
+      }),
       ),
     )
   })

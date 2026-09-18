@@ -4,45 +4,61 @@ import { ACHIEVEMENTS } from '../data/achievements'
 import { QUIZ_ACHIEVEMENTS } from '../data/quizAchievements'
 import { SPELLING_ACHIEVEMENTS } from '../data/spellingAchievements'
 import { useProgress } from '../lib/progress/ProgressProvider'
-import { Button, Card } from '../components/ui'
-import Collectible from '../components/Collectible'
+import { Card } from '../components/ui'
+import ScreenHeader from '../components/suite/ScreenHeader'
 import type { Route } from '../App'
 import { useTheme } from '../lib/theme/ThemeProvider'
+import { earnedFor } from '../lib/theme/rewards'
 
 interface Props {
   game: GameApi
   navigate: (r: Route) => void
 }
 
-type Tab = 'scores' | 'badges' | 'collection'
+type Tab = 'scores' | 'badges'
 
+/**
+ * Badges and high scores. The theme's collectibles are not here: they have
+ * their own screen, and this one links to it rather than keeping a second,
+ * different count of the same thing (docs/ux-coherence.md, "One collectible
+ * system").
+ */
 export default function TrophyRoom({ game, navigate }: Props) {
   const { theme } = useTheme()
   const [tab, setTab] = useState<Tab>('scores')
+  // High scores and typing badges come through the game state, which reads
+  // the same snapshot; the spelling and flashcard badges are read here. All
+  // of it follows the account — nothing on this screen is this browser's own.
   const { state } = game
   const { snapshot } = useProgress()
-  // Every subject's badges are unlocked out of the same table, so one set
-  // covers spelling and quiz alike.
   const unlockedIds = new Set(snapshot.achievements.map((a) => a.achievementId))
+  const earned = earnedFor(snapshot, theme)
 
   return (
     <div className="mx-auto w-full max-w-3xl py-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-3xl font-extrabold text-ink">Trophy Room 🏆</h1>
-        <Button variant="ghost" onClick={() => navigate({ name: 'home' })}>
-          ← Home
-        </Button>
-      </div>
+      <ScreenHeader title="Badges 🏅" back={{ name: 'home' }} />
+
+      {/* The collection is one tap away, with the same count home shows. */}
+      <button
+        type="button"
+        onClick={() => navigate({ name: 'world' })}
+        className="mb-4 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left ring-1 ring-hair transition-transform hover:-translate-y-px"
+        style={{ background: theme.tintA }}
+      >
+        <span>
+          <span className="block font-extrabold text-ink">See your {theme.worldNoun} →</span>
+          <span className="block text-sm font-bold text-muted">
+            {earned.owned} of {earned.total} {theme.unit}
+          </span>
+        </span>
+      </button>
 
       <div className="mb-4 flex gap-2">
         <TabButton active={tab === 'scores'} onClick={() => setTab('scores')}>
-          🥇 High Scores
+          🥇 High scores
         </TabButton>
         <TabButton active={tab === 'badges'} onClick={() => setTab('badges')}>
           🎖️ Badges
-        </TabButton>
-        <TabButton active={tab === 'collection'} onClick={() => setTab('collection')}>
-          {theme.unit}
         </TabButton>
       </div>
 
@@ -51,15 +67,16 @@ export default function TrophyRoom({ game, navigate }: Props) {
           {state.highScores.length === 0 ? (
             <Empty text="No scores yet — play Word Rain or Practice to set a record!" />
           ) : (
+            // The board is the learner's own, so no name column: every row is
+            // theirs.
             <ol className="divide-y divide-hair">
               {state.highScores.map((h, i) => (
-                <li key={i} className="flex items-center gap-3 py-2">
+                <li key={`${h.date}-${i}`} className="flex items-center gap-3 py-2">
                   <span className="w-8 text-center text-xl font-extrabold text-stone">
                     {i + 1}
                   </span>
                   <span className="flex-1 truncate font-bold text-ink">
-                    {h.name}
-                    <span className="ml-2 rounded-full bg-wash px-2 py-0.5 text-xs font-bold text-ink">
+                    <span className="rounded-full bg-wash px-2 py-0.5 text-xs font-bold text-ink">
                       {h.mode}
                     </span>
                   </span>
@@ -88,27 +105,11 @@ export default function TrophyRoom({ game, navigate }: Props) {
             unlocked={(id) => unlockedIds.has(id)}
           />
           <BadgeGrid
-            title="Quiz 🃏"
+            title="Flashcards 🃏"
             badges={QUIZ_ACHIEVEMENTS}
             unlocked={(id) => unlockedIds.has(id)}
           />
         </div>
-      )}
-
-      {tab === 'collection' && (
-        <Card>
-          {state.collectedCats.length === 0 ? (
-            <Empty text={`No ${theme.unit} yet — finish lessons to start collecting.`} />
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {state.collectedCats.map((seed) => (
-                <div key={seed} className="rounded-2xl bg-white p-2 shadow ring-1 ring-hair">
-                  <Collectible seed={seed} className="h-28 w-full" showLabel />
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
       )}
     </div>
   )

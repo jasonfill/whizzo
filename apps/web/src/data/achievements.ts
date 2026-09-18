@@ -63,11 +63,14 @@ export const ACHIEVEMENTS: Achievement[] = [
     },
   },
   {
+    // The id is what a saved unlock is stored under, so it stays put; the
+    // milestone behind it used to count the typing game's private cat cards,
+    // which no longer exist. Stars are typing's own measure.
     id: 'collector',
-    name: 'Collector',
+    name: 'Star Collector',
     emoji: '🗂️',
-    description: 'Collect 5 rewards.',
-    test: (s) => s.collectedCats.length >= 5,
+    description: 'Earn 15 stars in total.',
+    test: (s) => s.totalStars >= 15,
   },
   {
     id: 'high-scorer',

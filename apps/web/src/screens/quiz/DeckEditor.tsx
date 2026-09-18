@@ -17,7 +17,7 @@ import {
   type TermSeparator,
 } from '../../lib/quiz/decks'
 import type { DeckScope } from '../../lib/quiz/scope'
-import type { Navigate } from '../../routes'
+import type { Navigate, Route } from '../../routes'
 
 /**
  * Deck editor. Two ways in, because there are two kinds of person making a
@@ -83,16 +83,14 @@ export default function DeckEditor({
   const overDeckLimit = !inLibrary && isNew && snapshot.decks.length >= coverage.deckLimit
 
   /** Where leaving lands: the deck if there is one, else the list it came from. */
-  const back = (): void =>
-    navigate(
-      inLibrary
-        ? deckId
-          ? { name: 'library-deck', deckId }
-          : { name: 'library' }
-        : deckId
-          ? { name: 'quiz-deck', deckId }
-          : { name: 'quiz' },
-    )
+  const parent: Route = inLibrary
+    ? deckId
+      ? { name: 'library-deck', deckId }
+      : { name: 'library' }
+    : deckId
+      ? { name: 'quiz-deck', deckId }
+      : { name: 'quiz' }
+  const back = (): void => navigate(parent)
 
   const update = (patch: Partial<QuizDeck>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -146,7 +144,7 @@ export default function DeckEditor({
       load === 'loading' ? 'Opening…' : load === 'missing' ? 'Deck not found' : 'Could not open that'
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
-        <ScreenHeader title={title} onBack={() => navigate({ name: 'library' })} backLabel="← Library" />
+        <ScreenHeader title={title} back={{ name: 'library' }} backLabel="← Library" />
         <Card>
           <p className="font-bold text-muted">
             {load === 'loading'
@@ -174,7 +172,8 @@ export default function DeckEditor({
             ? 'Yours to set for any learner you look after. Two sides to every card.'
             : 'Two sides to every card: what you are asked, and what you have to remember.'
         }
-        onBack={back}
+        back={parent}
+        backLabel={inLibrary ? '← Library' : deckId ? '← Back to the deck' : '← Flashcards'}
       />
 
       {overDeckLimit && (

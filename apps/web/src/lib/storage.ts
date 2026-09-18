@@ -1,16 +1,17 @@
-// All persistence lives in localStorage so the game needs no backend.
-const KEY = 'keyboard-cats:v1'
+// What the typing screens read.
+//
+// Nothing in here is stored on the device any more. Lesson progress comes from
+// the account (lib/typing/progress.ts), high scores and badges from the
+// progress snapshot, and the switches from the learner (lib/learners/
+// useLearnerSettings.ts). The old `keyboard-cats:v1` save is simply ignored.
 
-export interface LessonProgress {
-  stars: number // best stars earned (0-3)
-  bestWpm: number
-  bestAccuracy: number
-  bestScore: number
-  plays: number
-}
+import type { LearnerSettings } from '@whizzo/shared'
+import type { LessonProgress } from './typing/progress'
 
+export type { LessonProgress } from './typing/progress'
+
+/** One arcade or practice score, as the trophy room shows it. */
 export interface HighScore {
-  name: string
   score: number
   wpm: number
   accuracy: number
@@ -18,61 +19,15 @@ export interface HighScore {
   date: number
 }
 
+/**
+ * Everything the typing screens read. Every field is derived on render from
+ * the account's snapshot and the learner's settings; nothing is written back
+ * to this device.
+ */
 export interface GameState {
-  playerName: string
-  lessons: Record<string, LessonProgress>
   highScores: HighScore[]
-  achievements: string[] // unlocked achievement ids
-  collectedCats: string[] // cat sticker/card seeds collected
-  keyErrors: Record<string, number> // char -> lifetime error count (spaced rep)
-  keyAttempts: Record<string, number>
-  settings: {
-    sound: boolean
-    showHands: boolean
-    showKeyboard: boolean
-  }
+  achievements: string[] // unlocked badge ids
+  settings: Required<LearnerSettings>
+  lessons: Record<string, LessonProgress>
   totalStars: number
-}
-
-const DEFAULT_STATE: GameState = {
-  playerName: '',
-  lessons: {},
-  highScores: [],
-  achievements: [],
-  collectedCats: [],
-  keyErrors: {},
-  keyAttempts: {},
-  settings: { sound: true, showHands: true, showKeyboard: true },
-  totalStars: 0,
-}
-
-export function loadState(): GameState {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return structuredClone(DEFAULT_STATE)
-    const parsed = JSON.parse(raw) as Partial<GameState>
-    return {
-      ...structuredClone(DEFAULT_STATE),
-      ...parsed,
-      settings: { ...DEFAULT_STATE.settings, ...(parsed.settings ?? {}) },
-    }
-  } catch {
-    return structuredClone(DEFAULT_STATE)
-  }
-}
-
-export function saveState(state: GameState): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state))
-  } catch {
-    // storage full / unavailable — fail silently, game still playable.
-  }
-}
-
-export function resetState(): void {
-  try {
-    localStorage.removeItem(KEY)
-  } catch {
-    /* ignore */
-  }
 }

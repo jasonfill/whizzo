@@ -174,6 +174,51 @@ describe('a missed card comes back', () => {
     expect(result.current.progress.retired).toBe(3)
   })
 
+  it('deals the options again when a multiple-choice card comes back', () => {
+    // Children learn where the green one was. When a missed card returns, the
+    // same options are there, but the right answer is somewhere else.
+    const { result } = renderHook(() => useQuizSession())
+    act(() => {
+      result.current.start({ mode: 'choice', decks: [deck], deckId: 'd1', size: 6 })
+    })
+    const first = result.current.currentQuestion!
+    expect(first.kind).toBe('multiple-choice')
+    const before = first.choices!
+    const cardId = result.current.current!.card.id
+
+    // Miss it, then answer everything else right until it comes back around.
+    act(() => {
+      result.current.submit('wrong', 'wrong')
+    })
+    act(() => result.current.advance())
+    let guard = 0
+    while (result.current.current?.card.id !== cardId && guard++ < 20) {
+      act(() => {
+        result.current.submit('right', 'correct')
+      })
+      act(() => result.current.advance())
+    }
+    expect(result.current.current?.card.id).toBe(cardId)
+
+    const after = result.current.currentQuestion!.choices!
+    expect([...after].sort()).toEqual([...before].sort())
+    expect(after.indexOf(first.answer)).not.toBe(before.indexOf(first.answer))
+  })
+
+  it('leaves the options where they were while the answer is still on screen', () => {
+    // The new order is for the next sighting. Rearranging under the learner
+    // while the red and green are showing would be worse than not moving.
+    const { result } = renderHook(() => useQuizSession())
+    act(() => {
+      result.current.start({ mode: 'choice', decks: [deck], deckId: 'd1', size: 6 })
+    })
+    const before = result.current.currentQuestion!.choices!
+    act(() => {
+      result.current.submit('wrong', 'wrong')
+    })
+    expect(result.current.currentQuestion!.choices).toEqual(before)
+  })
+
   it('terminates even when the learner never gets a card right', () => {
     // The requeue is capped, or a round would never end.
     const { result } = renderHook(() => useQuizSession())

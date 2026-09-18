@@ -16,9 +16,13 @@ import {
 import { Button, Card, Pill } from '../ui'
 import { cancelReward, fulfillReward, rewardsFor } from '../../lib/rewards/api'
 import OfferReward from './OfferReward'
-import { useProgress } from '../../lib/progress/ProgressProvider'
-import { allDecks } from '../../lib/quiz/decks'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
+
+/** A YYYY-MM-DD day, shown the way the Given dates are. */
+function dayLabel(day: string): string {
+  const [y, m, d] = day.split('-').map(Number)
+  return new Date(y!, m! - 1, d!).toLocaleDateString()
+}
 
 export default function RewardLedger({
   learnerId,
@@ -33,7 +37,9 @@ export default function RewardLedger({
 }) {
   const [rewards, setRewards] = useState<Reward[] | null>(null)
   const [offering, setOffering] = useState(false)
-  const { snapshot } = useProgress()
+  // The learner's own list — their decks, the ones set as tasks, the starter
+  // decks they added — so the picker offers what they can actually open.
+  const decks = useLearnerDecks()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -85,7 +91,7 @@ export default function RewardLedger({
       <OfferReward
         learnerId={learnerId}
         learnerName={learnerName}
-        decks={allDecks(snapshot, STARTER_DECKS)}
+        decks={decks}
         onDone={async () => {
           setOffering(false)
           await load()
@@ -125,7 +131,7 @@ export default function RewardLedger({
       {books.unpaid.length > 0 && (
         <section className="mb-4">
           <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone">
-            Earned — not yet given
+            Earned · not yet given
           </p>
           <ul className="flex flex-col gap-2">
             {books.unpaid.map((reward) => (
@@ -158,7 +164,7 @@ export default function RewardLedger({
       {books.promised.length > 0 && (
         <section className="mb-4">
           <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone">
-            Working toward
+            Promised
           </p>
           <ul className="flex flex-col gap-2">
             {books.promised.map((reward) => (
@@ -195,6 +201,39 @@ export default function RewardLedger({
               <li key={reward.id} className="text-sm font-bold text-muted">
                 {reward.title}
                 {reward.fulfilledAt && ` · ${new Date(reward.fulfilledAt).toLocaleDateString()}`}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Ran out before it was earned. Still `offered` in the database, and
+          nothing can earn it any more, so it is neither a promise nor a debt —
+          just a record, with a way to tidy it away. */}
+      {books.expired.length > 0 && (
+        <section className="mt-4">
+          <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone">
+            Expired
+          </p>
+          <ul className="flex flex-col gap-1">
+            {books.expired.map((reward) => (
+              <li
+                key={reward.id}
+                className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold text-muted"
+              >
+                <span>
+                  {reward.title}
+                  {reward.expiresOn && ` · ended ${dayLabel(reward.expiresOn)}`}
+                </span>
+                {canCancel(reward, userId, ownsLearner) && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => withdraw(reward)}
+                    disabled={busy === reward.id}
+                  >
+                    Remove
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

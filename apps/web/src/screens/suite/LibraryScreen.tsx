@@ -3,7 +3,6 @@ import { useAuth } from '../../auth/AuthProvider'
 import ScreenHeader from '../../components/suite/ScreenHeader'
 import SharedWork from '../../components/suite/SharedWork'
 import { Button, Card, Pill } from '../../components/ui'
-import { STARTER_DECKS } from '../../data/quiz/starterDecks'
 import {
   deleteLibraryDeck,
   deleteLibraryList,
@@ -14,7 +13,8 @@ import {
 import { useLearners } from '../../lib/learners/LearnerProvider'
 import { useProgress } from '../../lib/progress/ProgressProvider'
 import type { CustomWordList, QuizDeck } from '../../lib/progress/types'
-import { allDecks, isDraftDeck, newId } from '../../lib/quiz/decks'
+import { isDraftDeck, newId } from '../../lib/quiz/decks'
+import { useLearnerDecks } from '../../lib/quiz/useLearnerDecks'
 import type { Navigate } from '../../routes'
 import AssignForm from './AssignForm'
 import { groupBySource } from '../../lib/library/groups'
@@ -75,18 +75,16 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
     return () => controller.abort()
   }, [load, status])
 
-  /** Decks belonging to the learners this grown-up looks after, worth copying in. */
-  const learnerDecks = useMemo(
-    () => allDecks(snapshot, STARTER_DECKS).filter((d) => d.source === 'user'),
-    [snapshot],
-  )
+  /** The learner's own decks, worth copying in. Not the set ones — those are already here. */
+  const onScreen = useLearnerDecks()
+  const learnerDecks = useMemo(() => onScreen.filter((d) => d.source === 'user'), [onScreen])
 
   const assignable = learners.filter((l) => l.authUserId !== user?.id)
 
   if (status !== 'signed-in') {
     return (
       <div className="mx-auto w-full max-w-3xl py-4">
-        <ScreenHeader title="Library 📚" onBack={() => navigate({ name: 'home' })} />
+        <ScreenHeader title="Library 📚" back={{ name: 'home' }} />
         <Card>
           <p className="mb-3 font-bold text-muted">
             A library holds the decks and word lists that are yours rather than any one
@@ -124,7 +122,7 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
       <ScreenHeader
         title="Library 📚"
         subtitle="Everything you have made, ready to set for any learner you look after."
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
       />
 
       {/* The widest door into the library. Typing forty rows is the thing a
@@ -249,7 +247,7 @@ export default function LibraryScreen({ navigate }: { navigate: Navigate }) {
                               setAssigning({ kind: 'deck', ids: [deck.id], label: deck.title })
                             }
                           >
-                            Set as work
+                            Set as a task
                           </Button>
                         )}
                         <Button

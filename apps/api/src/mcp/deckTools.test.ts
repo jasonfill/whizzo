@@ -53,7 +53,7 @@ const ctx: ToolContext = {
   clientName: 'Claude',
 }
 
-const learnerRow = { id: LEARNER, owner_id: CALLER, display_name: 'Maya', avatar_emoji: '🐱', grade_hint: 4, birth_year: null, auth_kind: 'none', auth_user_id: null, created_at: new Date().toISOString(), theme: null, covered: false }
+const learnerRow = { id: LEARNER, owner_id: CALLER, display_name: 'Maya', avatar_emoji: '🐱', grade_hint: 4, birth_year: null, auth_kind: 'none', auth_user_id: null, created_at: new Date().toISOString(), theme: null, starter_decks: [], covered: false }
 
 const cells = [
   { id: 'card-1', term: 'Mitochondria', definition: 'Powerhouse of the cell', hint: 'Starts with m', difficulty: 2, category: 'organelle', altAnswers: ['powerhouse'] },
@@ -187,6 +187,71 @@ describe('finding a deck', () => {
     expect(res.data.text).not.toContain('Powerhouse')
     expect(res.data.metadata).toMatchObject({ library: true, cards: 3 })
     expect(res.say).toBe('"Cells", 3 cards, in your library.')
+  })
+})
+
+// The SQL `tutorDecksFor` reads the learner row with, so a test names the
+// mechanism: starters are a column on the learner, not rows in `decks`.
+const STARTERS = 'select starter_decks from public.learners'
+
+describe("a learner's starter decks", () => {
+  // A starter deck is a client constant, not a row — the app folds it in from
+  // `learners.starter_decks`. The tutor has no client to do that, so the API
+  // has to, or "US State Capitals" is invisible to the assistant.
+  it('list_materials offers a starter the learner added, with no track and every card unseen', async () => {
+    respond([
+      [LEARNERS, [learnerRow]],
+      [STARTERS, [{ starter_decks: ['starter-capitals'] }]],
+      [LEARNER_DECKS, [deckRow(LEARNER_DECK, 'learner')]],
+    ])
+    const res = await callTool(ctx, 'list_materials', {})
+    expect(res.isError).toBeFalsy()
+    const materials = res.data.materials as Array<{ id: string; title: string; track: string | null; cards: number; unseen: number; task: unknown }>
+    expect(materials.map((m) => m.id)).toEqual(expect.arrayContaining([LEARNER_DECK, 'starter-capitals']))
+    const capitals = materials.find((m) => m.id === 'starter-capitals')!
+    expect(capitals).toMatchObject({ title: 'US State Capitals', track: null, cards: 50, unseen: 50, task: null })
+    expect(res.say).toContain('"US State Capitals"')
+  })
+
+  it('list_materials leaves out a starter the learner has not added, and one the catalog no longer carries', async () => {
+    respond([
+      [LEARNERS, [learnerRow]],
+      [STARTERS, [{ starter_decks: ['starter-retired'] }]],
+    ])
+    const res = await callTool(ctx, 'list_materials', {})
+    expect(res.data.materials).toEqual([])
+    expect(res.say).toBe('Maya has no decks yet.')
+  })
+
+  it('search finds a starter by title, as the learner\'s deck and not a library one', async () => {
+    respond([
+      [LEARNERS, [learnerRow]],
+      [STARTERS, [{ starter_decks: ['starter-capitals', 'starter-spanish'] }]],
+    ])
+    const res = await callTool(ctx, 'search', { query: 'capitals' })
+    const results = res.data.results as Array<{ id: string; learner: string | null; library: boolean; url: string; cards: number }>
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({ id: 'starter-capitals', learner: 'Maya', library: false, url: 'https://whizzo.test/quiz/deck/starter-capitals', cards: 50 })
+    expect(res.say).toBe('1 matching deck.')
+  })
+
+  it('fetch reaches an added starter by id and still withholds the answers', async () => {
+    respond([
+      [LEARNERS, [learnerRow]],
+      [STARTERS, [{ starter_decks: ['starter-capitals'] }]],
+    ])
+    const res = await callTool(ctx, 'fetch', { id: 'starter-capitals' })
+    expect(res.isError).toBeFalsy()
+    expect(res.data.text).toContain('- Alabama')
+    expect(res.data.text).not.toContain('Montgomery')
+    expect(res.data.url).toBe('https://whizzo.test/quiz/deck/starter-capitals')
+    expect(res.data.metadata).toMatchObject({ library: false, cards: 50, track: null })
+  })
+
+  it('fetch refuses a starter the learner has not added', async () => {
+    respond([[LEARNERS, [learnerRow]]])
+    const res = await callTool(ctx, 'fetch', { id: 'starter-capitals' })
+    expect(res.isError).toBe(true)
   })
 })
 

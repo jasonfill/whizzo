@@ -88,7 +88,7 @@ export default function MyTutorCode() {
       <h3 className="mb-1 text-lg font-extrabold text-ink">Your connection code</h3>
       <p className="mb-3 text-sm font-bold text-muted">
         Give this to a family. They enter it, pick which of their children it applies to, and
-        those learners appear in your Family screen alongside your own. Nobody is added until
+        those learners appear on your Learners screen. Nobody is added until
         they accept.
       </p>
 

@@ -138,7 +138,7 @@ export default function PlanWeekScreen({ navigate }: { navigate: Navigate }) {
   if (!active || !data) {
     return (
       <div className="mx-auto w-full max-w-2xl py-4">
-        <ScreenHeader title="Plan your week" onBack={() => navigate({ name: 'planner' })} />
+        <ScreenHeader title="Plan your week" back={{ name: 'planner' }} />
         <p className="font-bold text-muted">{planner.loading ? 'Loading…' : 'Sign in with a learner to plan.'}</p>
       </div>
     )
@@ -154,7 +154,7 @@ export default function PlanWeekScreen({ navigate }: { navigate: Navigate }) {
       <ScreenHeader
         title="Plan your week"
         subtitle={`Step ${step + 1} of 5`}
-        onBack={() => navigate({ name: 'planner' })}
+        back={{ name: 'planner' }}
         backLabel="Later"
       />
       <div className="mb-4 flex gap-1">

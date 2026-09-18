@@ -26,7 +26,7 @@ export default function SpellingHome({ navigate }: { navigate: Navigate }) {
       <ScreenHeader
         title="Spelling"
         subtitle="Words picked for you, based on how you actually did."
-        onBack={() => navigate({ name: 'home' })}
+        back={{ name: 'home' }}
         backLabel="← Home"
       />
 

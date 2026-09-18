@@ -1,10 +1,10 @@
 // Settings, the trophy room, and the account screen.
 //
 // Three screens that mostly say what is already true, with two exceptions worth
-// pinning: erasing progress clears both stores (the typing game's own save and
-// the shared record behind the whole suite), and the library card shows a dash
-// rather than a zero when it could not be read — "none" and "could not ask"
-// are different answers.
+// pinning: every switch on the settings screen is written to the learner and
+// nothing is kept on this device, and the library card shows a dash rather than
+// a zero when it could not be read — "none" and "could not ask" are different
+// answers.
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -19,6 +19,18 @@ vi.mock('../lib/progress/ProgressProvider', async () =>
 vi.mock('../lib/theme/ThemeProvider', async () =>
   (await import('../test/mockProviders')).themeMock(),
 )
+// ScreenHeader's Back goes to real history; there is none in a test, so it
+// lands on the fallback route, which is what a test can assert on.
+vi.mock('../hooks/useBack', async () => {
+  const { spies } = await import('../test/mockProviders')
+  return { useBack: (fallback: unknown) => () => spies.navigate(fallback) }
+})
+// Back goes to real history when there is one; here there is none, so it
+// lands on the screen's natural parent — through the same navigate spy.
+vi.mock('../hooks/useBack', async () => {
+  const { spies } = await import('../test/mockProviders')
+  return { useBack: (fallback: unknown) => () => spies.navigate(fallback) }
+})
 
 const lib = vi.hoisted(() => ({
   loadLibrary: vi.fn(async () => ({ decks: [], customLists: [] })),
@@ -55,6 +67,19 @@ describe('settings', () => {
     expect(toggles.length).toBe(2)
   })
 
+  it('groups them: sound for the suite, the helpers under typing, the layout under flashcards', () => {
+    render(<SettingsScreen game={aGame()} navigate={navigate} />)
+    expect(screen.getByText('Sound')).toBeTruthy()
+    expect(screen.getByText('Typing')).toBeTruthy()
+    expect(screen.getByText('Flashcards')).toBeTruthy()
+  })
+
+  it('offers nothing to clear: nothing here is this device’s own', () => {
+    render(<SettingsScreen game={aGame()} navigate={navigate} />)
+    expect(screen.queryByText('This device')).toBeNull()
+    expect(screen.queryByText(/Clear typing data/)).toBeNull()
+  })
+
   it('turns sound off and on', () => {
     const game = aGame()
     render(<SettingsScreen game={game} navigate={navigate} />)
@@ -74,36 +99,47 @@ describe('settings', () => {
     }
   })
 
-  it('asks twice before erasing anything', () => {
-    const game = aGame()
+  it('picks the flashcard layout, and shows which is chosen', () => {
+    const game = aGame({ state: { settings: { flashcardLayout: 'slide' } } })
     render(<SettingsScreen game={game} navigate={navigate} />)
-    fireEvent.click(screen.getByText('🗑️ Reset all progress'))
-    expect(screen.getByText(/Are you sure\?/)).toBeTruthy()
-    fireEvent.click(screen.getByText('Cancel'))
-    expect(game.reset).not.toHaveBeenCalled()
+    expect(screen.getByRole('radio', { name: /Slide/ }).getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(screen.getByRole('radio', { name: /Flip/ }))
+    expect(game.setSetting).toHaveBeenCalledWith('flashcardLayout', 'flip')
   })
 
-  it('erases both stores when confirmed', () => {
-    // The typing game keeps its own save; the suite keeps the shared record.
-    // Clearing one and not the other leaves a half-erased account.
+  it('turns the strike-out on multiple choice off, and shows it under flashcards', () => {
     const game = aGame()
     render(<SettingsScreen game={game} navigate={navigate} />)
-    fireEvent.click(screen.getByText('🗑️ Reset all progress'))
-    fireEvent.click(screen.getByText('Yes, reset'))
-    expect(game.reset).toHaveBeenCalled()
-    expect(spies.reset).toHaveBeenCalled()
+    const label = screen.getByText('✕ Strike out answers I have ruled out')
+    const toggle = label.parentElement!.querySelector('button')!
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(toggle)
+    expect(game.setSetting).toHaveBeenCalledWith('strikeOutChoices', false)
   })
 
-  it('says where progress is being kept', () => {
+  it('no longer offers to reset all progress', () => {
+    render(<SettingsScreen game={aGame()} navigate={navigate} />)
+    expect(screen.queryByText(/Reset all progress/)).toBeNull()
+  })
+
+  it('says whose account the settings go to', () => {
+    signIn(aLearner({ displayName: 'Ada' }))
+    render(<SettingsScreen game={aGame()} navigate={navigate} />)
+    expect(screen.getByText("Settings and progress are saved to Ada's account.")).toBeTruthy()
+  })
+
+  it('says progress is in the account when there is no learner yet', () => {
+    testState.active = null
     testState.progressMode = 'cloud'
     render(<SettingsScreen game={aGame()} navigate={navigate} />)
-    expect(screen.getByText(/to your account/)).toBeTruthy()
+    expect(screen.getByText('Progress is saved to your account.')).toBeTruthy()
   })
 
   it('says so when it is only in this browser', () => {
+    testState.active = null
     testState.progressMode = 'local'
     render(<SettingsScreen game={aGame()} navigate={navigate} />)
-    expect(screen.getByText(/on this device/)).toBeTruthy()
+    expect(screen.getByText(/on this device until you sign in/)).toBeTruthy()
   })
 
   it('goes home', () => {
@@ -123,8 +159,8 @@ describe('the trophy room', () => {
     const game = aGame({
       state: {
         highScores: [
-          { name: 'Ada', score: 1200, wpm: 30, accuracy: 95, mode: 'Cat Rain', date: 0 },
-          { name: 'Ada', score: 800, wpm: 0, accuracy: 90, mode: 'Practice', date: 0 },
+          { score: 1200, wpm: 30, accuracy: 95, mode: 'Word Rain', date: 0 },
+          { score: 800, wpm: 0, accuracy: 90, mode: 'Practice', date: 0 },
         ],
       },
     })
@@ -133,6 +169,15 @@ describe('the trophy room', () => {
     expect(screen.getByText('30 wpm')).toBeTruthy()
     // A zero-WPM arcade score shows no speed rather than "0 wpm".
     expect(screen.queryByText('0 wpm')).toBeNull()
+    // The board is the learner's own, so no row is signed.
+    expect(screen.queryByText('Ada')).toBeNull()
+  })
+
+  it('shows the typing badges the account holds, on a browser that never earned them', () => {
+    const game = aGame({ state: { achievements: ['first-steps'] } })
+    render(<TrophyRoom game={game} navigate={navigate} />)
+    fireEvent.click(screen.getByText('🎖️ Badges'))
+    expect(screen.getByText('First Steps')).toBeTruthy()
   })
 
   it('names badges only once they are earned', () => {
@@ -153,27 +198,15 @@ describe('the trophy room', () => {
     expect(screen.getByText(/Typing ⌨️/)).toBeTruthy()
   })
 
-  it('calls the collection tab whatever the theme calls it', () => {
+  it('points at the theme’s collection instead of keeping its own', () => {
     render(<TrophyRoom game={aGame()} navigate={navigate} />)
-    expect(screen.getByText(testState.theme.unit)).toBeTruthy()
+    fireEvent.click(screen.getByText(`See your ${testState.theme.worldNoun} →`))
+    expect(navigate).toHaveBeenCalledWith({ name: 'world' })
   })
 
-  it('says how to start collecting, in the theme’s own words', () => {
+  it('goes back, home when there is nowhere else', () => {
     render(<TrophyRoom game={aGame()} navigate={navigate} />)
-    fireEvent.click(screen.getByText(testState.theme.unit))
-    expect(screen.getByText(new RegExp(`No ${testState.theme.unit} yet`))).toBeTruthy()
-  })
-
-  it('shows what has been collected', () => {
-    const game = aGame({ state: { collectedCats: ['seed-1', 'seed-2'] } })
-    render(<TrophyRoom game={game} navigate={navigate} />)
-    fireEvent.click(screen.getByText(testState.theme.unit))
-    expect(screen.queryByText(/yet — finish lessons/)).toBeNull()
-  })
-
-  it('goes home', () => {
-    render(<TrophyRoom game={aGame()} navigate={navigate} />)
-    fireEvent.click(screen.getByText('← Home'))
+    fireEvent.click(screen.getByText('← Back'))
     expect(navigate).toHaveBeenCalledWith({ name: 'home' })
   })
 })

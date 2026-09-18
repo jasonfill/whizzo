@@ -174,7 +174,7 @@ export default function ContentScreen({ navigate }: { navigate: (r: Route) => vo
   if (statusFailed || (status && !status.enabled)) {
     return (
       <div>
-        <ScreenHeader title="Add a document" onBack={() => navigate({ name: 'library' })} />
+        <ScreenHeader title="Add a document" back={{ name: 'library' }} />
         <Card>
           <p className="font-bold text-body">
             {statusFailed
@@ -196,7 +196,7 @@ export default function ContentScreen({ navigate }: { navigate: (r: Route) => vo
 
   return (
     <div>
-      <ScreenHeader title="Add a document" onBack={() => navigate({ name: 'library' })} />
+      <ScreenHeader title="Add a document" back={{ name: 'library' }} />
 
       {status?.balance && (
         <p className="mb-3 text-sm font-bold text-stone">
