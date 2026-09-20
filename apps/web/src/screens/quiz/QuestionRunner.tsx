@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import RichText from '../../components/rich/RichText'
+import SpeakButton from '../../components/speech/SpeakButton'
 import { Button, Card, Pill } from '../../components/ui'
 import type { QuizItemResult, QuizSessionApi } from '../../hooks/useQuizSession'
 import { useLearnerSettings } from '../../lib/learners/useLearnerSettings'
 import { gradeWritten, isProduced, type Grade } from '../../lib/quiz/questions'
 import { REASON_LABEL } from '../../lib/quiz/session'
 import { richToPlain } from '../../lib/rich/parse'
+import { readAloud, stopReading } from '../../lib/speech/reading'
 import { sfx } from '../../lib/sound'
 import type { QuestionKind } from '../../lib/quiz/questions'
 
@@ -29,6 +31,11 @@ const KIND_LABEL: Record<QuestionKind, string> = {
  * the learner meets it again while the correction is still fresh. Test does
  * not: it is a measurement, and a paper that keeps handing your mistakes back
  * until you fix them is measuring something else.
+ *
+ * Everything with words on it can be read out loud — the question, every
+ * choice, the hint, the answer when it is shown. A child who cannot yet read
+ * the question fluently is not being tested on the question, and neither Learn
+ * nor Test is meant to be a reading test in disguise.
  */
 export default function QuestionRunner({
   session,
@@ -55,6 +62,18 @@ export default function QuestionRunner({
   const { settings } = useLearnerSettings()
   const canStrike = settings.strikeOutChoices
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const prompt = currentQuestion?.prompt ?? ''
+  // Read the question out as it arrives, when the learner is set up for that.
+  // Only the question: reading the choices unasked would hand a struggling
+  // reader the answer along with the help.
+  useEffect(() => {
+    if (!settings.readAloud || !prompt) return
+    readAloud(prompt)
+  }, [prompt, settings.readAloud])
+
+  // Nothing carries on talking into the next screen.
+  useEffect(() => stopReading, [])
 
   useEffect(() => {
     setTyped('')
@@ -144,18 +163,24 @@ export default function QuestionRunner({
       )}
 
       <Card className="mb-4">
-        <p className="mb-1 text-xs font-extrabold uppercase tracking-widest text-stone">
-          {q.kind === 'true-false' ? 'Does this match?' : 'Question'}
-        </p>
+        <div className="mb-1 flex items-center gap-2">
+          <p className="text-xs font-extrabold uppercase tracking-widest text-stone">
+            {q.kind === 'true-false' ? 'Does this match?' : 'Question'}
+          </p>
+          <SpeakButton source={q.prompt} label="Read the question out loud" size="sm" />
+        </div>
         <RichText source={q.prompt} className="text-2xl font-extrabold text-ink md:text-3xl" />
         {q.kind === 'true-false' && (
-          <RichText
-            source={q.claim ?? ''}
-            className="mt-3 block rounded-2xl bg-quiet px-4 py-3 text-xl font-bold text-body"
-          />
+          <div className="mt-3 flex items-center gap-2 rounded-2xl bg-quiet px-4 py-3">
+            <SpeakButton source={q.claim ?? ''} label="Read this out loud" size="sm" />
+            <RichText source={q.claim ?? ''} className="text-xl font-bold text-body" />
+          </div>
         )}
         {hintsUsed > 0 && current.card.hint && (
-          <p className="mt-3 font-bold text-amber-600">💡 {current.card.hint}</p>
+          <p className="mt-3 inline-flex items-center gap-1.5 font-bold text-amber-600">
+            <span>💡 {current.card.hint}</span>
+            <SpeakButton source={current.card.hint} label="Read the hint out loud" size="sm" />
+          </p>
         )}
       </Card>
 
@@ -189,6 +214,13 @@ export default function QuestionRunner({
                 >
                   <RichText source={choice} />
                 </button>
+                {/* Hearing an option is not picking it, so the speaker is a
+                    sibling of the choice rather than something inside it. */}
+                <SpeakButton
+                  source={choice}
+                  label={`Read this answer out loud: ${plain}`}
+                  size="tile"
+                />
                 {/* A way to rule an option out without picking it. Only while
                     the question is open — after that there is nothing left
                     to rule out. */}
@@ -262,15 +294,21 @@ export default function QuestionRunner({
           {q.kind === 'word-bank' && q.bank && (
             <div className="mb-3 flex flex-wrap gap-2" aria-label="Possible answers">
               {q.bank.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  disabled={revealed}
-                  onClick={() => setTyped(option)}
-                  className="rounded-xl bg-quiet px-3 py-2 text-sm font-bold text-body ring-1 ring-hair transition-all hover:-translate-y-0.5 hover:shadow disabled:opacity-60"
-                >
-                  <RichText source={option} />
-                </button>
+                <span key={option} className="inline-flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={revealed}
+                    onClick={() => setTyped(option)}
+                    className="rounded-xl bg-quiet px-3 py-2 text-sm font-bold text-body ring-1 ring-hair transition-all hover:-translate-y-0.5 hover:shadow disabled:opacity-60"
+                  >
+                    <RichText source={option} />
+                  </button>
+                  <SpeakButton
+                    source={option}
+                    label={`Read this one out loud: ${richToPlain(option)}`}
+                    size="sm"
+                  />
+                </span>
               ))}
             </div>
           )}
@@ -346,8 +384,10 @@ export default function QuestionRunner({
           </div>
 
           {feedback.grade !== 'correct' && (
-            <div className="mb-3 text-lg font-bold text-body">
-              The answer is <RichText source={q.answer} className="text-emerald-700" />
+            <div className="mb-3 inline-flex flex-wrap items-center gap-1.5 text-lg font-bold text-body">
+              <span>The answer is</span>
+              <RichText source={q.answer} className="text-emerald-700" />
+              <SpeakButton source={q.answer} label="Read the answer out loud" size="sm" />
             </div>
           )}
           {feedback.grade === 'close' && (

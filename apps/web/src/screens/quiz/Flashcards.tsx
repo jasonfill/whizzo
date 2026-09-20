@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLearnerSettings } from '../../lib/learners/useLearnerSettings'
 import RichText from '../../components/rich/RichText'
+import SpeakButton from '../../components/speech/SpeakButton'
 import { Button, Card, Pill } from '../../components/ui'
 import type { QuizItemResult, QuizSessionApi } from '../../hooks/useQuizSession'
 import { REASON_LABEL } from '../../lib/quiz/session'
-import { richToPlain } from '../../lib/rich/parse'
-import { isSpeechAvailable, speak, stopSpeaking } from '../../lib/spelling/speech'
+import { readAloud, stopReading } from '../../lib/speech/reading'
 
 /**
  * Classic flashcards: read the front, decide whether you knew it, turn it over.
@@ -29,6 +29,10 @@ import { isSpeechAvailable, speak, stopSpeaking } from '../../lib/spelling/speec
  * Either way the answer stays hidden until the learner asks for it, and the
  * grade buttons stay hidden until then too. Seeing both sides at once is a
  * layout choice, not a license to grade without thinking first.
+ *
+ * Every side of every card has a speaker on it, and the answer's speaker only
+ * exists once the answer does — reading a card out is help with the words, not
+ * a way around the thinking.
  */
 
 export type CardLayout = 'flip' | 'slide'
@@ -56,6 +60,17 @@ export default function Flashcards({
     beginItem()
   }, [cursor, beginItem])
 
+  // Read the question out the moment the card arrives, for a learner whose
+  // reading is behind their thinking. Off unless a grown-up turns it on: a
+  // voice nobody asked for talking over a room of children is worse than no
+  // voice at all.
+  const front = currentQuestion?.prompt ?? ''
+  useEffect(() => {
+    if (!settings.readAloud || !front) return
+    readAloud(front)
+    return stopReading
+  }, [front, settings.readAloud])
+
   const setLayout = useCallback(
     (next: CardLayout) => setSettings({ flashcardLayout: next }),
     [setSettings],
@@ -69,7 +84,7 @@ export default function Flashcards({
       // Self-graded, and marked as such all the way down to the attempt row.
       const result = submit('', knewIt ? 'correct' : 'wrong', { verified: false })
       if (!result) return
-      stopSpeaking()
+      stopReading()
       const all = [...results, result]
 
       // A card they missed is going to come back — say so, briefly, before
@@ -107,7 +122,7 @@ export default function Flashcards({
 
   useEffect(
     () => () => {
-      stopSpeaking()
+      stopReading()
       window.clearTimeout(handoffRef.current)
     },
     [],
@@ -115,7 +130,6 @@ export default function Flashcards({
 
   if (!current || !currentQuestion) return null
 
-  const front = currentQuestion.prompt
   const back = currentQuestion.answer
   const reason = REASON_LABEL[current.reason]
   const sliding = layout === 'slide'
@@ -148,8 +162,24 @@ export default function Flashcards({
         </p>
       )}
 
-      {/* The card. Clicking anywhere turns it over, or slides the answer in. */}
-      <button onClick={() => setFlipped((f) => !f)} className="mb-4 w-full" aria-label={toggleLabel}>
+      {/* The card. Clicking anywhere turns it over, or slides the answer in.
+          A div rather than a button because each side carries its own speaker,
+          and a button inside a button is not a thing. It handles its own keys
+          and stops them there, so the window-level handler does not also fire
+          and turn the card straight back over. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setFlipped((f) => !f)}
+        onKeyDown={(e) => {
+          if (e.key !== ' ' && e.key !== 'Enter') return
+          e.preventDefault()
+          e.stopPropagation()
+          setFlipped((f) => !f)
+        }}
+        className="mb-4 w-full cursor-pointer"
+        aria-label={toggleLabel}
+      >
         {sliding ? (
           <SlideCard
             front={front}
@@ -160,19 +190,7 @@ export default function Flashcards({
         ) : (
           <FlipCard front={front} back={back} hint={current.card.hint} flipped={flipped} />
         )}
-      </button>
-
-      {isSpeechAvailable() && (
-        <div className="mb-4 flex justify-center">
-          <Button
-            variant="ghost"
-            onClick={() => speak(richToPlain(flipped ? back : front))}
-            aria-label="Read this side out loud"
-          >
-            🔊 Read it out
-          </Button>
-        </div>
-      )}
+      </div>
 
       {comingBack ? (
         <Card className="bg-amber-50 ring-amber-200">
@@ -220,14 +238,15 @@ function FlipCard({
         flipped ? 'bg-emerald-50/90 ring-emerald-200' : 'bg-white/90 ring-hair'
       }`}
     >
-      <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone">
-        {flipped ? 'Answer' : 'Question'}
-      </p>
+      <SideLabel
+        label={flipped ? 'Answer' : 'Question'}
+        source={flipped ? back : front}
+      />
       <RichText
         source={flipped ? back : front}
         className="text-3xl font-extrabold text-ink md:text-4xl"
       />
-      {!flipped && hint && <p className="mt-3 font-bold text-stone">💡 {hint}</p>}
+      {!flipped && hint && <Hint hint={hint} />}
       <p className="mt-6 text-sm font-bold text-stone">
         {flipped ? 'Tap to see the question again' : 'Tap the card, or press space, to flip'}
       </p>
@@ -259,21 +278,19 @@ function SlideCard({
       }`}
     >
       <div className="w-full transition-all">
-        <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone">Question</p>
+        <SideLabel label="Question" source={front} />
         <RichText
           source={front}
           className={`font-extrabold text-ink transition-all ${
             revealed ? 'text-xl md:text-2xl' : 'text-3xl md:text-4xl'
           }`}
         />
-        {!revealed && hint && <p className="mt-3 font-bold text-stone">💡 {hint}</p>}
+        {!revealed && hint && <Hint hint={hint} />}
       </div>
 
       {revealed ? (
         <div className="mt-5 w-full animate-slide-up border-t border-emerald-200 pt-5">
-          <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-emerald-700">
-            Answer
-          </p>
+          <SideLabel label="Answer" source={back} tone="text-emerald-700" />
           <RichText source={back} className="text-3xl font-extrabold text-ink md:text-4xl" />
           <p className="mt-6 text-sm font-bold text-stone">Tap to hide the answer again</p>
         </div>
@@ -283,6 +300,41 @@ function SlideCard({
         </p>
       )}
     </div>
+  )
+}
+
+/**
+ * Which side this is, and the button that reads it out.
+ *
+ * The speaker sits with the label rather than with the words: the words are
+ * the thing being learned and want the middle of the card to themselves, and
+ * a child looking for "say it to me" looks at the top of the card, which is
+ * where the card already tells them which side they are on.
+ */
+function SideLabel({
+  label,
+  source,
+  tone = 'text-stone',
+}: {
+  label: string
+  source: string
+  tone?: string
+}) {
+  return (
+    <div className="mb-2 flex items-center justify-center gap-2">
+      <p className={`text-xs font-extrabold uppercase tracking-widest ${tone}`}>{label}</p>
+      <SpeakButton source={source} label={`Read the ${label.toLowerCase()} out loud`} size="sm" />
+    </div>
+  )
+}
+
+/** A hint is words too, so it gets read out like everything else. */
+function Hint({ hint }: { hint: string }) {
+  return (
+    <p className="mt-3 inline-flex items-center gap-1.5 font-bold text-stone">
+      <span>💡 {hint}</span>
+      <SpeakButton source={hint} label="Read the hint out loud" size="sm" />
+    </p>
   )
 }
 

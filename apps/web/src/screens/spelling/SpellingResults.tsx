@@ -11,7 +11,7 @@ import { useBand } from '../../lib/band/useBand'
 import { findRound, roundCollectible } from '../../lib/theme/rewards'
 import Collectible from '../../components/Collectible'
 import type { SessionRecord } from '../../lib/progress/types'
-import { speak } from '../../lib/spelling/speech'
+import SpeakButton from '../../components/speech/SpeakButton'
 import { useBack } from '../../hooks/useBack'
 
 interface Props {
@@ -161,13 +161,7 @@ export default function SpellingResults({ summary, onAgain }: Props) {
                   {r.hintsUsed > 0 && ' · used a hint'}
                 </span>
               </div>
-              <button
-                onClick={() => speak(r.word.w)}
-                className="shrink-0 rounded-full bg-quiet px-2 py-1 text-xs font-extrabold text-ink"
-                aria-label={`Hear ${r.word.w}`}
-              >
-                🔊
-              </button>
+              <SpeakButton source={r.word.w} label={`Hear ${r.word.w}`} size="sm" />
             </li>
           ))}
         </ul>

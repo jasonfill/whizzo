@@ -83,6 +83,13 @@ export interface LearnerSettings {
    * some children lean on and others find clutter, so it is a switch.
    */
   strikeOutChoices?: boolean
+  /**
+   * Whether the question is read out on its own as each card arrives. The
+   * speaker buttons are always there; this is about whether the voice starts
+   * without being asked, which is right for a child whose reading is behind
+   * their thinking and wrong for a classroom of them sharing a room.
+   */
+  readAloud?: boolean
 }
 
 export interface Learner {

@@ -2,6 +2,7 @@ import type { GameApi } from '../hooks/useGameState'
 import { useLearners } from '../lib/learners/LearnerProvider'
 import { useProgress } from '../lib/progress/ProgressProvider'
 import ScreenHeader from '../components/suite/ScreenHeader'
+import VoicePicker from '../components/suite/VoicePicker'
 import { Card } from '../components/ui'
 import { setSoundEnabled, sfx } from '../lib/sound'
 import type { Route } from '../App'
@@ -12,11 +13,14 @@ interface Props {
 }
 
 /**
- * Suite-wide settings: sound, the typing helpers, the flashcard layout, the
- * strike-out switch on multiple choice. Every
+ * Suite-wide settings: sound, reading out loud, the typing helpers, the
+ * flashcard layout, the strike-out switch on multiple choice. Every
  * switch is saved to the learner, so it is the same on every device and a
- * grown-up can set it from their own phone. Nothing here is this browser's
- * own, which is why there is nothing here to clear.
+ * grown-up can set it from their own phone.
+ *
+ * The one exception is the voice, and it says so where it sits: a voice is
+ * named by a URI the browser invents from what is installed on that machine,
+ * and the name the laptop uses does not exist on the iPad.
  */
 export default function SettingsScreen({ game }: Props) {
   const { state, setSetting } = game
@@ -37,6 +41,21 @@ export default function SettingsScreen({ game }: Props) {
             if (v) sfx.chime()
           }}
         />
+      </Section>
+
+      <Section title="Reading out loud">
+        {/* The speaker buttons on cards are always there — this is only about
+            whether the voice starts on its own. */}
+        <Toggle
+          label="🗣️ Read each question out on its own"
+          checked={state.settings.readAloud}
+          onChange={(v) => setSetting('readAloud', v)}
+        />
+        <p className="mb-3 px-1 text-xs font-bold text-stone">
+          Every card, question and answer has a 🔊 button whatever this says. Whizzo
+          highlights each word as it reads it, so it is easier to follow along.
+        </p>
+        <VoicePicker className="border-t border-hair pt-3" />
       </Section>
 
       <Section title="Typing">

@@ -82,6 +82,7 @@ const patchLearnerSchema = z
         showKeyboard: z.boolean().optional(),
         flashcardLayout: z.enum(['flip', 'slide']).optional(),
         strikeOutChoices: z.boolean().optional(),
+        readAloud: z.boolean().optional(),
       })
       .strict()
       .optional(),

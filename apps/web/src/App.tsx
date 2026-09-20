@@ -17,6 +17,7 @@ import { useGameState, type GameApi } from './hooks/useGameState'
 import { LearnerProvider, useLearners } from './lib/learners/LearnerProvider'
 import { ProgressProvider, useProgress } from './lib/progress/ProgressProvider'
 import { ThemeProvider } from './lib/theme/ThemeProvider'
+import { stopReading } from './lib/speech/reading'
 import { setSoundEnabled } from './lib/sound'
 import {
   parseActivity,
@@ -143,6 +144,13 @@ function Router() {
   useEffect(() => {
     window.scrollTo({ top: 0 })
   }, [location.key])
+
+  // A card read out loud belongs to the screen it was read on; a sentence still
+  // being spoken over the next one is the app talking to itself. Done as a
+  // cleanup rather than an effect on purpose — React runs cleanups before the
+  // effects of what is arriving, so a screen that reads its first question out
+  // on its own is not silenced by the navigation that brought it here.
+  useEffect(() => stopReading, [location.key])
 
   // A newly signed-up grown-up owns no learners yet, and `home` is the *child's*
   // screen — dropping them there makes the account look like a student account

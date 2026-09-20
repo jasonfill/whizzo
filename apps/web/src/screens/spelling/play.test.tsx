@@ -42,6 +42,7 @@ const speech = vi.hoisted(() => ({
 }))
 
 vi.mock('../../lib/spelling/speech', () => ({
+  DEFAULT_RATE: 0.85,
   speak: speech.speak,
   dictate: speech.dictate,
   stopSpeaking: speech.stopSpeaking,

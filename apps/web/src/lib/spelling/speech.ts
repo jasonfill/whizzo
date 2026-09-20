@@ -185,7 +185,20 @@ export interface SpeakOptions {
   rate?: number
   pitch?: number
   onEnd?: () => void
+  /**
+   * Called as each word starts, with where that word begins in `text`.
+   *
+   * This is what lets a card underline the word it is saying. Support is
+   * uneven — Chrome, Edge and Firefox fire it reliably, some Safari and
+   * Android builds never do — so anything using it has to work when it
+   * never arrives. `lib/speech/reading.ts` handles that by running an
+   * estimate until the first real boundary proves it unnecessary.
+   */
+  onBoundary?: (charIndex: number) => void
 }
+
+/** The rate every utterance uses unless it asks for another. */
+export const DEFAULT_RATE = 0.85
 
 export function speak(text: string, opts: SpeakOptions = {}): void {
   const s = synth()
@@ -198,10 +211,20 @@ export function speak(text: string, opts: SpeakOptions = {}): void {
   utterance.voice = currentVoice()
   utterance.lang = utterance.voice?.lang ?? 'en-US'
   // Slower than conversational — this is dictation for a child.
-  utterance.rate = opts.rate ?? 0.85
+  utterance.rate = opts.rate ?? DEFAULT_RATE
   utterance.pitch = opts.pitch ?? 1
   utterance.onend = () => opts.onEnd?.()
   utterance.onerror = () => opts.onEnd?.()
+  if (opts.onBoundary) {
+    utterance.onboundary = (e: SpeechSynthesisEvent) => {
+      // Some engines also report sentence boundaries, and one of those
+      // arriving mid-word would jump the highlight back to the start of the
+      // sentence. Anything not named is taken as a word, which is what the
+      // engines that send no name at all mean by it.
+      if (e.name && e.name !== 'word') return
+      opts.onBoundary?.(e.charIndex)
+    }
+  }
   s.speak(utterance)
 }
 

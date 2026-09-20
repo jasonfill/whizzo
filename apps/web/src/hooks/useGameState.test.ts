@@ -360,6 +360,7 @@ describe('settings', () => {
       showKeyboard: true,
       flashcardLayout: 'flip',
       strikeOutChoices: true,
+      readAloud: false,
     })
   })
 

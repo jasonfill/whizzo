@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: Required<LearnerSettings> = {
   showKeyboard: true,
   flashcardLayout: 'flip',
   strikeOutChoices: true,
+  readAloud: false,
 }
 
 // --- the guest record ------------------------------------------------------

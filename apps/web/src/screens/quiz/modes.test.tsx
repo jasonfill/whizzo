@@ -23,6 +23,7 @@ vi.mock('../../lib/theme/ThemeProvider', async () =>
 )
 
 vi.mock('../../lib/spelling/speech', () => ({
+  DEFAULT_RATE: 0.85,
   speak: vi.fn(),
   dictate: vi.fn(),
   stopSpeaking: vi.fn(),
@@ -114,11 +115,14 @@ describe('flashcards', () => {
 
   it('moves on when a card was known', async () => {
     renderCards()
-    const first = (await screen.findByText('Question')).parentElement!.textContent
+    // The card itself, by the label on the thing you click to turn it.
+    const card = () => screen.getByLabelText(/^Turn card/).textContent
+    await screen.findByText('Question')
+    const first = card()
     fireEvent.click(screen.getByLabelText('Turn card over'))
     fireEvent.click(screen.getByText('😺 Got it'))
     await waitFor(() => {
-      expect(screen.getByText('Question').parentElement!.textContent).not.toBe(first)
+      expect(card()).not.toBe(first)
     })
   })
 
@@ -138,10 +142,11 @@ describe('flashcards', () => {
     expect(screen.queryByText('Answer')).toBeNull()
   })
 
-  it('offers to read the card out', async () => {
+  it('offers to read the side that is showing, and only that side', async () => {
     renderCards()
     await screen.findByText('Question')
-    fireEvent.click(screen.getByLabelText('Read this side out loud'))
+    expect(screen.queryByLabelText('Read the answer out loud')).toBeNull()
+    fireEvent.click(screen.getByLabelText('Read the question out loud'))
     const { speak } = await import('../../lib/spelling/speech')
     expect(speak).toHaveBeenCalled()
   })

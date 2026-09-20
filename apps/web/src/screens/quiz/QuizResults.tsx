@@ -1,6 +1,6 @@
 import Mascot from '../../components/Mascot'
 import Confetti from '../../components/Confetti'
-import RichText from '../../components/rich/RichText'
+import ReadAloud from '../../components/speech/ReadAloud'
 import { Button, Card, Pill, StarRow } from '../../components/ui'
 import type { QuizSummary } from '../../hooks/useQuizSession'
 import { modeDef } from '../../lib/quiz/session'
@@ -138,13 +138,18 @@ export default function QuizResults({ summary, onAgain, onDone, onHome }: Props)
           <div className="space-y-2">
             {missed.map((r, i) => (
               <div key={`${r.planned.card.id}-${i}`} className="rounded-2xl bg-rose-50 px-4 py-3">
-                <RichText
+                <ReadAloud
                   source={r.question.prompt}
-                  className="block font-extrabold text-ink"
-                  figures="describe"
+                  label="Read this question out loud"
+                  className="font-extrabold text-ink"
                 />
                 <p className="font-bold text-emerald-700">
-                  ✓ <RichText source={r.question.answer} figures="describe" />
+                  ✓{' '}
+                  <ReadAloud
+                    source={r.question.answer}
+                    label="Read this answer out loud"
+                    textClassName="text-emerald-700"
+                  />
                 </p>
                 {r.given && (
                   <p className="text-sm font-bold text-rose-500">

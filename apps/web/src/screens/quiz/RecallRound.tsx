@@ -13,7 +13,7 @@
 
 import { useMemo, useState } from 'react'
 import { gradeRecall, type RecallResult } from '@whizzo/shared'
-import RichText from '../../components/rich/RichText'
+import ReadAloud from '../../components/speech/ReadAloud'
 import { Button, Card, Pill } from '../../components/ui'
 import { gradeWritten } from '../../lib/quiz/questions'
 import type { PlannedCard } from '../../lib/quiz/session'
@@ -58,7 +58,7 @@ export default function RecallRound({
             <div className="flex flex-wrap gap-2">
               {result.matched.map((m) => (
                 <Pill key={m.card.id} className="bg-emerald-100 text-emerald-800">
-                  <RichText source={m.card.definition} />
+                  <ReadAloud source={m.card.definition} label="Read this out loud" />
                   {!m.exact && ' (close)'}
                 </Pill>
               ))}
@@ -74,7 +74,9 @@ export default function RecallRound({
             <div className="flex flex-wrap gap-2">
               {result.missed.map((card) => (
                 <Pill key={card.id} className="bg-wash text-body">
-                  <RichText source={card.definition} />
+                  {/* The ones they did not remember are exactly the ones worth
+                      hearing said properly before they meet them again. */}
+                  <ReadAloud source={card.definition} label="Read this out loud" />
                 </Pill>
               ))}
             </div>

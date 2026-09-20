@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Mascot, { type Mood } from '../../components/Mascot'
 import HereNow from '../../components/live/HereNow'
 import Confetti from '../../components/Confetti'
+import ReadAloud from '../../components/speech/ReadAloud'
 import { Button, Card, Pill } from '../../components/ui'
 import type { CurriculumWord } from '../../data/spelling'
 import { wordDifficulty } from '../../data/spelling'
@@ -456,7 +457,14 @@ function PromptArea(props: PromptProps) {
             Look at it, say it, then type it
           </p>
           <p className="font-mono text-5xl font-extrabold text-ink">{word}</p>
-          <p className="mt-3 font-bold text-muted">{sentence}</p>
+          {/* The sentence is where the word makes sense, so it is the part
+              worth hearing read with the words lit up one at a time. */}
+          <ReadAloud
+            source={sentence}
+            label="Read the sentence out loud"
+            className="mt-3"
+            textClassName="font-bold text-muted"
+          />
           <button
             onClick={() => speak(word)}
             className="mt-2 rounded-full bg-wash px-4 py-1.5 text-sm font-extrabold text-ink"
@@ -637,7 +645,12 @@ function Feedback({
         {result.correct ? 'That is the one' : 'The correct spelling is'}
       </p>
       <p className="font-mono text-4xl font-extrabold text-ink">{result.word.w}</p>
-      <p className="mx-auto mt-3 max-w-md font-bold text-muted">{result.word.s}</p>
+      <ReadAloud
+        source={result.word.s}
+        label="Read the sentence out loud"
+        className="mx-auto mt-3 max-w-md"
+        textClassName="font-bold text-muted"
+      />
 
       <button
         onClick={() => speak(result.word.w)}

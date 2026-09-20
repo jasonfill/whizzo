@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import ScreenHeader from '../../components/suite/ScreenHeader'
-import RichText from '../../components/rich/RichText'
+import ReadAloud from '../../components/speech/ReadAloud'
 import SourcePill from '../../components/suite/SourcePill'
 import { Button, Card, Pill, StarRow } from '../../components/ui'
 import { useProgress } from '../../lib/progress/ProgressProvider'
@@ -579,15 +579,17 @@ function CardRow({
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-white/80 px-4 py-3 ring-1 ring-hair">
-      <RichText
+      <ReadAloud
         source={card.term}
-        className="min-w-[9rem] flex-1 font-extrabold text-ink"
-        figures="describe"
+        label="Read this card's front out loud"
+        className="min-w-[9rem] flex-1"
+        textClassName="font-extrabold text-ink"
       />
-      <RichText
+      <ReadAloud
         source={card.definition}
-        className="flex-[2] font-bold text-muted"
-        figures="describe"
+        label="Read this card's back out loud"
+        className="flex-[2]"
+        textClassName="font-bold text-muted"
       />
       {showMastery && <Pill className={`shrink-0 ${band.className}`}>{band.label}</Pill>}
     </div>

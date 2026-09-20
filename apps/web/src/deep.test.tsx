@@ -32,6 +32,7 @@ vi.mock('./hooks/useAssignments', async () =>
 )
 
 vi.mock('./lib/spelling/speech', () => ({
+  DEFAULT_RATE: 0.85,
   speak: vi.fn(),
   dictate: vi.fn(),
   stopSpeaking: vi.fn(),

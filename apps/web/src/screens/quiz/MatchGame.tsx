@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import RichText from '../../components/rich/RichText'
+import SpeakButton from '../../components/speech/SpeakButton'
 import { Button, Card, Pill } from '../../components/ui'
 import type { QuizItemResult, QuizSessionApi } from '../../hooks/useQuizSession'
 import { sfx } from '../../lib/sound'
@@ -155,22 +156,34 @@ export default function MatchGame({
           const isSelected = selected?.key === tile.key
           const isWrong = wrongPair.includes(tile.key)
           return (
-            <button
-              key={tile.key}
-              onClick={() => pick(tile)}
-              disabled={isMatched}
-              className={`flex min-h-[6.5rem] items-center justify-center rounded-2xl p-3 text-center text-sm font-bold shadow ring-1 transition-all md:text-base ${
-                isMatched
-                  ? 'pointer-events-none scale-95 bg-emerald-50 text-emerald-300 opacity-40 ring-emerald-100'
-                  : isWrong
-                    ? 'animate-shake bg-rose-100 text-rose-700 ring-rose-300'
-                    : isSelected
-                      ? 'bg-accent text-white ring-edge'
-                      : 'bg-white/90 text-ink ring-hair hover:-translate-y-0.5 hover:shadow-lg'
-              }`}
-            >
-              <RichText source={tile.text} figures="describe" />
-            </button>
+            // The speaker sits on top of the tile rather than in it: the tile
+            // is the tap target for the pair, and a child asking to hear a
+            // word must not be spending a turn to do it.
+            <div key={tile.key} className="relative">
+              <button
+                onClick={() => pick(tile)}
+                disabled={isMatched}
+                className={`flex min-h-[6.5rem] w-full items-center justify-center rounded-2xl p-3 pt-6 text-center text-sm font-bold shadow ring-1 transition-all md:text-base ${
+                  isMatched
+                    ? 'pointer-events-none scale-95 bg-emerald-50 text-emerald-300 opacity-40 ring-emerald-100'
+                    : isWrong
+                      ? 'animate-shake bg-rose-100 text-rose-700 ring-rose-300'
+                      : isSelected
+                        ? 'bg-accent text-white ring-edge'
+                        : 'bg-white/90 text-ink ring-hair hover:-translate-y-0.5 hover:shadow-lg'
+                }`}
+              >
+                <RichText source={tile.text} figures="describe" />
+              </button>
+              {!isMatched && (
+                <SpeakButton
+                  source={tile.text}
+                  label="Read this tile out loud"
+                  size="sm"
+                  className="absolute right-1 top-1"
+                />
+              )}
+            </div>
           )
         })}
       </div>

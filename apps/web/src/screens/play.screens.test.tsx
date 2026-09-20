@@ -35,6 +35,7 @@ vi.mock('../hooks/useBack', async () => {
 // Speech is a browser capability jsdom does not have, and the spelling screens
 // dictate on mount.
 vi.mock('../lib/spelling/speech', () => ({
+  DEFAULT_RATE: 0.85,
   speak: vi.fn(),
   dictate: vi.fn(),
   stopSpeaking: vi.fn(),
