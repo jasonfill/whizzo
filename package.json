@@ -32,6 +32,6 @@
     "node": ">=20 <23"
   },
   "devDependencies": {
-    "concurrently": "^10.0.5"
+    "concurrently": "^10.0.6"
   }
 }
